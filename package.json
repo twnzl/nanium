@@ -1,0 +1,20 @@
+{
+  "name": "nocat",
+  "version": "0.1.0",
+  "description": "software architecture framework for no communication & assembling trouble",
+  "repository": {},
+  "license": "UNLICENSED",
+  "private": false,
+  "scripts": {
+    "lint": "tslint 'src/**/*.ts' -p tsconfig.json -c tslint.json -e node_modules",
+    "build": "tsc",
+    "clean": "rm -r dst"
+  },
+  "dependencies": {
+    "recursive-readdir": "^2.2.2"
+  },
+  "devDependencies": {
+    "@types/recursive-readdir": "^2.2.0",
+    "@types/node": "10.14.7"
+  }
+}
