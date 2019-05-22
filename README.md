@@ -1,3 +1,3 @@
-# nocat (no complexity & assembling trouble)
+# nocat (no communication & assembling trouble)
 
 ## software architecture framework 
