@@ -6,17 +6,7 @@ export class RequestBase {
 
 	constructor(request?: RequestBase) {
 		// determine service name
-		const ctorString: string = this.constructor.toString();
-		// es6
-		if (ctorString.startsWith('class')) {
-			this[serviceNameSymbol] = ctorString.split(' ')[1];
-		}
-		// es5
-		else {
-			this[serviceNameSymbol] = ctorString.substring(6, ctorString.indexOf(' '));
-		}
-
-		this[serviceNameSymbol] = this[serviceNameSymbol].replace(/Request$/g, '');
+		this[serviceNameSymbol] = this.constructor.name.replace(/Request$/g, '');
 
 		// init properties
 		if (request) {

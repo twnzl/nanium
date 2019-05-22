@@ -1,7 +1,7 @@
-import TestRequest from "./contracts/test.request";
 import NocatServer from "../server";
+import TestRequest from "./services/contracts/test.request";
 
-NocatServer.init().then(() => {
+NocatServer.init('services/executors').then(() => {
 	new TestRequest({	input1: 'hello world' }).execute()
 		.then((result: any) => {
 			console.log(result);
