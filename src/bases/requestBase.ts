@@ -4,7 +4,7 @@ import NocatClient from "../client";
 
 const serviceNameSymbol: symbol = Symbol('serviceNameSymbol');
 
-export class RequestBase {
+export default class RequestBase {
 
 	constructor(request?: RequestBase) {
 		// determine service name

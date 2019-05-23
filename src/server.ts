@@ -1,8 +1,8 @@
 import {Stats} from "fs";
 import * as findFiles from 'recursive-readdir';
 import * as path from "path";
-import {ServiceExecutor} from "./interfaces/serviceExecutor";
-import {RequestBase} from "./bases/requestBase";
+import ServiceExecutor from "./interfaces/serviceExecutor";
+import RequestBase from "./bases/requestBase";
 import ResponseBase from "./bases/responseBase";
 
 let repository: { [serviceName: string]: any } = undefined;

@@ -1,6 +1,6 @@
 import ServiceConfig from "./serviceConfig";
 
-export interface ServiceExecutor {
+export default interface ServiceExecutor {
 	execute(request: any, scope?: string): Promise<any>;
 	config?: ServiceConfig;
 }

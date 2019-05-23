@@ -1,10 +1,11 @@
 {
   "name": "nocat",
-  "version": "0.1.2",
+  "version": "0.1.10",
   "description": "software architecture framework for no communication & assembling trouble",
   "repository": {},
   "license": "UNLICENSED",
   "private": false,
+  "main": "dist/index.js",
   "scripts": {
     "lint": "tslint 'src/**/*.ts' -p tsconfig.json -c tslint.json -e node_modules",
     "build": "rm -r dist && tsc",

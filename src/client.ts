@@ -1,4 +1,4 @@
-import {RequestBase} from "./bases/requestBase";
+import RequestBase from "./bases/requestBase";
 import ResponseBase from "./bases/responseBase";
 
 export default class NocatClient {
