@@ -1,22 +1,25 @@
 import ServiceManager from '../interfaces/serviceManager';
+import ClientConfig from '../interfaces/clientConfig';
 
 export default class NocatClient implements ServiceManager {
-	config: { apiUrl: string } = {
-		apiUrl: '/'
-	};
+	config: ClientConfig;
 
-	constructor(config?: any) {
-		this.config = config;
+	constructor(config?: ClientConfig) {
+		this.config = {
+			...{
+				apiUrl: '/api'
+			},
+			...(config || {})
+		};
 	}
 
 	async init(): Promise<void> {
-		if (!this.config.apiUrl) {
-			this.config.apiUrl = window.location.host + '/api';
-			if (window.location.host === 'localhost:4200') {
-				this.config.apiUrl = window.location.hostname + ':3000/api';
-			}
-			this.config.apiUrl = window.location.protocol + '//' + this.config.apiUrl + '?' + name;
+		if (window.location.host === 'localhost:4200') {
+			this.config.apiUrl = window.location.hostname + ':3000' + this.config.apiUrl;
+		} else {
+			this.config.apiUrl = window.location.host + this.config.apiUrl;
 		}
+		this.config.apiUrl = window.location.protocol + '//' + this.config.apiUrl;
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {
@@ -31,8 +34,8 @@ export default class NocatClient implements ServiceManager {
 				}
 			};
 		});
-		xhr.open('POST', this.config.apiUrl + '#' + serviceName);
-		xhr.send(JSON.stringify({[serviceName]: request}));
+		xhr.open('POST', this.config.apiUrl + '?' + serviceName);
+		xhr.send(JSON.stringify({ [serviceName]: request }));
 		return await promise;
 	}
 

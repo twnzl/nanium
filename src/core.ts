@@ -8,11 +8,11 @@ export default class Nocat {
 		await this.manager.init();
 	}
 
-	static async execute(request: any): Promise<any> {
+	static async execute(request: any, serviceName?: string): Promise<any> {
 		if (!this.manager) {
 			throw new Error('nocat has not been initialized');
 		}
-		const serviceName: string = request.constructor.name.replace(/Request$/g, '');
+		serviceName = serviceName || request.constructor.name.replace(/Request$/g, '');
 		return await this.manager.execute(serviceName, request);
 	}
 }

@@ -15,7 +15,7 @@ export default class NocatServer implements ServiceManager {
 	}
 
 	async init(): Promise<void> {
-		const files: string[] = await findFiles(this.executorsPath, [(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.service.js')]);
+		const files: string[] = await findFiles(this.executorsPath, [(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
 			const executor: Function = require(path.resolve(file)).default;
 			const serviceName: string = executor.name.replace(/Executor$/g, '');
