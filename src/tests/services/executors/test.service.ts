@@ -1,5 +1,5 @@
-import TestRequest from "../contracts/test.request";
-import ServiceExecutor from "../../../interfaces/serviceExecutor";
+import TestRequest from '../contracts/test.request';
+import ServiceExecutor from '../../../interfaces/serviceExecutor';
 
 export default class TestExecutor implements ServiceExecutor {
 

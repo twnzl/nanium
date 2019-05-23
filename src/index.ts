@@ -4,4 +4,4 @@ export { default as ResponseBase } from './bases/responseBase';
 export { default as RequestBase } from './bases/requestBase';
 
 export { default as NocatServer } from './server';
-export { default as NoCatClient } from './client';
+export { default as NocatClient } from './client';

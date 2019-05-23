@@ -1,6 +1,5 @@
 {
   "rules": {
-    "object-id-comparison-only-by-equals": true,
     "arrow-return-shorthand": true,
     "callable-types": true,
     "class-name": true,

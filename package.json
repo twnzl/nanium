@@ -1,22 +1,32 @@
 {
   "name": "nocat",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "software architecture framework for no communication & assembling trouble",
   "repository": {},
   "license": "UNLICENSED",
   "private": false,
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": ["nanoservices", "framework", "typescript"],
+  "author": "twnzl",
   "scripts": {
     "lint": "tslint 'src/**/*.ts' -p tsconfig.json -c tslint.json -e node_modules",
     "build": "rm -r dist && tsc",
-    "clean": "rm -r dist"
+    "clean": "rm -r dist",
+    "test": "",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint"
   },
+  "files": [
+    "dist/**/*"
+  ],
   "dependencies": {
     "recursive-readdir": "^2.2.2"
   },
   "devDependencies": {
     "@types/node": "10.14.7",
     "@types/recursive-readdir": "^2.2.0",
-    "ts-loader": "^6.0.1"
+    "@types/typescript": "^2.0.0",
+    "typescript": "^3.4.5"
   }
 }

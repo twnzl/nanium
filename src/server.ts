@@ -1,12 +1,12 @@
-import {Stats} from "fs";
+import {Stats} from 'fs';
 import * as findFiles from 'recursive-readdir';
-import * as path from "path";
-import ServiceExecutor from "./interfaces/serviceExecutor";
-import RequestBase from "./bases/requestBase";
-import ResponseBase from "./bases/responseBase";
-import {serviceNameSymbol} from "./symbols";
+import * as path from 'path';
+import ServiceExecutor from './interfaces/serviceExecutor';
+import RequestBase from './bases/requestBase';
+import ResponseBase from './bases/responseBase';
+import {serviceNameSymbol} from './symbols';
 
-let repository: { [serviceName: string]: any } = undefined;
+let repository: { [serviceName: string]: any };
 
 export default class NocatServer {
 
@@ -14,23 +14,24 @@ export default class NocatServer {
 	 * initialize the NocatServer
 	 * @param executorsPath base path of the service executor files
 	 */
-	public static async init(executorsPath?: string) {
+	public static async init(executorsPath?: string): Promise<void> {
 		executorsPath = executorsPath || 'executors';
 		repository = {};
-		let files: string[] = await findFiles(
+		const files: string[] = await findFiles(
 			executorsPath, [(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.service.js')]);
 		for (const file of files) {
-			const executor = require(path.resolve(file)).default;
+			const executor: Function = require(path.resolve(file)).default;
 			const serviceName: string = this.getServiceName(executor);
 			repository[serviceName] = executor;
 		}
 	}
 
-	private static getServiceName(executorConstructor): string {
+	private static getServiceName(executorConstructor: Function): string {
 		return executorConstructor.name.replace(/Executor$/g, '');
 	}
 
 	static async execute(request: RequestBase): Promise<ResponseBase> {
+		// @ts-ignore
 		const serviceName: string = request[serviceNameSymbol];
 		if (repository === undefined) {
 			throw new Error('nocat server is not initialized');
