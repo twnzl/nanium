@@ -1,5 +1,5 @@
 import Nocat from '../../../core';
-import ServiceRequest from '../../../interfaces/rerviceRequest';
+import ServiceRequest from '../../../interfaces/serviceRequest';
 
 export default class TestRequest implements ServiceRequest {
 	constructor(

@@ -7,7 +7,9 @@ export default class NocatClient implements ServiceManager {
 	constructor(config?: ClientConfig) {
 		this.config = {
 			...{
-				apiUrl: '/api'
+				apiUrl: '/api',
+				protocol: 'http',
+				exceptionHandler: this.defaultExceptionHandler
 			},
 			...(config || {})
 		};
@@ -23,14 +25,27 @@ export default class NocatClient implements ServiceManager {
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {
+		if (this.config.protocol === 'websocket') {
+			return await this.executeWebsocket(serviceName, request);
+		} else {
+			return await this.executeHttp(serviceName, request);
+		}
+	}
+
+	private defaultExceptionHandler(response: any): void {
+		alert(response);
+	}
+
+
+	private async executeHttp(serviceName: string, request: any): Promise<any> {
 		const xhr: XMLHttpRequest = new XMLHttpRequest();
 		const promise: Promise<any> = new Promise<any>((resolve: Function, reject: Function): void => {
-			xhr.onload = function (): void {
+			xhr.onload = (): void => {
 				console.log(xhr);
 				if (xhr.status === 200) {
 					resolve(xhr.response);
 				} else {
-					reject(xhr);
+					this.config.exceptionHandler(xhr.response);
 				}
 			};
 		});
@@ -39,5 +54,8 @@ export default class NocatClient implements ServiceManager {
 		return await promise;
 	}
 
-	// todo changeable Protokoll (http, websocket)
+	private async executeWebsocket(serviceName: string, request: any): Promise<any> {
+		throw new Error('not yet implemented');
+		// todo implement websocket protocol
+	}
 }
