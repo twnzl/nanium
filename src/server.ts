@@ -4,6 +4,7 @@ import * as path from "path";
 import ServiceExecutor from "./interfaces/serviceExecutor";
 import RequestBase from "./bases/requestBase";
 import ResponseBase from "./bases/responseBase";
+import {serviceNameSymbol} from "./symbols";
 
 let repository: { [serviceName: string]: any } = undefined;
 
@@ -29,7 +30,8 @@ export default class NocatServer {
 		return executorConstructor.name.replace(/Executor$/g, '');
 	}
 
-	static async execute(serviceName: string, request: RequestBase): Promise<ResponseBase> {
+	static async execute(request: RequestBase): Promise<ResponseBase> {
+		const serviceName: string = request[serviceNameSymbol];
 		if (repository === undefined) {
 			throw new Error('nocat server is not initialized');
 		}
