@@ -1,4 +1,6 @@
-import NocatServer, {ResponseBase} from "../server";
+import NocatServer from "../server";
+import ResponseBase from "./responseBase";
+import NocatClient from "../client";
 
 const serviceNameSymbol: symbol = Symbol('serviceNameSymbol');
 
@@ -14,11 +16,11 @@ export class RequestBase {
 		}
 	}
 
-	async execute?(): Promise<ResponseBase> {
+	async execute?<TResponse extends ResponseBase>(): Promise<TResponse> {
 		if (typeof window === 'undefined') {
-			return await NocatServer.execute(this[serviceNameSymbol], this);
+			return (await NocatServer.execute(this[serviceNameSymbol], this)) as TResponse;
 		} else {
-			return {} // todo implement clientSite
+			return (await NocatClient.execute(this[serviceNameSymbol], this)) as TResponse;
 		}
 	}
 }
