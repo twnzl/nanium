@@ -30,7 +30,7 @@ export default class NocatServer {
 		return executorConstructor.name.replace(/Executor$/g, '');
 	}
 
-	static async execute(request: RequestBase): Promise<ResponseBase> {
+	static async execute(request: RequestBase): Promise<any> {
 		// @ts-ignore
 		const serviceName: string = request[serviceNameSymbol];
 		if (repository === undefined) {

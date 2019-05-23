@@ -1,10 +1,13 @@
-import RequestBase from '../../../bases/requestBase';
+import Nocat from '../../../core';
 
-export default class TestRequest extends RequestBase {
+export default class TestRequest {
 	input1: string;
 
 	constructor(request: TestRequest) {
-		super(request);
 		this.input1 = request.input1;
+	}
+
+	async execute?(): Promise<string> {
+		return await Nocat.execute(this);
 	}
 }

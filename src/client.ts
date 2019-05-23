@@ -1,10 +1,9 @@
-import RequestBase from './bases/requestBase';
-import ResponseBase from './bases/responseBase';
-
 export default class NocatClient {
 
-	static async execute(request: RequestBase): Promise<ResponseBase> {
-		alert(request);
-		return {};
+	constructor(config?: any) {
+	}
+
+	async execute<T>(serviceName: string, request: any): Promise<any> {
+		return ':-)';
 	}
 }
