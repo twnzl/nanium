@@ -1,10 +1,10 @@
 import Nocat from '../../../core';
 
 export default class TestRequest {
-	input1: string;
-
-	constructor(request: TestRequest) {
-		this.input1 = request.input1;
+	constructor(
+		public input1: string,
+		public input2?: string
+	) {
 	}
 
 	async execute?(): Promise<string> {

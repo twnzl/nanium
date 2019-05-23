@@ -1,8 +1,11 @@
-export default class Nocat {
-	static manager: Manager;
+import ServiceManager from './interfaces/serviceManager';
 
-	static init(manager: Manager): void {
+export default class Nocat {
+	static manager: ServiceManager;
+
+	static async init(manager: ServiceManager): Promise<void> {
 		this.manager = manager;
+		await this.manager.init();
 	}
 
 	static async execute(request: any): Promise<any> {
@@ -12,8 +15,4 @@ export default class Nocat {
 		const serviceName: string = request.constructor.name.replace(/Request$/g, '');
 		return await this.manager.execute(serviceName, request);
 	}
-}
-
-export interface Manager {
-	execute(serviceName: string, request: any): Promise<any>;
 }
