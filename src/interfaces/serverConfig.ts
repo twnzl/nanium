@@ -1,9 +1,8 @@
 import ServiceRequestInterceptor from './serviceRequestInterceptor';
 import ServiceResponseInterceptor from './serviceResponseInterceptor';
 
-export default interface ClientConfig {
-	apiUrl?: string;
-	protocol?: 'http' | 'websocket';
+export default interface ServerConfig {
+	executorsPath: string;
 	requestInterceptors?: ServiceRequestInterceptor[];
 	responseInterceptors?: ServiceResponseInterceptor[];
 	exceptionHandler?: (response: any) => void;

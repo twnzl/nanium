@@ -25,12 +25,30 @@ export default class NocatClient implements ServiceManager {
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {
+
+		// execute request interceptors
+		if (this.config.requestInterceptors.length) {
+			for (const interceptor of this.config.requestInterceptors) {
+				request = await interceptor.execute(request);
+			}
+		}
+
+		// execute the request
+		let response: any;
 		if (this.config.protocol === 'websocket') {
-			return await this.executeWebsocket(serviceName, request);
+			response = await this.executeWebsocket(serviceName, request);
 		} else {
-			return await this.executeHttp(serviceName, request);
+			response = await this.executeHttp(serviceName, request);
+		}
+
+		// execute response interceptors
+		if (this.config.responseInterceptors.length) {
+			for (const interceptor of this.config.responseInterceptors) {
+				response = await interceptor.execute(response);
+			}
 		}
 	}
+
 
 	private defaultExceptionHandler(response: any): void {
 		alert(response);
@@ -39,7 +57,7 @@ export default class NocatClient implements ServiceManager {
 
 	private async executeHttp(serviceName: string, request: any): Promise<any> {
 		const xhr: XMLHttpRequest = new XMLHttpRequest();
-		const promise: Promise<any> = new Promise<any>((resolve: Function, reject: Function): void => {
+		const promise: Promise<any> = new Promise<any>((resolve: Function): void => {
 			xhr.onload = (): void => {
 				console.log(xhr);
 				if (xhr.status === 200) {
@@ -50,7 +68,7 @@ export default class NocatClient implements ServiceManager {
 			};
 		});
 		xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-		xhr.send(JSON.stringify({ [serviceName]: request }));
+		xhr.send(JSON.stringify({[serviceName]: request}));
 		return await promise;
 	}
 
