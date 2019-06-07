@@ -1,6 +1,6 @@
 {
   "name": "nocat",
-  "version": "0.1.23",
+  "version": "0.1.25",
   "description": "software architecture framework for no communication & assembling trouble",
   "repository": {},
   "license": "UNLICENSED",
@@ -17,7 +17,7 @@
     "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "build": "rm -r dist && tsc",
     "clean": "rm -r dist",
-    "test": "jasmine",
+    "test": "node $NODE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint"
   },
@@ -36,6 +36,7 @@
     "@types/typescript": "^2.0.0",
     "jasmine": "^3.4.0",
     "jasmine-spec-reporter": "^4.2.1",
+    "jasmine-ts-console-reporter": "^3.1.1",
     "typescript": "^3.4.5"
   }
 }

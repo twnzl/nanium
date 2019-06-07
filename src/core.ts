@@ -15,4 +15,6 @@ export default class Nocat {
 		serviceName = serviceName || request.constructor.name.replace(/Request$/g, '');
 		return await this.manager.execute(serviceName, request);
 	}
+
+	// todo maybe we should use Observable instead of promises
 }

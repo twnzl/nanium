@@ -11,9 +11,11 @@ export default class NocatServer implements ServiceManager {
 	config: ServerConfig;
 
 	constructor(config: ServerConfig) {
-		config.executorsPath = config.executorsPath || 'executors';
-		config.requestInterceptors = config.requestInterceptors || [];
-		config.responseInterceptors = config.responseInterceptors || [];
+		this.config = {
+			executorsPath: config.executorsPath,
+			requestInterceptors: config.requestInterceptors || [],
+			responseInterceptors: config.responseInterceptors || []
+		};
 		repository = {};
 	}
 
@@ -44,7 +46,7 @@ export default class NocatServer implements ServiceManager {
 		}
 
 		// execute the request
-		const executor: ServiceExecutor = new repository[serviceName]();
+		const executor: ServiceExecutor<any, any> = new repository[serviceName]();
 		let response: any = await executor.execute(request);
 
 		// execute response interceptors
@@ -53,6 +55,8 @@ export default class NocatServer implements ServiceManager {
 				response = await interceptor.execute(response);
 			}
 		}
+
+		return response;
 	}
 
 	// todo queues

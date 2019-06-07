@@ -1,6 +1,7 @@
 import ServiceConfig from './serviceConfig';
 
-export default interface ServiceExecutor {
-	execute(request: any, scope?: string): Promise<any>;
+export default interface ServiceExecutor<TRequest, TResponse> {
+	execute(request: TRequest, scope?: string): Promise<TResponse>;
+
 	config?: ServiceConfig;
 }

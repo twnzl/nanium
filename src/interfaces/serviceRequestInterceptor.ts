@@ -1,5 +1,5 @@
-import ServiceRequest from './serviceRequest';
+import {ServiceRequestBase} from '..';
 
 export default interface ServiceRequestInterceptor {
-	execute(request: ServiceRequest, scope?: string): Promise<ServiceRequest>;
+	execute(request: ServiceRequestBase<any, any>, scope?: string): Promise<ServiceRequestBase<any, any>>;
 }
