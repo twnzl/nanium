@@ -1,5 +1,5 @@
-import {ServiceRequestBase} from '..';
-
-export default interface ServiceRequestInterceptor {
-	execute(request: ServiceRequestBase<any, any>, scope?: string): Promise<ServiceRequestBase<any, any>>;
+export default interface ServiceRequestInterceptor<TRequest> {
+	execute(
+		request: TRequest, scope?: string
+	): Promise<TRequest>;
 }

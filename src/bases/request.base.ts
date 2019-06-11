@@ -1,19 +1,12 @@
 import Nocat from '../core';
-import {ServiceResponseBase} from './response.base';
 
-export class ServiceRequestBase<TRequestBody, TResponseBody> {
-	head: ServiceRequestHead;
-	body: TRequestBody;
+export default class ServiceRequestBase<TRequest, TResponse> {
 
-	constructor(body: TRequestBody) {
-		this.body = body;
+	constructor(request: Partial<TRequest>) {
+		Object.assign(this, request);
 	}
 
-	async execute(): Promise<ServiceResponseBase<TResponseBody>> {
+	async execute(): Promise<TResponse> {
 		return await Nocat.execute(this);
 	}
-}
-
-export class ServiceRequestHead {
-	apiVersion: string;
 }
