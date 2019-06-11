@@ -6,7 +6,7 @@ Nocat.init(new NocatServer({
 	executorsPath: '../services/executors',
 	// requestInterceptors: [new TestRequestInterceptor()]
 })).then(() => {
-	new TestRequest({input1: 'hello world'}).execute()
+	new TestRequest('hello world').execute()
 		.then((result: TestResponse) => {
 			console.log(result);
 			process.exit(0);

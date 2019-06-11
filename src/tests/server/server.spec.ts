@@ -5,9 +5,7 @@ import TestServerRequestInterceptor from '../services/interceptors/server/test.r
 import TestServerResponseInterceptor from '../services/interceptors/server/test.response.interceptor';
 
 describe('execute TestRequest on server \n', function (): void {
-	const request: TestRequest = new TestRequest({
-		input1: 'hello world'
-	});
+	const request: TestRequest = new TestRequest('hello world');
 	let response: TestResponse;
 
 	beforeEach(async function (): Promise<void> {
