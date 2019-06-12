@@ -1,9 +1,9 @@
-import {Stats} from 'fs';
+import { Stats } from 'fs';
 import * as findFiles from 'recursive-readdir';
 import * as path from 'path';
 import ServiceExecutor from '../interfaces/serviceExecutor';
 import ServiceManager from '../interfaces/serviceManager';
-import ServerConfig from '../interfaces/serverConfig';
+import { LogMode, ServerConfig } from '../interfaces/serverConfig';
 
 let repository: { [serviceName: string]: any };
 
@@ -14,7 +14,8 @@ export default class NocatServer implements ServiceManager {
 		this.config = {
 			executorsPath: config.executorsPath,
 			requestInterceptors: config.requestInterceptors || [],
-			responseInterceptors: config.responseInterceptors || []
+			responseInterceptors: config.responseInterceptors || [],
+			logMode: config.logMode || LogMode.info
 		};
 		repository = {};
 	}
@@ -26,6 +27,9 @@ export default class NocatServer implements ServiceManager {
 			const executor: Function = require(path.resolve(file)).default;
 			const serviceName: string = executor.name.replace(/Executor$/g, '');
 			repository[serviceName] = executor;
+			if (this.config.logMode >= LogMode.info) {
+				console.log('service ready: ' + serviceName);
+			}
 		}
 	}
 
@@ -60,6 +64,8 @@ export default class NocatServer implements ServiceManager {
 	}
 
 	// todo queues
-	// todo build binary
-
+	// todo build ohne tests
+	// todo add property requestSource setzen
+	// todo im executor exceptions mit throw
+	// todo im executor auch nur body zurück geben muss möglich sein
 }
