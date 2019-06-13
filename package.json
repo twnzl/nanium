@@ -22,10 +22,15 @@
     "clean": "rm -r dist",
     "test": "node $NODE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test && npm run lint"
+    "prepublishOnly": "npm test && npm run lint",
+    "publishlist": "npm pack && tar -xvzf *.tgz && rm -rf package *.tgz"
   },
   "files": [
-    "dist/**/*"
+    "/dist/*.js",
+    "/dist/adaptor",
+    "/dist/interfaces",
+    "/dist/managers",
+    "/dist/tools"
   ],
   "dependencies": {
     "jasmine-ts": "^0.3.0",
