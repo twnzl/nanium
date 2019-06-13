@@ -12,7 +12,7 @@ export class Nocat {
 		if (!this.manager) {
 			throw new Error('nocat has not been initialized');
 		}
-		serviceName = serviceName || request.constructor.name.replace(/Request$/g, '');
+		serviceName = serviceName || request.constructor.serviceName;
 		return await this.manager.execute(serviceName, request);
 	}
 

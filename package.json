@@ -1,11 +1,14 @@
 {
   "name": "nocat",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "description": "software architecture framework for no communication & assembling trouble",
   "repository": {},
   "license": "UNLICENSED",
   "private": false,
   "main": "dist/index.js",
+  "bin": {
+    "nocat": "dist/tools/nocat.js"
+  },
   "types": "dist/index.d.ts",
   "keywords": [
     "nanoservices",

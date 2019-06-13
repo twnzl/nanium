@@ -24,11 +24,10 @@ export class NocatServer implements ServiceManager {
 		const files: string[] = await findFiles(this.config.executorsPath,
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
-			const executor: Function = require(path.resolve(file)).default;
-			const serviceName: string = executor.name.replace(/Executor$/g, '');
-			repository[serviceName] = executor;
+			const executor: { serviceName: string } = require(path.resolve(file)).default;
+			repository[executor.serviceName] = executor;
 			if (this.config.logMode >= LogMode.info) {
-				console.log('service ready: ' + serviceName);
+				console.log('service ready: ' + executor.serviceName);
 			}
 		}
 	}

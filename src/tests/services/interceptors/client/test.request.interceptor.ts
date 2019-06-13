@@ -14,7 +14,7 @@ export class TestClientRequestInterceptor implements ServiceRequestInterceptor<a
 
 	execute(request: any, scope?: string): Promise<any> {
 		request.head = {
-			apiVersion: '45'
+			language: 'de'
 		};
 		return request;
 	}
