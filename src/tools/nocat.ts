@@ -80,6 +80,7 @@ function generateService(args: string[]): void {
 	contractDir = path.join(root, contractDir);
 	executorFileName += '.executor.ts';
 	contractFileName += '.contract.ts';
+	const contractsRelativeDir: string = root === '..' ? '.' : root.replace('../', '');
 
 	// todo check if service with that name already exists
 
@@ -104,8 +105,8 @@ ${config.indentString}}
 
 	// create contract file
 	const contractFileContent: string = `
-import { ServiceRequestBase } from '${root.replace('../', '')}/serviceRequestBase';
-import { ServiceResponseBase } from '${root.replace('../', '')}/serviceResponseBase';
+import { ServiceRequestBase } from '${contractsRelativeDir}/serviceRequestBase';
+import { ServiceResponseBase } from '${contractsRelativeDir}/serviceResponseBase';
 
 export class ${serviceName}Request extends ServiceRequestBase<${serviceName}RequestBody, ${serviceName}ResponseBody> {
 ${config.indentString}static serviceName: string = '${serviceName}';
