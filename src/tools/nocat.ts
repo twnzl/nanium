@@ -104,8 +104,8 @@ ${config.indentString}}
 
 	// create contract file
 	const contractFileContent: string = `
-import { ServiceRequestBase } from '${root}/serviceRequestBase';
-import { ServiceResponseBase } from '${root}/serviceResponseBase';
+import { ServiceRequestBase } from '${root.replace('../', '')}/serviceRequestBase';
+import { ServiceResponseBase } from '${root.replace('../', '')}/serviceResponseBase';
 
 export class ${serviceName}Request extends ServiceRequestBase<${serviceName}RequestBody, ${serviceName}ResponseBody> {
 ${config.indentString}static serviceName: string = '${serviceName}';

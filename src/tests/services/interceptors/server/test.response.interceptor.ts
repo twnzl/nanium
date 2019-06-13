@@ -1,5 +1,5 @@
 import { ServiceResponseInterceptor } from '../../../../interfaces/serviceResponseInterceptor';
-import { ServiceResponseBase } from '../../serviceResponseBase';
+import { ServiceResponseBase } from '../../contracts/serviceResponseBase';
 
 export class TestServerResponseInterceptor implements ServiceResponseInterceptor<ServiceResponseBase<any>> {
 	async execute(response: ServiceResponseBase<any>): Promise<ServiceResponseBase<any>> {
