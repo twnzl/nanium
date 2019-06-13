@@ -1,5 +1,5 @@
-import ServiceRequestInterceptor from './serviceRequestInterceptor';
-import ServiceResponseInterceptor from './serviceResponseInterceptor';
+import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
+import { ServiceResponseInterceptor } from './serviceResponseInterceptor';
 
 export interface ServerConfig {
 	/**

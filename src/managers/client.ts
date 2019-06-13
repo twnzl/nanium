@@ -1,7 +1,7 @@
-import ServiceManager from '../interfaces/serviceManager';
-import ClientConfig from '../interfaces/clientConfig';
+import { ServiceManager } from '../interfaces/serviceManager';
+import { ClientConfig } from '../interfaces/clientConfig';
 
-export default class NocatClient implements ServiceManager {
+export class NocatClient implements ServiceManager {
 	config: ClientConfig;
 
 	constructor(config?: ClientConfig) {
@@ -68,7 +68,7 @@ export default class NocatClient implements ServiceManager {
 			};
 		});
 		xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-		xhr.send(JSON.stringify({[serviceName]: request}));
+		xhr.send(JSON.stringify({ [serviceName]: request }));
 		return await promise;
 	}
 

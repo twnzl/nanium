@@ -1,8 +1,8 @@
-import Nocat from '../../core';
-import NocatServer from '../../managers/server';
-import {TestRequest, TestResponse} from '../services/contracts/test.contract';
-import TestServerRequestInterceptor from '../services/interceptors/server/test.request.interceptor';
-import TestServerResponseInterceptor from '../services/interceptors/server/test.response.interceptor';
+import { Nocat } from '../../core';
+import { NocatServer } from '../../managers/server';
+import { TestRequest, TestResponse } from '../services/contracts/test.contract';
+import { TestServerRequestInterceptor } from '../services/interceptors/server/test.request.interceptor';
+import { TestServerResponseInterceptor } from '../services/interceptors/server/test.response.interceptor';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestRequest = new TestRequest('hello world');

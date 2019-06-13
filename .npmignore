@@ -6,3 +6,5 @@ tsconfig.json
 tslint.json
 src
 tests
+dist/tests
+dist\tests

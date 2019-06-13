@@ -1,13 +1,13 @@
 import { Stats } from 'fs';
 import * as findFiles from 'recursive-readdir';
 import * as path from 'path';
-import ServiceExecutor from '../interfaces/serviceExecutor';
-import ServiceManager from '../interfaces/serviceManager';
+import { ServiceExecutor } from '../interfaces/serviceExecutor';
+import { ServiceManager } from '../interfaces/serviceManager';
 import { LogMode, ServerConfig } from '../interfaces/serverConfig';
 
 let repository: { [serviceName: string]: any };
 
-export default class NocatServer implements ServiceManager {
+export class NocatServer implements ServiceManager {
 	config: ServerConfig;
 
 	constructor(config: ServerConfig) {

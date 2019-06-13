@@ -1,5 +1,5 @@
-import ServiceRequest from '../../../interfaces/serviceRequest';
-import {Nocat} from '../../..';
+import { ServiceRequest } from '../../../interfaces/serviceRequest';
+import { Nocat } from '../../..';
 
 export class TestRequest implements ServiceRequest<TestResponse> {
 	input1: string;

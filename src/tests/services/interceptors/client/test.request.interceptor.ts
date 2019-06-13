@@ -1,6 +1,6 @@
-import ServiceRequestInterceptor from '../../../../interfaces/serviceRequestInterceptor';
+import { ServiceRequestInterceptor } from '../../../../interfaces/serviceRequestInterceptor';
 
-export default class TestClientRequestInterceptor implements ServiceRequestInterceptor<any> {
+export class TestClientRequestInterceptor implements ServiceRequestInterceptor<any> {
 	config: {
 		language: string;
 		apiVersion: string;

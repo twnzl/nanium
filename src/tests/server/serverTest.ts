@@ -1,6 +1,6 @@
-import NocatServer from '../../managers/server';
-import Nocat from '../../core';
-import {TestRequest, TestResponse} from '../services/contracts/test.contract';
+import { NocatServer } from '../../managers/server';
+import { Nocat } from '../../core';
+import { TestRequest, TestResponse } from '../services/contracts/test.contract';
 
 Nocat.init(new NocatServer({
 	executorsPath: '../services/executors',

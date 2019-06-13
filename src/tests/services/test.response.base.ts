@@ -1,2 +1,2 @@
-export default class TestResponseBase<T> {
+export class TestResponseBase<T> {
 }
