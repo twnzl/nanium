@@ -1,3 +1,3 @@
-export default interface ServiceRequest<TResponse> {
+export interface ServiceRequest<TResponse> {
 	execute(): Promise<TResponse>;
 }

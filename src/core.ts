@@ -1,6 +1,6 @@
-import ServiceManager from './interfaces/serviceManager';
+import { ServiceManager } from './interfaces/serviceManager';
 
-export default class Nocat {
+export class Nocat {
 	static manager: ServiceManager;
 
 	static async init(manager: ServiceManager): Promise<void> {

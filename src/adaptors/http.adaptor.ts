@@ -1,8 +1,9 @@
 import { IncomingMessage, ServerResponse } from 'http';
-import Nocat from '../core';
+import { Nocat } from '../core';
 
-export default class NocatHttpAdaptor {
-	static create(config: any): ((req: IncomingMessage, res: ServerResponse) => void) {
+export class NocatHttpAdaptor {
+
+	static create(config: NocatHttpAdaptorConfig): ((req: IncomingMessage, res: ServerResponse) => void) {
 		return (req: IncomingMessage, res: ServerResponse): void => {
 			const data: any[] = [];
 			req.on('data', (chunk: any) => {
@@ -27,4 +28,8 @@ export default class NocatHttpAdaptor {
 			});
 		};
 	}
+}
+
+export interface NocatHttpAdaptorConfig {
+	formats: string[];
 }

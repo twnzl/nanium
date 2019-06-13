@@ -1,4 +1,4 @@
-export default interface ServiceConfig {
+export interface ServiceConfig {
 
 	/**
 	 * list of interceptor names that shall be skipped when this Service executes

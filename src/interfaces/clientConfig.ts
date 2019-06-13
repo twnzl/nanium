@@ -1,7 +1,7 @@
-import ServiceRequestInterceptor from './serviceRequestInterceptor';
-import ServiceResponseInterceptor from './serviceResponseInterceptor';
+import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
+import { ServiceResponseInterceptor } from './serviceResponseInterceptor';
 
-export default interface ClientConfig {
+export interface ClientConfig {
 	apiUrl?: string;
 	protocol?: 'http' | 'websocket';
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
