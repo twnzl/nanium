@@ -18,7 +18,7 @@
   "author": "twnzl",
   "scripts": {
     "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
-    "build": "rm -r dist && tsc",
+    "build": "tsc",
     "clean": "rm -r dist",
     "test": "node $NODE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js",
     "prepare": "npm run build",

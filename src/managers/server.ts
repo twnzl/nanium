@@ -12,7 +12,7 @@ export class NocatServer implements ServiceManager {
 
 	constructor(config: ServerConfig) {
 		this.config = {
-			executorsPath: config.executorsPath,
+			servicePath: config.servicePath,
 			requestInterceptors: config.requestInterceptors || [],
 			responseInterceptors: config.responseInterceptors || [],
 			logMode: config.logMode || LogMode.info
@@ -21,7 +21,7 @@ export class NocatServer implements ServiceManager {
 	}
 
 	async init(): Promise<void> {
-		const files: string[] = await findFiles(this.config.executorsPath,
+		const files: string[] = await findFiles(this.config.servicePath,
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
 			const executor: { serviceName: string } = require(path.resolve(file)).default;

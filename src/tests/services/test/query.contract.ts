@@ -1,5 +1,5 @@
-import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
+import { ServiceRequestBase } from '..//serviceRequestBase';
+import { ServiceResponseBase } from '..//serviceResponseBase';
 
 export class TestQueryRequest extends ServiceRequestBase<TestQueryRequestBody, TestQueryResponseBody> {
 	static serviceName: string = 'TestQuery';

@@ -1,9 +1,9 @@
-import { NocatServer } from '../../managers/server';
-import { Nocat } from '../../core';
-import { TestQueryRequest, TestQueryResponse } from '../services/contracts/test/query.contract';
+import { NocatServer } from '../managers/server';
+import { Nocat } from '../core';
+import { TestQueryRequest, TestQueryResponse } from './services/test/query.contract';
 
 Nocat.init(new NocatServer({
-	executorsPath: '../services/executors',
+	servicePath: '../services',
 	// requestInterceptors: [new TestRequestInterceptor()]
 })).then(() => {
 	new TestQueryRequest({ input1: 'hello world' }).execute()

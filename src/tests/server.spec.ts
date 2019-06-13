@@ -1,8 +1,8 @@
-import { Nocat } from '../../core';
-import { NocatServer } from '../../managers/server';
-import { TestServerRequestInterceptor } from '../services/interceptors/server/test.request.interceptor';
-import { TestServerResponseInterceptor } from '../services/interceptors/server/test.response.interceptor';
-import { TestQueryRequest, TestQueryResponse } from '../services/contracts/test/query.contract';
+import { Nocat } from '../core';
+import { NocatServer } from '../managers/server';
+import { TestQueryRequest, TestQueryResponse } from './services/test/query.contract';
+import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
+import { TestServerResponseInterceptor } from './interceptors/server/test.response.interceptor';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestQueryRequest = new TestQueryRequest({ input1: 'hello world' });
@@ -10,7 +10,7 @@ describe('execute TestRequest on server \n', function (): void {
 
 	beforeEach(async function (): Promise<void> {
 		await Nocat.init(new NocatServer({
-			executorsPath: 'dist/tests/services/executors',
+			servicePath: 'dist/tests/services',
 			requestInterceptors: [new TestServerRequestInterceptor()],
 			responseInterceptors: [new TestServerResponseInterceptor()]
 		}));

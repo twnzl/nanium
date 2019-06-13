@@ -1,5 +1,5 @@
-import { TestQueryRequest, TestQueryResponse } from '../../contracts/test/query.contract';
-import { ServiceExecutor } from '../../../..';
+import { TestQueryRequest, TestQueryResponse } from './query.contract';
+import { ServiceExecutor } from '../../..';
 
 export default class TestQueryExecutor implements ServiceExecutor<TestQueryRequest, TestQueryResponse> {
 	static serviceName: string = 'TestQuery';

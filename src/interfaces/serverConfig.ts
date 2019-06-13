@@ -3,12 +3,23 @@ import { ServiceResponseInterceptor } from './serviceResponseInterceptor';
 
 export interface ServerConfig {
 	/**
-	 * root path where nocat should search for executer implementations (defualt: /service/executors)
+	 * root path where nocat should searches for service executor implementations (default: /service)
 	 */
-	executorsPath: string;
+	servicePath: string;
+
+	/**
+	 * array of interceptors (code that runs bevor each request is executed)
+	 */
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
+
+	/**
+	 * array of interceptors (code that runs bevor each response is returned)
+	 */
 	responseInterceptors?: ServiceResponseInterceptor<any>[];
-	exceptionHandler?: (response: any) => void;
+
+	/**
+	 * which log output should be made?
+	 */
 	logMode?: LogMode;
 }
 
