@@ -1,6 +1,6 @@
 {
   "name": "nocat",
-  "version": "0.1.31",
+  "version": "0.1.33",
   "description": "software architecture framework for no communication & assembling trouble",
   "repository": {},
   "license": "UNLICENSED",
@@ -27,7 +27,7 @@
   },
   "files": [
     "/dist/*.js",
-    "/dist/adaptor",
+    "/dist/adaptors",
     "/dist/interfaces",
     "/dist/managers",
     "/dist/tools"
