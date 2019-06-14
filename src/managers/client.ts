@@ -49,6 +49,8 @@ export class NocatClient implements ServiceManager {
 				response = await interceptor.execute(response);
 			}
 		}
+
+		return response;
 	}
 
 	private defaultExceptionHandler(response: any): void {
@@ -70,7 +72,13 @@ export class NocatClient implements ServiceManager {
 		});
 		xhr.open('POST', this.config.apiUrl + '?' + serviceName);
 		xhr.send(JSON.stringify({ [serviceName]: request }));
-		return await promise;
+
+		const result: any = await promise;
+		if (result !== null && result !== undefined) {
+			return JSON.parse(result);
+		} else {
+			return undefined;
+		}
 	}
 
 	private async executeWebsocket(serviceName: string, request: any): Promise<any> {

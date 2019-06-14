@@ -65,7 +65,12 @@ actions[command](process.argv.slice(3));
 
 
 function generateService(args: string[]): void {
-	const parts: string[] = args[0].split('.');
+	let parts: string[];
+	if (args[0].indexOf('/') >= 0) {
+		parts = args[0].split('/');
+	} else {
+		parts = args[0].split('.');
+	}
 	const relativeToRoot: string = '../'.repeat(parts.length - 1) || './';
 	const subPath: string = parts.slice(0, parts.length - 1).join('/');
 	const serviceName: string = parts.map((n: string) => n[0].toUpperCase() + n.substring(1)).join('');
