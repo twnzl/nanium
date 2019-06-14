@@ -9,7 +9,9 @@ export class NocatClient implements ServiceManager {
 			...{
 				apiUrl: '/api',
 				protocol: 'http',
-				exceptionHandler: this.defaultExceptionHandler
+				exceptionHandler: this.defaultExceptionHandler,
+				requestInterceptors: [],
+				responseInterceptors: []
 			},
 			...(config || {})
 		};
@@ -48,7 +50,6 @@ export class NocatClient implements ServiceManager {
 			}
 		}
 	}
-
 
 	private defaultExceptionHandler(response: any): void {
 		alert(response);
