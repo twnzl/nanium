@@ -4,18 +4,28 @@ import * as path from 'path';
 import { ServiceExecutor } from '../interfaces/serviceExecutor';
 import { ServiceManager } from '../interfaces/serviceManager';
 import { LogMode, ServerConfig } from '../interfaces/serverConfig';
+import { ServiceResponseBase, ServiceResponseMessage } from '../tests/services/serviceResponseBase';
 
 let repository: { [serviceName: string]: any };
 
 export class NocatServer implements ServiceManager {
-	config: ServerConfig;
+	config: ServerConfig = {
+		servicePath: 'services',
+		requestInterceptors: [],
+		responseInterceptors: [],
+		logMode: LogMode.error,
+		handleError: (err: any): any => {
+			if (err instanceof ServiceResponseMessage) {
+				return new ServiceResponseBase({}, { errors: [err] });
+			}
+			throw err;
+		}
+	};
 
 	constructor(config: ServerConfig) {
 		this.config = {
-			servicePath: config.servicePath,
-			requestInterceptors: config.requestInterceptors || [],
-			responseInterceptors: config.responseInterceptors || [],
-			logMode: config.logMode || LogMode.info
+			...this.config,
+			...config
 		};
 		repository = {};
 	}
@@ -33,33 +43,37 @@ export class NocatServer implements ServiceManager {
 	}
 
 	async execute(serviceName: string, request: any): Promise<any> {
-		// validation
-		if (repository === undefined) {
-			throw new Error('nocat server is not initialized');
-		}
-		if (!repository.hasOwnProperty(serviceName)) {
-			throw new Error('unknown service ' + serviceName);
-		}
-
-		// execute request interceptors
-		if (this.config.requestInterceptors.length) {
-			for (const interceptor of this.config.requestInterceptors) {
-				request = await interceptor.execute(request);
+		try {
+			// validation
+			if (repository === undefined) {
+				return this.config.handleError(new Error('nocat server is not initialized'));
 			}
-		}
-
-		// execute the request
-		const executor: ServiceExecutor<any, any> = new repository[serviceName]();
-		let response: any = await executor.execute(request);
-
-		// execute response interceptors
-		if (this.config.responseInterceptors.length) {
-			for (const interceptor of this.config.responseInterceptors) {
-				response = await interceptor.execute(response);
+			if (!repository.hasOwnProperty(serviceName)) {
+				return this.config.handleError(new Error('unknown service ' + serviceName));
 			}
-		}
 
-		return response;
+			// execute request interceptors
+			if (this.config.requestInterceptors.length) {
+				for (const interceptor of this.config.requestInterceptors) {
+					request = await interceptor.execute(request);
+				}
+			}
+
+			// execute the request
+			const executor: ServiceExecutor<any, any> = new repository[serviceName]();
+			let response: any = await executor.execute(request);
+
+			// execute response interceptors
+			if (this.config.responseInterceptors.length) {
+				for (const interceptor of this.config.responseInterceptors) {
+					response = await interceptor.execute(response);
+				}
+			}
+
+			return response;
+		} catch (e) {
+			return this.config.handleError(e);
+		}
 	}
 
 	// todo queues
