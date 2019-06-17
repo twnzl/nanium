@@ -4,7 +4,6 @@ import * as path from 'path';
 import { ServiceExecutor } from '../interfaces/serviceExecutor';
 import { ServiceManager } from '../interfaces/serviceManager';
 import { LogMode, ServerConfig } from '../interfaces/serverConfig';
-import { ServiceResponseBase, ServiceResponseMessage } from '../tests/services/serviceResponseBase';
 
 let repository: { [serviceName: string]: any };
 
@@ -14,10 +13,7 @@ export class NocatServer implements ServiceManager {
 		requestInterceptors: [],
 		responseInterceptors: [],
 		logMode: LogMode.error,
-		handleError: (err: any): any => {
-			if (err instanceof ServiceResponseMessage) {
-				return new ServiceResponseBase({}, { errors: [err] });
-			}
+		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}
 	};
@@ -77,8 +73,6 @@ export class NocatServer implements ServiceManager {
 	}
 
 	// todo queues
-	// todo build ohne tests
 	// todo add property requestSource setzen
-	// todo im executor exceptions mit throw
 	// todo im executor auch nur body zurück geben muss möglich sein
 }

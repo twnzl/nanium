@@ -28,7 +28,7 @@ export interface ServerConfig {
 	 * If null or undefined is returned the Error will be thrown again (rejection of the Promise)
 	 * @param err an exception or other kind of error Information thrown by the service executor
 	 */
-	handleError: (err: Error | any) => any;
+	handleError: (err: Error | any) => Promise<any>;
 }
 
 export enum LogMode {
