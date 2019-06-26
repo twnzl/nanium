@@ -1,5 +1,6 @@
 import { ServiceManager } from '../interfaces/serviceManager';
 import { ClientConfig } from '../interfaces/clientConfig';
+import { Observable, Observer } from 'rxjs';
 
 export class NocatClient implements ServiceManager {
 	config: ClientConfig;
@@ -43,13 +44,6 @@ export class NocatClient implements ServiceManager {
 			response = await this.executeHttp(serviceName, request);
 		}
 
-		// execute response interceptors
-		if (this.config.responseInterceptors.length) {
-			for (const interceptor of this.config.responseInterceptors) {
-				response = await interceptor.execute(response);
-			}
-		}
-
 		return response;
 	}
 
@@ -57,6 +51,32 @@ export class NocatClient implements ServiceManager {
 		alert(response);
 	}
 
+	stream(serviceName: string, request: any): Observable<any> {
+		return new Observable<any>((observer: Observer<any>): void => {
+			const xhr: XMLHttpRequest = new XMLHttpRequest();
+			xhr.open('POST', this.config.apiUrl + '?' + serviceName);
+			let seenBytes: number = 0;
+			xhr.onreadystatechange = (): void => {
+				if (xhr.readyState === 3) {
+					const r: any = JSON.parse(xhr.response.substr(seenBytes));
+					if (Array.isArray(r)) {
+						for (const item of r) {
+							observer.next(item);
+						}
+					} else {
+						observer.next(r);
+					}
+					seenBytes = xhr.responseText.length;
+				}
+			};
+			xhr.addEventListener('error', (e: any) => {
+				this.config.handleException(e);
+				observer.error(e);
+			});
+
+			xhr.send(JSON.stringify({ [serviceName]: request }));
+		});
+	}
 
 	private async executeHttp(serviceName: string, request: any): Promise<any> {
 		const xhr: XMLHttpRequest = new XMLHttpRequest();
@@ -66,7 +86,7 @@ export class NocatClient implements ServiceManager {
 				if (xhr.status === 200) {
 					resolve(xhr.response);
 				} else {
-					this.config.exceptionHandler(xhr.response);
+					this.config.handleException(xhr.response);
 				}
 			};
 		});

@@ -1,22 +1,21 @@
 import { Nocat } from '../core';
 import { NocatServer } from '../managers/server';
-import { TestQueryRequest, TestQueryResponse } from './services/test/query.contract';
+import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { TestServerResponseInterceptor } from './interceptors/server/test.response.interceptor';
 import { LogMode } from '..';
 import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
+import { TestDto, TestQueryRequest } from './services/test/query.contract';
 
 describe('execute TestRequest on server \n', function (): void {
-	const request: TestQueryRequest = new TestQueryRequest({ input1: 'hello world' });
-	let response: TestQueryResponse;
+	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
+	let response: TestGetResponse;
 
 	beforeEach(async function (): Promise<void> {
 		await Nocat.init(new NocatServer({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: [new TestServerRequestInterceptor()],
-			responseInterceptors: [new TestServerResponseInterceptor()],
-			handleError: (err: any): any => {
+			handleException: (err: any): any => {
 				if (err instanceof ServiceResponseMessage) {
 					return new ServiceResponseBase({}, { errors: [err] });
 				}
@@ -28,7 +27,7 @@ describe('execute TestRequest on server \n', function (): void {
 		}));
 	});
 
-	describe('execute successfull \n', function (): void {
+	describe('execute successful \n', function (): void {
 		beforeEach(async function (): Promise<void> {
 			request.body.input2 = null;
 			response = await request.execute();
@@ -38,7 +37,6 @@ describe('execute TestRequest on server \n', function (): void {
 			expect(response.body.output1).toBe('hello world :-)', 'output1 should be correct');
 			expect(response.body.output2).toBe(2, 'output2 should be correct');
 			expect(request.head.token).toBe('1234', 'the property head.token should have been set by the server request interceptor');
-			expect(response.head['tmp']).toBe(':-)', 'the property head.tmp should have been set by the server response interceptor');
 		});
 	});
 
@@ -88,6 +86,25 @@ describe('execute TestRequest on server \n', function (): void {
 		it('-->  \n', async function (): Promise<void> {
 			expect(response).toBeUndefined('response should not be set');
 			expect(exception.message).toBe('no no!', 'promise should have been rejected with an object of type Error and the right message');
+		});
+	});
+
+	describe('stream successful response \n', function (): void {
+		const dtoList: TestDto[] = [];
+
+		beforeEach(async function (): Promise<void> {
+			await new Promise((resolve: Function): void => {
+				new TestQueryRequest({ input: 1 }).execute().subscribe({
+					next: (value: TestDto): void => {
+						dtoList.push(value);
+					},
+					complete: (): void => resolve()
+				});
+			});
+		});
+
+		it('-->  \n', async function (): Promise<void> {
+			expect(dtoList.length).toBe(3, 'length of result list should be correct');
 		});
 	});
 });

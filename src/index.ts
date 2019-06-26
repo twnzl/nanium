@@ -7,6 +7,5 @@ export * from './interfaces/serviceExecutor';
 export * from './interfaces/serviceManager';
 export * from './interfaces/serviceRequest';
 export * from './interfaces/serviceRequestInterceptor';
-export * from './interfaces/serviceResponseInterceptor';
 
 export * from './core';

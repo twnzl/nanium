@@ -1,4 +1,5 @@
 import { ServiceManager } from './interfaces/serviceManager';
+import { Observable } from 'rxjs';
 
 export class Nocat {
 	static manager: ServiceManager;
@@ -14,6 +15,14 @@ export class Nocat {
 		}
 		serviceName = serviceName || request.constructor.serviceName;
 		return await this.manager.execute(serviceName, request);
+	}
+
+	static stream(request: any, serviceName?: string): Observable<any> {
+		if (!this.manager) {
+			throw new Error('nocat has not been initialized');
+		}
+		serviceName = serviceName || request.constructor.serviceName;
+		return this.manager.stream(serviceName, request);
 	}
 
 	// todo maybe we should use Observable instead of promises

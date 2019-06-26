@@ -4,6 +4,8 @@ import * as path from 'path';
 import { ServiceExecutor } from '../interfaces/serviceExecutor';
 import { ServiceManager } from '../interfaces/serviceManager';
 import { LogMode, ServerConfig } from '../interfaces/serverConfig';
+import { Observable, Observer } from 'rxjs';
+import { StreamServiceExecutor } from '../interfaces/streamServiceExecutor';
 
 let repository: { [serviceName: string]: any };
 
@@ -11,9 +13,8 @@ export class NocatServer implements ServiceManager {
 	config: ServerConfig = {
 		servicePath: 'services',
 		requestInterceptors: [],
-		responseInterceptors: [],
 		logMode: LogMode.error,
-		handleError: async (err: any): Promise<any> => {
+		handleException: async (err: any): Promise<any> => {
 			throw err;
 		}
 	};
@@ -42,34 +43,66 @@ export class NocatServer implements ServiceManager {
 		try {
 			// validation
 			if (repository === undefined) {
-				return this.config.handleError(new Error('nocat server is not initialized'));
+				return this.config.handleException(new Error('nocat server is not initialized'));
 			}
 			if (!repository.hasOwnProperty(serviceName)) {
-				return this.config.handleError(new Error('unknown service ' + serviceName));
+				return this.config.handleException(new Error('unknown service ' + serviceName));
 			}
 
-			// execute request interceptors
-			if (this.config.requestInterceptors.length) {
-				for (const interceptor of this.config.requestInterceptors) {
-					request = await interceptor.execute(request);
-				}
-			}
+			request = await this.executeRequestInterceptors(request);
 
 			// execute the request
 			const executor: ServiceExecutor<any, any> = new repository[serviceName]();
-			let response: any = await executor.execute(request);
+			return await executor.execute(request);
 
-			// execute response interceptors
-			if (this.config.responseInterceptors.length) {
-				for (const interceptor of this.config.responseInterceptors) {
-					response = await interceptor.execute(response);
-				}
-			}
-
-			return response;
 		} catch (e) {
-			return this.config.handleError(e);
+			return this.config.handleException(e);
 		}
+	}
+
+	stream(serviceName: string, request: any): Observable<any> {// validation
+		if (repository === undefined) {
+			return this.createErrorObservable(new Error('nocat server is not initialized'));
+		}
+		if (!repository.hasOwnProperty(serviceName)) {
+			return this.createErrorObservable(Error('unknown service ' + serviceName));
+		}
+
+		return new Observable<any>((observer: Observer<any>): void => {
+			this.executeRequestInterceptors(request).then((request: any) => {
+				const executor: StreamServiceExecutor<any, any> = new repository[serviceName]();
+				executor.execute(request).subscribe({
+					next: (value: any): void => {
+						observer.next(value);
+					},
+					error: (e: any): void => {
+						this.config.handleException(e).then();
+						observer.error(e);
+					},
+					complete: (): void => {
+						observer.complete();
+					}
+				});
+			});
+		});
+	}
+
+	private createErrorObservable(e: any): Observable<any> {
+		return new Observable((observer: Observer<any>): void => {
+			observer.error(e);
+		});
+	}
+
+	/**
+	 * execute request interceptors
+	 */
+	private async executeRequestInterceptors(request: any): Promise<any> {
+		if (this.config.requestInterceptors.length) {
+			for (const interceptor of this.config.requestInterceptors) {
+				request = await interceptor.execute(request);
+			}
+		}
+		return request;
 	}
 
 	// todo queues
