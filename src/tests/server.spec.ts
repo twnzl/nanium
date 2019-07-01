@@ -1,9 +1,9 @@
+import { LogMode } from '..';
 import { Nocat } from '../core';
 import { NocatServer } from '../managers/server';
-import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { LogMode } from '..';
 import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
+import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
 
 describe('execute TestRequest on server \n', function (): void {
@@ -15,7 +15,7 @@ describe('execute TestRequest on server \n', function (): void {
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: [new TestServerRequestInterceptor()],
-			handleException: (err: any): any => {
+			handleException: async (err: any): Promise<any> => {
 				if (err instanceof ServiceResponseMessage) {
 					return new ServiceResponseBase({}, { errors: [err] });
 				}

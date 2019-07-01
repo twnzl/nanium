@@ -1,13 +1,15 @@
 import { Stats } from 'fs';
-import * as findFiles from 'recursive-readdir';
 import * as path from 'path';
+import * as findFiles from 'recursive-readdir';
+import { Observable, Observer } from 'rxjs';
+
+import { LogMode, ServerConfig } from '../interfaces/serverConfig';
 import { ServiceExecutor } from '../interfaces/serviceExecutor';
 import { ServiceManager } from '../interfaces/serviceManager';
-import { LogMode, ServerConfig } from '../interfaces/serverConfig';
-import { Observable, Observer } from 'rxjs';
 import { StreamServiceExecutor } from '../interfaces/streamServiceExecutor';
 
 let repository: { [serviceName: string]: any };
+let streamServices: { [serviceName: string]: boolean };
 
 export class NocatServer implements ServiceManager {
 	config: ServerConfig = {
@@ -25,13 +27,17 @@ export class NocatServer implements ServiceManager {
 			...config
 		};
 		repository = {};
+		streamServices = {};
 	}
 
 	async init(): Promise<void> {
 		const files: string[] = await findFiles(this.config.servicePath,
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
-			const executor: { serviceName: string } = require(path.resolve(file)).default;
+			const executor: any = require(path.resolve(file)).default;
+			if (executor.prototype.stream) {
+				streamServices[executor.serviceName] = true;
+			}
 			repository[executor.serviceName] = executor;
 			if (this.config.logMode >= LogMode.info) {
 				console.log('service ready: ' + executor.serviceName);
@@ -43,10 +49,10 @@ export class NocatServer implements ServiceManager {
 		try {
 			// validation
 			if (repository === undefined) {
-				return this.config.handleException(new Error('nocat server is not initialized'));
+				return await this.config.handleException(new Error('nocat server is not initialized'));
 			}
 			if (!repository.hasOwnProperty(serviceName)) {
-				return this.config.handleException(new Error('unknown service ' + serviceName));
+				return await this.config.handleException(new Error('unknown service ' + serviceName));
 			}
 
 			request = await this.executeRequestInterceptors(request);
@@ -54,9 +60,8 @@ export class NocatServer implements ServiceManager {
 			// execute the request
 			const executor: ServiceExecutor<any, any> = new repository[serviceName]();
 			return await executor.execute(request);
-
 		} catch (e) {
-			return this.config.handleException(e);
+			return await this.config.handleException(e);
 		}
 	}
 
@@ -71,7 +76,7 @@ export class NocatServer implements ServiceManager {
 		return new Observable<any>((observer: Observer<any>): void => {
 			this.executeRequestInterceptors(request).then((request: any) => {
 				const executor: StreamServiceExecutor<any, any> = new repository[serviceName]();
-				executor.execute(request).subscribe({
+				executor.stream(request).subscribe({
 					next: (value: any): void => {
 						observer.next(value);
 					},
@@ -85,6 +90,10 @@ export class NocatServer implements ServiceManager {
 				});
 			});
 		});
+	}
+
+	isStream(serviceName: string): boolean {
+		return !!repository[serviceName].stream;
 	}
 
 	private createErrorObservable(e: any): Observable<any> {

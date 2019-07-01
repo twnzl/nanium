@@ -1,6 +1,7 @@
-import { ServiceManager } from '../interfaces/serviceManager';
-import { ClientConfig } from '../interfaces/clientConfig';
 import { Observable, Observer } from 'rxjs';
+
+import { ClientConfig } from '../interfaces/clientConfig';
+import { ServiceManager } from '../interfaces/serviceManager';
 
 export class NocatClient implements ServiceManager {
 	config: ClientConfig;

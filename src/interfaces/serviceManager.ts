@@ -5,5 +5,7 @@ export interface ServiceManager {
 
 	stream?(serviceName: string, request: any): Observable<any>;
 
+	isStream?(serviceName: string): boolean;
+
 	init(): Promise<void>;
 }

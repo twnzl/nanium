@@ -1,4 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'http';
+import { Observable } from 'rxjs';
+
 import { Nocat } from '../core';
 
 export class NocatHttpAdaptor {
@@ -14,10 +16,29 @@ export class NocatHttpAdaptor {
 				if (config.formats.includes('json') && body.length && body[0] === '{') {
 					try {
 						const json: object = JSON.parse(body);
-						const result: any = await Nocat.execute(json[Object.keys(json)[0]], Object.keys(json)[0]);
-						res.writeHead(200, { 'Content-Type': 'application/json' });
-						res.write(JSON.stringify(result));
-						res.end();
+						const serviceName: string = Object.keys(json)[0];
+						const request: any = json[serviceName];
+						if (Nocat.isStream(serviceName)) {
+							const result: Observable<any> = Nocat.stream(request, serviceName);
+							res.statusCode = 200;
+							result.subscribe({
+								next: (value: any): void => {
+									res.write(JSON.stringify(value));
+								},
+								complete: (): void => {
+									res.end();
+								},
+								error: (e: any): void => {
+									// config.handleException(e);
+									res.statusCode = 500;
+									res.write(JSON.stringify(e));
+								}
+							});
+						} else {
+							const result: Promise<any> = Nocat.execute(request, serviceName);
+							res.write(JSON.stringify(await result));
+							res.end();
+						}
 						done = true;
 					} catch (e) {
 					}

@@ -1,6 +1,6 @@
-import { TestGetRequest, TestGetResponse } from './get.contract';
 import { ServiceExecutor } from '../../..';
 import { ServiceResponseMessage } from '../serviceResponseBase';
+import { TestGetRequest, TestGetResponse } from './get.contract';
 
 export default class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
 	static serviceName: string = 'TestGet';
@@ -20,6 +20,5 @@ export default class TestGetExecutor implements ServiceExecutor<TestGetRequest, 
 			output2: 2
 		});
 	}
-
 }
 
