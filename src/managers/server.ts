@@ -9,7 +9,6 @@ import { ServiceManager } from '../interfaces/serviceManager';
 import { StreamServiceExecutor } from '../interfaces/streamServiceExecutor';
 
 let repository: { [serviceName: string]: any };
-let streamServices: { [serviceName: string]: boolean };
 
 export class NocatServer implements ServiceManager {
 	config: ServerConfig = {
@@ -27,7 +26,6 @@ export class NocatServer implements ServiceManager {
 			...config
 		};
 		repository = {};
-		streamServices = {};
 	}
 
 	async init(): Promise<void> {
@@ -35,9 +33,6 @@ export class NocatServer implements ServiceManager {
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
 			const executor: any = require(path.resolve(file)).default;
-			if (executor.prototype.stream) {
-				streamServices[executor.serviceName] = true;
-			}
 			repository[executor.serviceName] = executor;
 			if (this.config.logMode >= LogMode.info) {
 				console.log('service ready: ' + executor.serviceName);
@@ -93,7 +88,7 @@ export class NocatServer implements ServiceManager {
 	}
 
 	isStream(serviceName: string): boolean {
-		return !!repository[serviceName].stream;
+		return !!repository[serviceName].prototype.stream;
 	}
 
 	private createErrorObservable(e: any): Observable<any> {

@@ -54,29 +54,42 @@ export class NocatClient implements ServiceManager {
 
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
-			const xhr: XMLHttpRequest = new XMLHttpRequest();
-			xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-			let seenBytes: number = 0;
-			xhr.onreadystatechange = (): void => {
-				if (xhr.readyState === 3) {
-					const r: any = JSON.parse(xhr.response.substr(seenBytes));
-					if (Array.isArray(r)) {
-						for (const item of r) {
-							observer.next(item);
+			const core: Function = (): void => {
+				const xhr: XMLHttpRequest = new XMLHttpRequest();
+				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
+				let seenBytes: number = 0;
+				xhr.onreadystatechange = (): void => {
+					if (xhr.readyState === 3) {
+						const r: any = JSON.parse(xhr.response.substr(seenBytes));
+						if (Array.isArray(r)) {
+							for (const item of r) {
+								observer.next(item);
+							}
+						} else {
+							observer.next(r);
 						}
-					} else {
-						observer.next(r);
+						seenBytes = xhr.responseText.length;
 					}
-					seenBytes = xhr.responseText.length;
-				}
+				};
+				xhr.addEventListener('error', (e: any) => {
+					this.config.handleException(e);
+					observer.error(e);
+				});
+				xhr.send(JSON.stringify({ [serviceName]: request }));
 			};
-			xhr.addEventListener('error', (e: any) => {
-				this.config.handleException(e);
-				observer.error(e);
-			});
 
-			xhr.send(JSON.stringify({ [serviceName]: request }));
-		});
+			// execute request interceptors
+			if (this.config.requestInterceptors.length) {
+				const promises: Promise<any>[] = [];
+				for (const interceptor of this.config.requestInterceptors) {
+					promises.push(interceptor.execute(request));
+				}
+				Promise.all(promises).then(() => core());
+			} else {
+				core();
+			}
+	});
+
 	}
 
 	private async executeHttp(serviceName: string, request: any): Promise<any> {

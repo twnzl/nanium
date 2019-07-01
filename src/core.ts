@@ -19,7 +19,7 @@ export class Nocat {
 			throw new Error('nocat has not been initialized');
 		}
 		serviceName = serviceName || request.constructor.serviceName;
-		return this.manager.execute(serviceName, request);
+		return await this.manager.execute(serviceName, request);
 	}
 
 	static stream(request: any, serviceName?: string): Observable<any> {

@@ -6,6 +6,8 @@ export * from './interfaces/serviceConfig';
 export * from './interfaces/serviceExecutor';
 export * from './interfaces/serviceManager';
 export * from './interfaces/serviceRequest';
+export * from './interfaces/streamServiceRequest';
+export * from './interfaces/streamServiceExecutor';
 export * from './interfaces/serviceRequestInterceptor';
 
 export * from './core';

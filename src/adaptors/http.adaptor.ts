@@ -21,9 +21,11 @@ export class NocatHttpAdaptor {
 						if (Nocat.isStream(serviceName)) {
 							const result: Observable<any> = Nocat.stream(request, serviceName);
 							res.statusCode = 200;
+							res.setHeader('Content-Type', 'application/json');
 							result.subscribe({
 								next: (value: any): void => {
-									res.write(JSON.stringify(value));
+									res.write(JSON.stringify(value) + '\n');
+									res['flush']();
 								},
 								complete: (): void => {
 									res.end();
