@@ -96,7 +96,6 @@ export class NocatClient implements ServiceManager {
 		const xhr: XMLHttpRequest = new XMLHttpRequest();
 		const promise: Promise<any> = new Promise<any>((resolve: Function): void => {
 			xhr.onload = (): void => {
-				console.log(xhr);
 				if (xhr.status === 200) {
 					resolve(xhr.response);
 				} else {

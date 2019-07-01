@@ -2,7 +2,7 @@ export class ServiceResponseBase<TResponseBody> {
 	head?: ServiceResponseHead;
 	body?: TResponseBody;
 
-	constructor(body: TResponseBody, head?: ServiceResponseHead) {
+	constructor(body?: TResponseBody, head?: ServiceResponseHead) {
 		this.body = body;
 		this.head = head;
 	}
