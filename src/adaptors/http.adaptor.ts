@@ -2,6 +2,7 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { Observable } from 'rxjs';
 
 import { Nocat } from '../core';
+import * as util from 'util';
 
 export class NocatHttpAdaptor {
 
@@ -18,10 +19,10 @@ export class NocatHttpAdaptor {
 						const json: object = JSON.parse(body);
 						const serviceName: string = Object.keys(json)[0];
 						const request: any = json[serviceName];
+						res.setHeader('Content-Type', 'application/json; charset=utf-8');
 						if (Nocat.isStream(serviceName)) {
 							const result: Observable<any> = Nocat.stream(request, serviceName);
 							res.statusCode = 200;
-							res.setHeader('Content-Type', 'application/json');
 							result.subscribe({
 								next: (value: any): void => {
 									res.write(JSON.stringify(value) + '\n');
@@ -37,8 +38,16 @@ export class NocatHttpAdaptor {
 								}
 							});
 						} else {
-							const result: Promise<any> = Nocat.execute(request, serviceName);
-							res.write(JSON.stringify(await result));
+							try {
+								const result: any = await Nocat.execute(request, serviceName);
+								if (result !== undefined && result !== null) {
+									res.write(JSON.stringify(result));
+								}
+								res.statusCode = 200;
+							} catch (e) {
+								res.statusCode = 500;
+								res.write(util.inspect(e, { compact: false, depth: 3 }));
+							}
 							res.end();
 						}
 						done = true;

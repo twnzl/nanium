@@ -16,7 +16,6 @@ export class ServiceResponseBase<TResponseBody> {
 				}]
 			});
 	}
-
 }
 
 export class ServiceResponseHead {
