@@ -1,6 +1,6 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
 import { ServiceExecutionScope } from '../../..';
+import { ServiceResponseBase } from '../serviceResponseBase';
 
 export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
 	static serviceName: string = 'TestGet';

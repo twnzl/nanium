@@ -1,11 +1,11 @@
 import { ServiceExecutor } from '../../..';
-import { PrivateStuffRequest } from './privateStuff.contract';
+import { PrivateStuffRequest, PrivateStuffResponse } from './privateStuff.contract';
 
-export default class PrivateStuffExecutor implements ServiceExecutor<PrivateStuffRequest, number> {
+export default class PrivateStuffExecutor implements ServiceExecutor<PrivateStuffRequest, PrivateStuffResponse> {
 	static serviceName: string = 'PrivateStuff';
 
-	async execute(request: PrivateStuffRequest): Promise<number> {
-		return request.body++;
+	async execute(request: PrivateStuffRequest): Promise<PrivateStuffResponse> {
+		return new PrivateStuffResponse(request.body + 1);
 	}
 }
 

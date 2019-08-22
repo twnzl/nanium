@@ -1,14 +1,17 @@
-import { LogMode } from '..';
+import { LogMode, ServiceExecutionScope } from '..';
 import { Nocat } from '../core';
 import { NocatServer } from '../managers/server';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
+import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
+import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
+	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1);
 	let response: TestGetResponse;
+	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
 		await Nocat.init(new NocatServer({
@@ -105,6 +108,32 @@ describe('execute TestRequest on server \n', function (): void {
 
 		it('-->  \n', async function (): Promise<void> {
 			expect(dtoList.length).toBe(3, 'length of result list should be correct');
+		});
+	});
+
+	describe('execute private service without scope \n', function (): void {
+		beforeEach(async function (): Promise<void> {
+			privateResponse = await privateRequest.execute();
+		});
+
+		it('--> \n', async function (): Promise<void> {
+			expect(privateResponse.body).toBe(2, 'result should be correct');
+		});
+	});
+
+	describe('execute private service with scope public \n', function (): void {
+		let err: Error;
+
+		beforeEach(async function (): Promise<void> {
+			try {
+				privateResponse = await Nocat.execute(privateRequest, 'PrivateStuff', ServiceExecutionScope.public);
+			} catch (e) {
+				err = e;
+			}
+		});
+
+		it('--> \n', async function (): Promise<void> {
+			expect(err.message).toBe('unauthorized', 'result should be correct');
 		});
 	});
 });

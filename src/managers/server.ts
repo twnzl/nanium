@@ -3,13 +3,22 @@ import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
 import { Observable, Observer } from 'rxjs';
 
-import { LogMode, ServerConfig } from '..';
-import { ServiceExecutor } from '..';
-import { ServiceManager } from '..';
-import { StreamServiceExecutor } from '..';
-import { ServiceExecutionScope } from '..';
+import {
+	LogMode,
+	ServerConfig,
+	ServiceExecutionScope,
+	ServiceExecutor,
+	ServiceManager,
+	StreamServiceExecutor
+} from '..';
 
-let repository: { [serviceName: string]: any };
+let repository: {
+	[serviceName: string]: {
+		Executor: any,
+		Request: any
+	}
+};
+
 
 export class NocatServer implements ServiceManager {
 	config: ServerConfig = {
@@ -34,7 +43,11 @@ export class NocatServer implements ServiceManager {
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
 			const executor: any = require(path.resolve(file)).default;
-			repository[executor.serviceName] = executor;
+			const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName + 'Request'];
+			repository[executor.serviceName] = {
+				Executor: executor,
+				Request: request
+			};
 			if (this.config.logMode >= LogMode.info) {
 				console.log('service ready: ' + executor.serviceName);
 			}
@@ -50,15 +63,16 @@ export class NocatServer implements ServiceManager {
 			if (!repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleException(new Error('unknown service ' + serviceName));
 			}
-			if (!scope || scope === ServiceExecutionScope.public) {
-				if (!request.constructor.scope || request.constructor.scope !== ServiceExecutionScope.public) {
+			if (scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
+				const requestConstructor: any = repository[serviceName].Request;
+				if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
 					return await this.config.handleException(new Error('unauthorized'));
 				}
 			}
 
 			// execution
 			request = await this.executeRequestInterceptors(request);
-			const executor: ServiceExecutor<any, any> = new repository[serviceName]();
+			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
 			return await executor.execute(request);
 		} catch (e) {
 			return await this.config.handleException(e);
@@ -72,15 +86,16 @@ export class NocatServer implements ServiceManager {
 		if (!repository.hasOwnProperty(serviceName)) {
 			return this.createErrorObservable(new Error('unknown service ' + serviceName));
 		}
-		if (!scope || scope === ServiceExecutionScope.public) {
-			if (!request.constructor.scope || request.constructor.scope !== ServiceExecutionScope.public) {
+		if (scope === ServiceExecutionScope.public) { // private is the default, all adaptors have to set the scope explicitly
+			const requestConstructor: any = repository[serviceName].Request;
+			if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
 				return this.createErrorObservable(new Error('unauthorized'));
 			}
 		}
 
 		return new Observable<any>((observer: Observer<any>): void => {
 			this.executeRequestInterceptors(request).then((request: any) => {
-				const executor: StreamServiceExecutor<any, any> = new repository[serviceName]();
+				const executor: StreamServiceExecutor<any, any> = new repository[serviceName].Executor();
 				executor.stream(request).subscribe({
 					next: (value: any): void => {
 						observer.next(value);
@@ -98,7 +113,7 @@ export class NocatServer implements ServiceManager {
 	}
 
 	isStream(serviceName: string): boolean {
-		return !!repository[serviceName].prototype.stream;
+		return !!repository[serviceName].Executor.prototype.stream;
 	}
 
 	private createErrorObservable(e: any): Observable<any> {
