@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-
 import * as fs from 'fs';
 import * as path from 'path';
+import * as shell from 'shelljs';
 
 export class NocatToolConfig {
 	serviceDirectory: string;
@@ -15,6 +15,8 @@ nocat init
 nocat generate | g {directory.}*{service name}
 nocat rename {old service name} {new service name}
 nocat pkg
+nocat ccp {srcPath} {dstPath} -- like bash cp but cares about creating destination path and removes old files in destination path
+nocat shell '{bash command}' -- executes the bash command but is also working on windows and mac
 `);
 	process.exit(0);
 }
@@ -57,7 +59,12 @@ const actions: { [actionName: string]: Function } = {
 	},
 	pkg: function (): void {
 		console.log('creating a binary for the app is not yet implemented');
-	}
+	},
+	ccp: cleanAndCopyFiles,
+	sdk: function (): void {
+		console.log('creating a binary for the app is not yet implemented');
+	},
+	shell: shellExec
 };
 
 
@@ -65,8 +72,20 @@ const actions: { [actionName: string]: Function } = {
 const command: string = process.argv[2];
 actions[command](process.argv.slice(3));
 
-
 // action functions
+function cleanAndCopyFiles(args: string[]): void {
+	const src: string = args[0];
+	const dst: string = args[1];
+	shell.mkdir('-p', dst);
+	shell.rm('-rf', dst);
+	shell.mkdir('-p', dst);
+	shell.cp('-R', src + '/*', dst);
+}
+
+function shellExec(args: string[]): void {
+	console.log(shell.exec(args[0]).toString());
+}
+
 function generateService(args: string[]): void {
 	let parts: string[];
 	if (args[0].indexOf('/') >= 0) {
@@ -128,3 +147,4 @@ export class ${serviceName}ResponseBody {
 	fs.writeFileSync(contractFileName, contractFileContent);
 	console.log('created: ' + contractFileName);
 }
+
