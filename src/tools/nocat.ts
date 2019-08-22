@@ -12,8 +12,9 @@ export class NocatToolConfig {
 if (process.argv.length <= 3) {
 	console.log(`
 nocat init
-nocat generate [service name]
-nocat rename [old service name] [new service name]
+nocat generate | g {directory.}*{service name}
+nocat rename {old service name} {new service name}
+nocat pkg
 `);
 	process.exit(0);
 }
@@ -46,12 +47,16 @@ const config: NocatToolConfig = (function (): NocatToolConfig {
 
 // define dictionary with action-functions
 const actions: { [actionName: string]: Function } = {
+	g: generateService,
 	generate: generateService,
 	rename: function (): void {
-		console.log('not yet implemented');
+		console.log('renaming of services is not yet implemented');
 	},
 	init: function (): void {
 		console.log('not yet implemented');
+	},
+	pkg: function (): void {
+		console.log('creating a binary for the app is not yet implemented');
 	}
 };
 
@@ -62,8 +67,6 @@ actions[command](process.argv.slice(3));
 
 
 // action functions
-
-
 function generateService(args: string[]): void {
 	let parts: string[];
 	if (args[0].indexOf('/') >= 0) {
@@ -77,6 +80,7 @@ function generateService(args: string[]): void {
 	const serviceLastName: string = parts.slice(-1).join('');
 	const executorFileName: string = path.join(config.serviceDirectory, subPath, serviceLastName + '.executor.ts');
 	const contractFileName: string = path.join(config.serviceDirectory, subPath, serviceLastName + '.contract.ts');
+	const scope: string = args[1] || 'private';
 
 	// todo check if service with that name already exists
 
@@ -103,9 +107,11 @@ ${config.indentString}}
 	const contractFileContent: string = `
 import { ServiceRequestBase } from '${relativeToRoot}serviceRequestBase';
 import { ServiceResponseBase } from '${relativeToRoot}serviceResponseBase';
+import { ServiceExecutionScope } from 'nocat';
 
 export class ${serviceName}Request extends ServiceRequestBase<${serviceName}RequestBody, ${serviceName}ResponseBody> {
 ${config.indentString}static serviceName: string = '${serviceName}';
+${config.indentString}static scope: ServiceExecutionScope = ServiceExecutionScope.${scope};
 }
 
 export class ${serviceName}RequestBody {

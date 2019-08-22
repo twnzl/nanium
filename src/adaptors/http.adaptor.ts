@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 
 import { Nocat } from '../core';
 import * as util from 'util';
+import { ServiceExecutionScope } from '..';
 
 export class NocatHttpAdaptor {
 
@@ -21,7 +22,7 @@ export class NocatHttpAdaptor {
 						const request: any = json[serviceName];
 						res.setHeader('Content-Type', 'application/json; charset=utf-8');
 						if (Nocat.isStream(serviceName)) {
-							const result: Observable<any> = Nocat.stream(request, serviceName);
+							const result: Observable<any> = Nocat.stream(request, serviceName, ServiceExecutionScope.public);
 							res.statusCode = 200;
 							result.subscribe({
 								next: (value: any): void => {
@@ -39,7 +40,7 @@ export class NocatHttpAdaptor {
 							});
 						} else {
 							try {
-								const result: any = await Nocat.execute(request, serviceName);
+								const result: any = await Nocat.execute(request, serviceName, ServiceExecutionScope.public);
 								if (result !== undefined && result !== null) {
 									res.write(JSON.stringify(result));
 								}

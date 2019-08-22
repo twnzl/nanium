@@ -1,7 +1,6 @@
 import { Observable, Observer } from 'rxjs';
 
-import { ClientConfig } from '../interfaces/clientConfig';
-import { ServiceManager } from '../interfaces/serviceManager';
+import { ClientConfig, ServiceManager } from '..';
 
 export class NocatClient implements ServiceManager {
 	config: ClientConfig;
@@ -88,7 +87,7 @@ export class NocatClient implements ServiceManager {
 			} else {
 				core();
 			}
-	});
+		});
 
 	}
 
@@ -107,7 +106,7 @@ export class NocatClient implements ServiceManager {
 		xhr.send(JSON.stringify({ [serviceName]: request }));
 
 		const result: any = await promise;
-		if (result !== null && result !== undefined) {
+		if (result !== null && result !== undefined && result !== '') {
 			return JSON.parse(result);
 		} else {
 			return undefined;

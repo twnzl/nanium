@@ -1,8 +1,10 @@
-import { ServiceRequestBase } from '..//serviceRequestBase';
-import { ServiceResponseBase } from '..//serviceResponseBase';
+import { ServiceRequestBase } from '../serviceRequestBase';
+import { ServiceResponseBase } from '../serviceResponseBase';
+import { ServiceExecutionScope } from '../../..';
 
 export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
 	static serviceName: string = 'TestGet';
+	static scope: ServiceExecutionScope = ServiceExecutionScope.public;
 }
 
 export class TestGetRequestBody {

@@ -3,10 +3,11 @@ import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
 import { Observable, Observer } from 'rxjs';
 
-import { LogMode, ServerConfig } from '../interfaces/serverConfig';
-import { ServiceExecutor } from '../interfaces/serviceExecutor';
-import { ServiceManager } from '../interfaces/serviceManager';
-import { StreamServiceExecutor } from '../interfaces/streamServiceExecutor';
+import { LogMode, ServerConfig } from '..';
+import { ServiceExecutor } from '..';
+import { ServiceManager } from '..';
+import { StreamServiceExecutor } from '..';
+import { ServiceExecutionScope } from '..';
 
 let repository: { [serviceName: string]: any };
 
@@ -40,7 +41,7 @@ export class NocatServer implements ServiceManager {
 		}
 	}
 
-	async execute(serviceName: string, request: any): Promise<any> {
+	async execute(serviceName: string, request: any, scope?: ServiceExecutionScope): Promise<any> {
 		try {
 			// validation
 			if (repository === undefined) {
@@ -49,10 +50,14 @@ export class NocatServer implements ServiceManager {
 			if (!repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleException(new Error('unknown service ' + serviceName));
 			}
+			if (!scope || scope === ServiceExecutionScope.public) {
+				if (!request.constructor.scope || request.constructor.scope !== ServiceExecutionScope.public) {
+					return await this.config.handleException(new Error('unauthorized'));
+				}
+			}
 
+			// execution
 			request = await this.executeRequestInterceptors(request);
-
-			// execute the request
 			const executor: ServiceExecutor<any, any> = new repository[serviceName]();
 			return await executor.execute(request);
 		} catch (e) {
@@ -60,12 +65,17 @@ export class NocatServer implements ServiceManager {
 		}
 	}
 
-	stream(serviceName: string, request: any): Observable<any> {// validation
+	stream(serviceName: string, request: any, scope?: ServiceExecutionScope): Observable<any> {// validation
 		if (repository === undefined) {
 			return this.createErrorObservable(new Error('nocat server is not initialized'));
 		}
 		if (!repository.hasOwnProperty(serviceName)) {
-			return this.createErrorObservable(Error('unknown service ' + serviceName));
+			return this.createErrorObservable(new Error('unknown service ' + serviceName));
+		}
+		if (!scope || scope === ServiceExecutionScope.public) {
+			if (!request.constructor.scope || request.constructor.scope !== ServiceExecutionScope.public) {
+				return this.createErrorObservable(new Error('unauthorized'));
+			}
 		}
 
 		return new Observable<any>((observer: Observer<any>): void => {
