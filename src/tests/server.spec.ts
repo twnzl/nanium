@@ -18,7 +18,7 @@ describe('execute TestRequest on server \n', function (): void {
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: [new TestServerRequestInterceptor()],
-			handleException: async (err: any): Promise<any> => {
+			handleError: async (err: any): Promise<any> => {
 				if (err instanceof ServiceResponseMessage) {
 					return new ServiceResponseBase({}, { errors: [err] });
 				}

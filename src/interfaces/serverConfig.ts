@@ -19,7 +19,7 @@ export interface ServerConfig {
 	/**
 	 * exception handling function
 	 */
-	handleException: (err: Error | any) => Promise<any>;
+	handleError: (e: Error | any) => Promise<void>;
 }
 
 export enum LogMode {

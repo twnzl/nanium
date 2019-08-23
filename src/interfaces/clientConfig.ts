@@ -4,5 +4,5 @@ export interface ClientConfig {
 	apiUrl?: string;
 	protocol?: 'http' | 'websocket';
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
-	handleException?: (response: any) => void;
+	handleError?: (e: any) => Promise<void>;
 }

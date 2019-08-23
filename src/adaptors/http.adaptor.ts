@@ -2,7 +2,6 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { Observable } from 'rxjs';
 
 import { Nocat } from '../core';
-import * as util from 'util';
 import { ServiceExecutionScope } from '..';
 
 export class NocatHttpAdaptor {
@@ -33,7 +32,6 @@ export class NocatHttpAdaptor {
 									res.end();
 								},
 								error: (e: any): void => {
-									// config.handleException(e);
 									res.statusCode = 500;
 									res.write(JSON.stringify(e));
 								}
@@ -47,7 +45,7 @@ export class NocatHttpAdaptor {
 								res.statusCode = 200;
 							} catch (e) {
 								res.statusCode = 500;
-								res.write(util.inspect(e, { compact: false, depth: 3 }));
+								res.write(JSON.stringify(e));
 							}
 							res.end();
 						}

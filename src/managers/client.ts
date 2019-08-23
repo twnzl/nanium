@@ -71,7 +71,9 @@ export class NocatClient implements ServiceManager {
 					}
 				};
 				xhr.addEventListener('error', (e: any) => {
-					this.config.handleException(e);
+					this.config.handleError(e).then(() => {
+
+					});
 					observer.error(e);
 				});
 				xhr.send(JSON.stringify({ [serviceName]: request }));
@@ -93,12 +95,15 @@ export class NocatClient implements ServiceManager {
 
 	private async executeHttp(serviceName: string, request: any): Promise<any> {
 		const xhr: XMLHttpRequest = new XMLHttpRequest();
-		const promise: Promise<any> = new Promise<any>((resolve: Function): void => {
+		const promise: Promise<any> = new Promise<any>((resolve: Function, reject: Function): void => {
 			xhr.onload = (): void => {
 				if (xhr.status === 200) {
 					resolve(xhr.response);
 				} else {
-					this.config.handleException(xhr.response);
+					this.config.handleError(JSON.parse(xhr.response)).then(() => {
+					}, (e) => {
+						reject(e);
+					});
 				}
 			};
 		});

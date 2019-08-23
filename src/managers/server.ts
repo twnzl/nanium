@@ -25,7 +25,7 @@ export class NocatServer implements ServiceManager {
 		servicePath: 'services',
 		requestInterceptors: [],
 		logMode: LogMode.error,
-		handleException: async (err: any): Promise<any> => {
+		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}
 	};
@@ -58,15 +58,15 @@ export class NocatServer implements ServiceManager {
 		try {
 			// validation
 			if (repository === undefined) {
-				return await this.config.handleException(new Error('nocat server is not initialized'));
+				return await this.config.handleError(new Error('nocat server is not initialized'));
 			}
 			if (!repository.hasOwnProperty(serviceName)) {
-				return await this.config.handleException(new Error('unknown service ' + serviceName));
+				return await this.config.handleError(new Error('unknown service ' + serviceName));
 			}
 			if (scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
 				const requestConstructor: any = repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
-					return await this.config.handleException(new Error('unauthorized'));
+					return await this.config.handleError(new Error('unauthorized'));
 				}
 			}
 
@@ -75,7 +75,7 @@ export class NocatServer implements ServiceManager {
 			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
 			return await executor.execute(request);
 		} catch (e) {
-			return await this.config.handleException(e);
+			return await this.config.handleError(e);
 		}
 	}
 
@@ -101,7 +101,7 @@ export class NocatServer implements ServiceManager {
 						observer.next(value);
 					},
 					error: (e: any): void => {
-						this.config.handleException(e).then();
+						this.config.handleError(e).then();
 						observer.error(e);
 					},
 					complete: (): void => {
