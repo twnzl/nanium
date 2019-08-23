@@ -1,10 +1,10 @@
 import { Observable } from 'rxjs';
-import { ServiceExecutionScope } from './serviceRequest';
+import { ServiceExecutionContext } from './ServiceExecutionContext';
 
 export interface ServiceManager {
-	execute?(serviceName: string, request: any, scope?: ServiceExecutionScope): Promise<any>;
+	execute?(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any>;
 
-	stream?(serviceName: string, request: any, scope?: ServiceExecutionScope): Observable<any>;
+	stream?(serviceName: string, request: any, context?: ServiceExecutionContext): Observable<any>;
 
 	isStream?(serviceName: string): boolean;
 

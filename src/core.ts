@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 
 import { ServiceManager } from './interfaces/serviceManager';
-import { ServiceExecutionScope } from './interfaces/serviceRequest';
+import { ServiceExecutionContext } from './interfaces/ServiceExecutionContext';
 
 export class Nocat {
 	static manager: ServiceManager;
@@ -15,19 +15,19 @@ export class Nocat {
 		return this.manager.isStream(serviceName);
 	}
 
-	static async execute(request: any, serviceName?: string, scope?: ServiceExecutionScope): Promise<any> {
+	static async execute(request: any, serviceName?: string, context?: ServiceExecutionContext): Promise<any> {
 		if (!this.manager) {
 			throw new Error('nocat has not been initialized');
 		}
 		serviceName = serviceName || request.constructor.serviceName;
-		return await this.manager.execute(serviceName, request, scope);
+		return await this.manager.execute(serviceName, request, context);
 	}
 
-	static stream(request: any, serviceName?: string, scope?: ServiceExecutionScope): Observable<any> {
+	static stream(request: any, serviceName?: string, context?: ServiceExecutionContext): Observable<any> {
 		if (!this.manager) {
 			throw new Error('nocat has not been initialized');
 		}
 		serviceName = serviceName || request.constructor.serviceName;
-		return this.manager.stream(serviceName, request, scope);
+		return this.manager.stream(serviceName, request, context);
 	}
 }

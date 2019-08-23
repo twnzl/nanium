@@ -21,7 +21,7 @@ export class NocatHttpAdaptor {
 						const request: any = json[serviceName];
 						res.setHeader('Content-Type', 'application/json; charset=utf-8');
 						if (Nocat.isStream(serviceName)) {
-							const result: Observable<any> = Nocat.stream(request, serviceName, ServiceExecutionScope.public);
+							const result: Observable<any> = Nocat.stream(request, serviceName, { scope: ServiceExecutionScope.public });
 							res.statusCode = 200;
 							result.subscribe({
 								next: (value: any): void => {
@@ -38,7 +38,7 @@ export class NocatHttpAdaptor {
 							});
 						} else {
 							try {
-								const result: any = await Nocat.execute(request, serviceName, ServiceExecutionScope.public);
+								const result: any = await Nocat.execute(request, serviceName, { scope: ServiceExecutionScope.public });
 								if (result !== undefined && result !== null) {
 									res.write(JSON.stringify(result));
 								}

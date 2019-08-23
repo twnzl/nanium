@@ -1,7 +1,7 @@
-import { ServiceExecutionScope } from './serviceRequest';
+import { ServiceExecutionContext } from './ServiceExecutionContext';
 
 export interface ServiceRequestInterceptor<TRequest> {
 	execute(
-		request: TRequest, scope?: ServiceExecutionScope,
+		request: TRequest, context?: ServiceExecutionContext,
 	): Promise<TRequest>;
 }

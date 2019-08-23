@@ -126,7 +126,7 @@ describe('execute TestRequest on server \n', function (): void {
 
 		beforeEach(async function (): Promise<void> {
 			try {
-				privateResponse = await Nocat.execute(privateRequest, 'PrivateStuff', ServiceExecutionScope.public);
+				privateResponse = await Nocat.execute(privateRequest, 'PrivateStuff', { scope: ServiceExecutionScope.public });
 			} catch (e) {
 				err = e;
 			}

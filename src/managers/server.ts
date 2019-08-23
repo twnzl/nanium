@@ -6,6 +6,7 @@ import { Observable, Observer } from 'rxjs';
 import {
 	LogMode,
 	ServerConfig,
+	ServiceExecutionContext,
 	ServiceExecutionScope,
 	ServiceExecutor,
 	ServiceManager,
@@ -54,7 +55,7 @@ export class NocatServer implements ServiceManager {
 		}
 	}
 
-	async execute(serviceName: string, request: any, scope?: ServiceExecutionScope): Promise<any> {
+	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {
 		try {
 			// validation
 			if (repository === undefined) {
@@ -63,7 +64,7 @@ export class NocatServer implements ServiceManager {
 			if (!repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleError(new Error('unknown service ' + serviceName));
 			}
-			if (scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
+			if (context && context.scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
 				const requestConstructor: any = repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
 					return await this.config.handleError(new Error('unauthorized'));
@@ -79,14 +80,14 @@ export class NocatServer implements ServiceManager {
 		}
 	}
 
-	stream(serviceName: string, request: any, scope?: ServiceExecutionScope): Observable<any> {// validation
+	stream(serviceName: string, request: any, context?: ServiceExecutionContext): Observable<any> {// validation
 		if (repository === undefined) {
 			return this.createErrorObservable(new Error('nocat server is not initialized'));
 		}
 		if (!repository.hasOwnProperty(serviceName)) {
 			return this.createErrorObservable(new Error('unknown service ' + serviceName));
 		}
-		if (scope === ServiceExecutionScope.public) { // private is the default, all adaptors have to set the scope explicitly
+		if (context && context.scope === ServiceExecutionScope.public) { // private is the default, all adaptors have to set the scope explicitly
 			const requestConstructor: any = repository[serviceName].Request;
 			if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
 				return this.createErrorObservable(new Error('unauthorized'));
