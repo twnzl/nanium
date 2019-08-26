@@ -1,6 +1,6 @@
-import { ServiceExecutor } from '../../..';
 import { ServiceResponseMessage } from '../serviceResponseBase';
 import { TestGetRequest, TestGetResponse } from './get.contract';
+import { ServiceExecutor } from '../../..';
 
 export default class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
 	static serviceName: string = 'TestGet';

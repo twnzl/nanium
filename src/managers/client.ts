@@ -32,7 +32,7 @@ export class NocatClient implements ServiceManager {
 		// execute request interceptors
 		if (this.config.requestInterceptors.length) {
 			for (const interceptor of this.config.requestInterceptors) {
-				request = await interceptor.execute(request);
+				request = await interceptor.execute(request, {});
 			}
 		}
 
@@ -83,7 +83,7 @@ export class NocatClient implements ServiceManager {
 			if (this.config.requestInterceptors.length) {
 				const promises: Promise<any>[] = [];
 				for (const interceptor of this.config.requestInterceptors) {
-					promises.push(interceptor.execute(request));
+					promises.push(interceptor.execute(request, {}));
 				}
 				Promise.all(promises).then(() => core());
 			} else {
@@ -119,7 +119,10 @@ export class NocatClient implements ServiceManager {
 	}
 
 	private async executeWebsocket(serviceName: string, request: any): Promise<any> {
-		throw new Error('not yet implemented');
+		if (!serviceName && !request) {
+			throw new Error('not yet implemented:');
+		}
+		throw new Error('not yet implemented:');
 		// todo implement websocket protocol
 	}
 }

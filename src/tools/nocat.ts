@@ -107,14 +107,14 @@ function generateService(args: string[]): void {
 	const executorFileContent: string = `
 import { ServiceExecutor } from 'nocat';
 import { ${serviceName}Request, ${serviceName}Response } from './${serviceLastName}.contract';
+import { ServiceRequestContext } from '${relativeToRoot}serviceRequestContext';
 
 export default class ${serviceName}Executor implements ServiceExecutor<${serviceName}Request, ${serviceName}Response> {
 ${config.indentString}static serviceName: string = '${serviceName}';
 
-${config.indentString}async execute(request: ${serviceName}Request): Promise<${serviceName}Response> {
+${config.indentString}async execute(request: ${serviceName}Request, executionContext: ServiceRequestContext): Promise<${serviceName}Response> {
 ${config.indentString}${config.indentString}return new ${serviceName}Response({});
 ${config.indentString}}
-
 }
 
 `;

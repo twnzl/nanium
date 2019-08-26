@@ -56,6 +56,8 @@ export class NocatServer implements ServiceManager {
 	}
 
 	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {
+		context = context || {};
+
 		try {
 			// validation
 			if (repository === undefined) {
@@ -72,15 +74,16 @@ export class NocatServer implements ServiceManager {
 			}
 
 			// execution
-			request = await this.executeRequestInterceptors(request);
+			await this.executeRequestInterceptors(request, context);
 			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
-			return await executor.execute(request);
+			return await executor.execute(request, context);
 		} catch (e) {
 			return await this.config.handleError(e);
 		}
 	}
 
 	stream(serviceName: string, request: any, context?: ServiceExecutionContext): Observable<any> {// validation
+		context = context || {};
 		if (repository === undefined) {
 			return this.createErrorObservable(new Error('nocat server is not initialized'));
 		}
@@ -95,9 +98,9 @@ export class NocatServer implements ServiceManager {
 		}
 
 		return new Observable<any>((observer: Observer<any>): void => {
-			this.executeRequestInterceptors(request).then((request: any) => {
+			this.executeRequestInterceptors(request, context).then(() => {
 				const executor: StreamServiceExecutor<any, any> = new repository[serviceName].Executor();
-				executor.stream(request).subscribe({
+				executor.stream(request, context).subscribe({
 					next: (value: any): void => {
 						observer.next(value);
 					},
@@ -126,13 +129,12 @@ export class NocatServer implements ServiceManager {
 	/**
 	 * execute request interceptors
 	 */
-	private async executeRequestInterceptors(request: any): Promise<any> {
+	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext): Promise<void> {
 		if (this.config.requestInterceptors.length) {
 			for (const interceptor of this.config.requestInterceptors) {
-				request = await interceptor.execute(request);
+				await interceptor.execute(request, context);
 			}
 		}
-		return request;
 	}
 
 	// todo queues
