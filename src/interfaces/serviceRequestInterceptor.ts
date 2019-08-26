@@ -1,4 +1,4 @@
-import { ServiceExecutionContext } from './ServiceExecutionContext';
+import { ServiceExecutionContext } from './serviceExecutionContext';
 
 export interface ServiceRequestInterceptor<TRequest> {
 	execute(

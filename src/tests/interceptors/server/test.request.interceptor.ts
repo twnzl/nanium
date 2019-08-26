@@ -8,4 +8,8 @@ export class TestServerRequestInterceptor implements ServiceRequestInterceptor<S
 			token: '1234'
 		};
 	}
+
+	constructor() {
+
+	}
 }

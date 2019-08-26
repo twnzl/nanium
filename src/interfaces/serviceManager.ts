@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { ServiceExecutionContext } from './ServiceExecutionContext';
+import { ServiceExecutionContext } from './serviceExecutionContext';
 
 export interface ServiceManager {
 	execute?(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any>;

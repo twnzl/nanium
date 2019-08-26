@@ -2,11 +2,11 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { Observable } from 'rxjs';
 
 import { Nocat } from '../core';
-import { ServiceExecutionScope } from '..';
+import { ServiceExecutionScope, TransportAdaptorConfig } from '..';
 
 export class NocatHttpAdaptor {
 
-	static create(config: NocatHttpAdaptorConfig): ((req: IncomingMessage, res: ServerResponse) => void) {
+	static create(config: TransportAdaptorConfig): ((req: IncomingMessage, res: ServerResponse) => void) {
 		return (req: IncomingMessage, res: ServerResponse): void => {
 			const data: any[] = [];
 			req.on('data', (chunk: any) => {
@@ -14,14 +14,15 @@ export class NocatHttpAdaptor {
 			}).on('end', async () => {
 				const body: string = Buffer.concat(data).toString();
 				let done: boolean = false;
-				if (config.formats.includes('json') && body.length && body[0] === '{') {
+				// todo: for now only json is supported. later here the nocat.deserialize() function should be used which uses the registered Format-Adaptors to deserialize and serialize
+				if (body.length && body[0] === '{') {
 					try {
 						const json: object = JSON.parse(body);
 						const serviceName: string = Object.keys(json)[0];
 						const request: any = json[serviceName];
 						res.setHeader('Content-Type', 'application/json; charset=utf-8');
 						if (Nocat.isStream(serviceName)) {
-							const result: Observable<any> = Nocat.stream(request, serviceName, { scope: ServiceExecutionScope.public });
+							const result: Observable<any> = Nocat.stream(request, serviceName, new config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
 							res.statusCode = 200;
 							result.subscribe({
 								next: (value: any): void => {
@@ -38,14 +39,14 @@ export class NocatHttpAdaptor {
 							});
 						} else {
 							try {
-								const result: any = await Nocat.execute(request, serviceName, { scope: ServiceExecutionScope.public });
+								const result: any = await Nocat.execute(request, serviceName, new config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
 								if (result !== undefined && result !== null) {
-									res.write(JSON.stringify(result));
+									res.write(JSON.stringify(result)); // todo: user nocat.serialize()
 								}
 								res.statusCode = 200;
 							} catch (e) {
 								res.statusCode = 500;
-								res.write(JSON.stringify(e));
+								res.write(JSON.stringify(e)); // todo: user nocat.serialize()
 							}
 							res.end();
 						}
@@ -59,8 +60,4 @@ export class NocatHttpAdaptor {
 			});
 		};
 	}
-}
-
-export interface NocatHttpAdaptorConfig {
-	formats: string[];
 }

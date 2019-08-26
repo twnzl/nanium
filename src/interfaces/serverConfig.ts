@@ -9,7 +9,7 @@ export interface ServerConfig {
 	/**
 	 * array of interceptors (code that runs bevor each request is executed)
 	 */
-	requestInterceptors?: ServiceRequestInterceptor<any>[];
+	requestInterceptors?: (new() => ServiceRequestInterceptor<any>)[];
 
 	/**
 	 * which log output should be made?

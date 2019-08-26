@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 
 import { ServiceManager } from './interfaces/serviceManager';
-import { ServiceExecutionContext } from './interfaces/ServiceExecutionContext';
+import { ServiceExecutionContext } from './interfaces/serviceExecutionContext';
 
 export class Nocat {
 	static manager: ServiceManager;

@@ -15,6 +15,7 @@ export * from './interfaces/serviceRequestInterceptor';
 export {
 	ServiceExecutionContext,
 	ServiceExecutionScope
-} from './interfaces/ServiceExecutionContext'
+} from './interfaces/serviceExecutionContext'
+export * from './interfaces/transportAdaptorConfig';
 
 export * from './core';

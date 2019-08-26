@@ -132,7 +132,7 @@ export class NocatServer implements ServiceManager {
 	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext): Promise<void> {
 		if (this.config.requestInterceptors.length) {
 			for (const interceptor of this.config.requestInterceptors) {
-				await interceptor.execute(request, context);
+				await new interceptor().execute(request, context);
 			}
 		}
 	}
