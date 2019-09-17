@@ -1,5 +1,5 @@
 import { ServiceExecutionContext } from './serviceExecutionContext';
 
-export interface TransportAdaptorConfig {
+export interface RequestChannelConfig {
 	executionContextConstructor: new(data: ServiceExecutionContext) => ServiceExecutionContext;
 }

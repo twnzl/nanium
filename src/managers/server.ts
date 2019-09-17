@@ -13,13 +13,14 @@ import {
 	StreamServiceExecutor
 } from '..';
 
-let repository: {
+export class NocatRepository {
 	[serviceName: string]: {
 		Executor: any,
 		Request: any
 	}
-};
+}
 
+let repository: NocatRepository;
 
 export class NocatServer implements ServiceManager {
 	config: ServerConfig = {
@@ -40,6 +41,8 @@ export class NocatServer implements ServiceManager {
 	}
 
 	async init(): Promise<void> {
+
+		// init repository
 		const files: string[] = await findFiles(this.config.servicePath,
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
@@ -51,6 +54,13 @@ export class NocatServer implements ServiceManager {
 			};
 			if (this.config.logMode >= LogMode.info) {
 				console.log('service ready: ' + executor.serviceName);
+			}
+		}
+
+		// init channels over which requests can come from public scope
+		if (this.config.requestChannels && this.config.requestChannels.length) {
+			for (const channel of this.config.requestChannels) {
+				await channel.init(repository);
 			}
 		}
 	}

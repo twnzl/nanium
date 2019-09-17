@@ -1,4 +1,5 @@
-export * from './adaptors/http.adaptor';
+export * from './channels/http.channel';
+export * from './channels/rest.channel';
 
 export * from './interfaces/clientConfig';
 export {
@@ -15,7 +16,8 @@ export * from './interfaces/serviceRequestInterceptor';
 export {
 	ServiceExecutionContext,
 	ServiceExecutionScope
-} from './interfaces/serviceExecutionContext'
-export * from './interfaces/transportAdaptorConfig';
+} from './interfaces/serviceExecutionContext';
+export * from './interfaces/requestChannel';
+export * from './interfaces/requestChannelConfig';
 
 export * from './core';
