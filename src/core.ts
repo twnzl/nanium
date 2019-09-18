@@ -2,12 +2,15 @@ import { Observable } from 'rxjs';
 
 import { ServiceManager } from './interfaces/serviceManager';
 import { ServiceExecutionContext } from './interfaces/serviceExecutionContext';
+import { LogMode } from './interfaces/serverConfig';
 
 export class Nocat {
 	static manager: ServiceManager;
+	static logMode: LogMode;
 
-	static async init(manager: ServiceManager): Promise<void> {
+	static async init(manager: ServiceManager, logMode?: LogMode): Promise<void> {
 		this.manager = manager;
+		this.logMode = logMode;
 		await this.manager.init();
 	}
 

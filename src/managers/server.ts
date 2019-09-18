@@ -5,6 +5,7 @@ import { Observable, Observer } from 'rxjs';
 
 import {
 	LogMode,
+	Nocat,
 	ServerConfig,
 	ServiceExecutionContext,
 	ServiceExecutionScope,
@@ -15,7 +16,7 @@ import {
 
 export class NocatRepository {
 	[serviceName: string]: {
-		Executor: any,
+		Executor: any, // upper case because it are constructors
 		Request: any
 	}
 }
@@ -26,7 +27,6 @@ export class NocatServer implements ServiceManager {
 	config: ServerConfig = {
 		servicePath: 'services',
 		requestInterceptors: [],
-		logMode: LogMode.error,
 		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}
@@ -52,7 +52,7 @@ export class NocatServer implements ServiceManager {
 				Executor: executor,
 				Request: request
 			};
-			if (this.config.logMode >= LogMode.info) {
+			if (Nocat.logMode >= LogMode.info) {
 				console.log('service ready: ' + executor.serviceName);
 			}
 		}

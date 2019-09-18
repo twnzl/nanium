@@ -1,6 +1,6 @@
 import * as express from 'express';
 import { Nocat } from '../core';
-import { RequestChannel, RequestChannelConfig, ServiceExecutionContext, ServiceExecutionScope } from '..';
+import { LogMode, RequestChannel, RequestChannelConfig, ServiceExecutionContext, ServiceExecutionScope } from '..';
 import { NocatRepository } from '../managers/server';
 import { Observable } from 'rxjs';
 
@@ -13,7 +13,7 @@ export class NocatRestChannelConfig implements RequestChannelConfig {
 
 export class NocatRestChannel implements RequestChannel {
 	private config: NocatRestChannelConfig;
-	private repository: NocatRepository;
+	private serviceRepository: NocatRepository;
 
 	constructor(config: NocatRestChannelConfig) {
 		this.config = config;
@@ -33,7 +33,7 @@ export class NocatRestChannel implements RequestChannel {
 	}
 
 	async init(serviceRepository: NocatRepository): Promise<void> {
-		this.repository = serviceRepository;
+		this.serviceRepository = serviceRepository;
 		for (const key in serviceRepository) {
 			if (!serviceRepository.hasOwnProperty(key)) {
 				continue;
@@ -65,6 +65,7 @@ export class NocatRestChannel implements RequestChannel {
 				break;
 			case 'Update':
 			case 'Change':
+			case 'Store':
 			case 'Put':
 				method = 'put';
 				break;
@@ -72,9 +73,17 @@ export class NocatRestChannel implements RequestChannel {
 			case 'Delete':
 				method = 'delete';
 				break;
+			case 'Create':
+			case 'Add':
+			case 'Post':
+				method = 'post';
+				break;
 			default:
 				method = 'post';
 				path = path + '/' + lastPart;
+		}
+		if (Nocat.logMode === LogMode.info) {
+			console.log((method + '    ').substr(0, 7) + ':' + path);
 		}
 		return { method, path };
 		// todo: optional it should be possible to pass a configuration to the constructor where is defined which service shall be exposed with which method/path
