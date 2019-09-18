@@ -2,6 +2,7 @@ import * as express from 'express';
 import { Nocat } from '../core';
 import { RequestChannel, RequestChannelConfig, ServiceExecutionContext, ServiceExecutionScope } from '..';
 import { NocatRepository } from '../managers/server';
+import { Observable } from 'rxjs';
 
 export class NocatRestChannelConfig implements RequestChannelConfig {
 	expressApp: express.Express;
@@ -11,7 +12,8 @@ export class NocatRestChannelConfig implements RequestChannelConfig {
 }
 
 export class NocatRestChannel implements RequestChannel {
-	config: NocatRestChannelConfig;
+	private config: NocatRestChannelConfig;
+	private repository: NocatRepository;
 
 	constructor(config: NocatRestChannelConfig) {
 		this.config = config;
@@ -31,6 +33,7 @@ export class NocatRestChannel implements RequestChannel {
 	}
 
 	async init(serviceRepository: NocatRepository): Promise<void> {
+		this.repository = serviceRepository;
 		for (const key in serviceRepository) {
 			if (!serviceRepository.hasOwnProperty(key)) {
 				continue;
@@ -38,7 +41,14 @@ export class NocatRestChannel implements RequestChannel {
 			const request: any = serviceRepository[key].Request;
 			if (request.scope === ServiceExecutionScope.public) {
 				const { method, path }: { method: string; path: string; } = this.getMethodAndPath(request.serviceName);
-				this.config.expressApp[method](path, (req: express.Request, res: express.Response) => this.execute(request.serviceName, req, res));
+				this.config.expressApp[method](path, (req: express.Request, res: express.Response) => {
+					const serviceRequest: object = this.createRequest(req);
+					if (Nocat.isStream(request.serviceName)) {
+						this.stream(request.serviceName, serviceRequest, res);
+					} else {
+						this.execute(request.serviceName, serviceRequest, res);
+					}
+				});
 			}
 		}
 	}
@@ -70,26 +80,36 @@ export class NocatRestChannel implements RequestChannel {
 		// todo: optional it should be possible to pass a configuration to the constructor where is defined which service shall be exposed with which method/path
 	}
 
-	private async execute(serviceName: string, req: express.Request, res: express.Response): Promise<any> {
-		const serviceRequest: object = this.createRequest(req);
-		serviceRequest['$$headers'] = req.headers || {};
-		serviceRequest['$$rawBody'] = req['$$rawBody'];
-		serviceRequest['$$requestSource'] = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-		if (Nocat.isStream(serviceName)) {
-			// todo: implement
-		} else {
-			try {
-				const result: any = await Nocat.execute(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
-				if (result !== undefined && result !== null) {
-					res.write(JSON.stringify(result)); // todo: user nocat.serialize()
-				}
-				res.statusCode = 200;
-			} catch (e) {
-				res.statusCode = this.config.getHttpStatusCode(e);
-				res.write(JSON.stringify(e)); // todo: user nocat.serialize()
+	private async execute(serviceName: string, serviceRequest: any, res: express.Response): Promise<any> {
+		try {
+			const result: any = await Nocat.execute(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
+			if (result !== undefined && result !== null) {
+				res.write(JSON.stringify(result)); // todo: user nocat.serialize()
 			}
-			res.end();
+			res.statusCode = 200;
+		} catch (e) {
+			res.statusCode = this.config.getHttpStatusCode(e);
+			res.write(JSON.stringify(e)); // todo: user nocat.serialize()
 		}
+		res.end();
+	}
+
+	private stream(serviceName: string, serviceRequest: object, res: express.Response): void {
+		const result: Observable<any> = Nocat.stream(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
+		res.statusCode = 200;
+		result.subscribe({
+			next: (value: any): void => {
+				res.write(JSON.stringify(value) + '\n');
+				res['flush']();
+			},
+			complete: (): void => {
+				res.end();
+			},
+			error: (e: any): void => {
+				res.statusCode = this.config.getHttpStatusCode(e);
+				res.write(JSON.stringify(e));
+			}
+		});
 	}
 
 	createRequest(req: express.Request): any {
@@ -112,6 +132,9 @@ export class NocatRestChannel implements RequestChannel {
 				subObj = subObj[prop];
 			}
 		}
+		request['$$headers'] = req.headers || {};
+		request['$$rawBody'] = req['$$rawBody'];
+		request['$$requestSource'] = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 		return request;
 	}
 }
