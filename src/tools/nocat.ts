@@ -16,7 +16,7 @@ nocat generate | g {directory.}*{service name}
 nocat rename {old service name} {new service name}
 nocat pkg
 nocat ccp {srcPath} {dstPath} -- like bash cp but cares about creating destination path and removes old files in destination path
-nocat shell '{bash command}' -- executes the bash command but is also working on windows and mac
+nocat rm {file or folder} -- removes the file or folder
 `);
 	process.exit(0);
 }
@@ -64,7 +64,7 @@ const actions: { [actionName: string]: Function } = {
 	sdk: function (): void {
 		console.log('creating a binary for the app is not yet implemented');
 	},
-	shell: shellExec
+	rm: removeFiles
 };
 
 
@@ -82,8 +82,8 @@ function cleanAndCopyFiles(args: string[]): void {
 	shell.cp('-R', src + '/*', dst);
 }
 
-function shellExec(args: string[]): void {
-	console.log(shell.exec(args[0]).toString());
+function removeFiles(args: string[]): void {
+	console.log(shell.rm('-rf', args[0]).toString());
 }
 
 function generateService(args: string[]): void {
