@@ -112,10 +112,14 @@ export class NocatClient implements ServiceManager {
 							resolve();
 						}
 					} else {
-						this.config.handleError(JSON.parse(xhr.response)).then(() => {
-						}, (e: any) => {
+						try {
+							this.config.handleError(JSON.parse(xhr.response)).then(() => {
+							}, (e: any) => {
+								reject(e);
+							});
+						} catch (e) {
 							reject(e);
-						});
+						}
 					}
 				};
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
