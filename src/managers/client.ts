@@ -94,28 +94,36 @@ export class NocatClient implements ServiceManager {
 	}
 
 	private async executeHttp(serviceName: string, request: any): Promise<any> {
-		const xhr: XMLHttpRequest = new XMLHttpRequest();
-		const promise: Promise<any> = new Promise<any>((resolve: Function, reject: Function): void => {
-			xhr.onload = (): void => {
-				if (xhr.status === 200) {
-					resolve(xhr.response);
-				} else {
-					this.config.handleError(JSON.parse(xhr.response)).then(() => {
-					}, (e) => {
-						reject(e);
-					});
-				}
-			};
+		return await new Promise<any>((resolve: Function, reject: Function): void => {
+			try {
+				const xhr: XMLHttpRequest = new XMLHttpRequest();
+				xhr.onabort = (e: any): void => {
+					reject(e);
+				};
+				xhr.onerror = (e: any): void => {
+					reject(e);
+				};
+				xhr.onload = (): void => {
+					if (xhr.status === 200) {
+						const result: any = xhr.response;
+						if (result !== null && result !== undefined && result !== '') {
+							resolve(JSON.parse(result));
+						} else {
+							resolve();
+						}
+					} else {
+						this.config.handleError(JSON.parse(xhr.response)).then(() => {
+						}, (e: any) => {
+							reject(e);
+						});
+					}
+				};
+				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
+				xhr.send(JSON.stringify({ [serviceName]: request }));
+			} catch (e) {
+				reject(e);
+			}
 		});
-		xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-		xhr.send(JSON.stringify({ [serviceName]: request }));
-
-		const result: any = await promise;
-		if (result !== null && result !== undefined && result !== '') {
-			return JSON.parse(result);
-		} else {
-			return undefined;
-		}
 	}
 
 	private async executeWebsocket(serviceName: string, request: any): Promise<any> {
