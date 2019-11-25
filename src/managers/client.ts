@@ -19,12 +19,14 @@ export class NocatClient implements ServiceManager {
 	}
 
 	async init(): Promise<void> {
-		if (window.location.host === 'localhost:4200') {
-			this.config.apiUrl = window.location.hostname + ':3000' + this.config.apiUrl;
-		} else {
-			this.config.apiUrl = window.location.host + this.config.apiUrl;
+		if (!this.config.apiUrl.startsWith('http')) {
+			if (window.location.host === 'localhost:4200') {
+				this.config.apiUrl = window.location.hostname + ':3000' + this.config.apiUrl;
+			} else {
+				this.config.apiUrl = window.location.host + this.config.apiUrl;
+			}
+			this.config.apiUrl = window.location.protocol + '//' + this.config.apiUrl;
 		}
-		this.config.apiUrl = window.location.protocol + '//' + this.config.apiUrl;
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {
