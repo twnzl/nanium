@@ -84,7 +84,7 @@ export class NocatServer implements ServiceManager {
 			}
 
 			// execution
-			await this.executeRequestInterceptors(request, context);
+			await this.executeRequestInterceptors(request, context, repository[serviceName].Request);
 			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
 			return await executor.execute(request, context);
 		} catch (e) {
@@ -108,7 +108,7 @@ export class NocatServer implements ServiceManager {
 		}
 
 		return new Observable<any>((observer: Observer<any>): void => {
-			this.executeRequestInterceptors(request, context).then(() => {
+			this.executeRequestInterceptors(request, context, repository[serviceName].Request).then(() => {
 				const executor: StreamServiceExecutor<any, any> = new repository[serviceName].Executor();
 				executor.stream(request, context).subscribe({
 					next: (value: any): void => {
@@ -139,9 +139,15 @@ export class NocatServer implements ServiceManager {
 	/**
 	 * execute request interceptors
 	 */
-	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext): Promise<void> {
+	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext, requestType: any): Promise<void> {
 		if (this.config.requestInterceptors.length) {
 			for (const interceptor of this.config.requestInterceptors) {
+				if (
+					requestType.skipInterceptors === true ||
+					(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.indexOf(interceptor) >= 0)
+				) {
+					continue;
+				}
 				await new interceptor().execute(request, context);
 			}
 		}

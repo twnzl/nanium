@@ -5,6 +5,7 @@ import { ServiceResponseBase } from '../serviceResponseBase';
 export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
 	static serviceName: string = 'TestGet';
 	static scope: ServiceExecutionScope = ServiceExecutionScope.public;
+	static skipInterceptors: boolean = false;
 }
 
 export class TestGetRequestBody {

@@ -131,6 +131,7 @@ import { ServiceExecutionScope } from 'nocat';
 export class ${serviceName}Request extends ServiceRequestBase<${serviceName}RequestBody, ${serviceName}ResponseBody> {
 ${config.indentString}static serviceName: string = '${serviceName}';
 ${config.indentString}static scope: ServiceExecutionScope = ServiceExecutionScope.${scope};
+${config.indentString}static skipInterceptors: boolean = false;
 }
 
 export class ${serviceName}RequestBody {

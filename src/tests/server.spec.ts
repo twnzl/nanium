@@ -6,10 +6,11 @@ import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
+import { AnonymousRequest } from './services/test/anonymous.contract';
 
 describe('execute TestRequest on server \n', function (): void {
-	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
-	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1);
+	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' }, { token: '1234' });
+	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1, { token: '1234' });
 	let response: TestGetResponse;
 	let privateResponse: PrivateStuffResponse;
 
@@ -39,7 +40,18 @@ describe('execute TestRequest on server \n', function (): void {
 		it('--> \n', async function (): Promise<void> {
 			expect(response.body.output1).toBe('hello world :-)', 'output1 should be correct');
 			expect(response.body.output2).toBe(2, 'output2 should be correct');
-			expect(request.head.token).toBe('1234', 'the property head.token should have been set by the server request interceptor');
+		});
+	});
+
+	describe('execute skip interceptor \n', function (): void {
+		const anonymousRequest: AnonymousRequest = new AnonymousRequest();
+		let anonymousResponse: ServiceResponseBase<string>;
+		beforeEach(async function (): Promise<void> {
+			anonymousResponse = await anonymousRequest.execute();
+		});
+
+		it('--> \n', async function (): Promise<void> {
+			expect(anonymousResponse.body).toBe(':-)', 'output should be correct');
 		});
 	});
 
@@ -97,7 +109,7 @@ describe('execute TestRequest on server \n', function (): void {
 
 		beforeEach(async function (): Promise<void> {
 			await new Promise((resolve: Function): void => {
-				new TestQueryRequest({ input: 1 }).execute().subscribe({
+				new TestQueryRequest({ input: 1 }, { token: '1234' }).execute().subscribe({
 					next: (value: TestDto): void => {
 						dtoList.push(value);
 					},
