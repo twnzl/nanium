@@ -8,8 +8,27 @@ export class NocatToolConfig {
 	indentString: string;
 }
 
+// define dictionary with action-functions
+const actions: { [actionName: string]: Function } = {
+	g: generateService,
+	generate: generateService,
+	rename: function (): void {
+		console.log('renaming of services is not yet implemented');
+	},
+	init: init,
+	pkg: function (): void {
+		console.log('creating a binary for the app is not yet implemented');
+	},
+	ccp: cleanAndCopyFiles,
+	sdk: function (): void {
+		console.log('creating a binary for the app is not yet implemented');
+	},
+	rm: removeFiles
+};
+
+
 // arguments
-if (process.argv.length <= 3) {
+if (process.argv.length < 3 || !actions[process.argv[2]]) {
 	console.log(`
 nocat init
 nocat generate | g {directory.}*{service name}
@@ -45,28 +64,6 @@ const config: NocatToolConfig = (function (): NocatToolConfig {
 		...configFromFile
 	};
 })();
-
-
-// define dictionary with action-functions
-const actions: { [actionName: string]: Function } = {
-	g: generateService,
-	generate: generateService,
-	rename: function (): void {
-		console.log('renaming of services is not yet implemented');
-	},
-	init: function (): void {
-		console.log('not yet implemented');
-	},
-	pkg: function (): void {
-		console.log('creating a binary for the app is not yet implemented');
-	},
-	ccp: cleanAndCopyFiles,
-	sdk: function (): void {
-		console.log('creating a binary for the app is not yet implemented');
-	},
-	rm: removeFiles
-};
-
 
 // determine and execute action
 const command: string = process.argv[2];
@@ -149,3 +146,102 @@ export class ${serviceName}ResponseBody {
 	console.log('created: ' + contractFileName);
 }
 
+function init() {
+	let fileContent: string;
+	fs.mkdirSync(config.serviceDirectory, { recursive: true });
+
+	// serviceRequestBase.ts
+	fileContent = `import { Nocat, ServiceRequest, ServiceExecutionContext } from 'nocat';
+import { ServiceRequestHead } from './serviceRequestHead';
+
+export class ServiceRequestBase<TRequestBody, TResponse> implements ServiceRequest<TResponse> {
+
+\thead: ServiceRequestHead;
+\tbody: TRequestBody;
+
+\tconstructor(body?: TRequestBody, head?: ServiceRequestHead) {
+\t\tthis.body = body || {} as TRequestBody;
+\t\tthis.head = head;
+\t}
+
+\tasync execute(context?: ServiceExecutionContext): Promise<TResponse> {
+\t\treturn await Nocat.execute(this, undefined, context);
+\t}
+}
+`.replace(/\t/g, config.indentString);
+	fs.writeFileSync(path.join(config.serviceDirectory, 'serviceRequestBase.ts'), fileContent);
+
+	// serviceRequestHead.ts
+	fileContent = `export class ServiceRequestHead {
+\tuserName?: string;
+\tpassword?: string;
+\ttoken?: string;
+\tlanguage?: string;
+}
+`.replace(/\t/g, config.indentString);
+	fs.writeFileSync(path.join(config.serviceDirectory, 'serviceRequestHead.ts'), fileContent);
+
+	// serviceRequestContext.ts
+	fileContent = `import { ServiceExecutionContext, ServiceExecutionScope } from 'nocat';
+
+export class ServiceRequestContext implements ServiceExecutionContext {
+\tscope?: ServiceExecutionScope;
+
+\tconstructor(data: Partial<ServiceRequestContext>) {
+\t\tObject.assign(this, data);
+\t}
+}
+`.replace(/\t/g, config.indentString);
+	fs.writeFileSync(path.join(config.serviceDirectory, 'serviceRequestContext.ts'), fileContent);
+
+	// serviceError.ts
+	fileContent = `export class ServiceError {
+\tcode: string;
+\ttext?: string;
+\tproperties?: string[];
+
+\tconstructor(public type: 'error' | 'exception') {
+\t}
+
+\tstatic error(code?: string, text?: string, properties?: string[]): ServiceError {
+\t\tconst result: ServiceError = new ServiceError('error');
+\t\tresult.code = code;
+\t\tresult.text = text;
+\t\tresult.properties = properties;
+\t\treturn result;
+\t}
+
+\tstatic exception(code?: string, text?: string): ServiceError {
+\t\tconst result: ServiceError = new ServiceError('exception');
+\t\tresult.code = code;
+\t\tresult.text = text;
+\t\treturn result;
+\t}
+}
+
+export enum ServiceErrorCodes {
+\tunauthenticated = 'unauthenticated',
+\tunauthorized = 'unauthorized',
+\tbadRequest = 'badRequest',
+\tnotUnique = 'notUnique'
+}
+`.replace(/\t/g, config.indentString);
+	fs.writeFileSync(path.join(config.serviceDirectory, 'serviceError.ts'), fileContent);
+
+	// request.interceptor.ts
+	fileContent = `import { ServiceRequestBase } from './serviceRequestBase';
+import { ServiceRequestInterceptor } from 'nocat';
+import { ServiceRequestContext } from './serviceRequestContext';
+
+export class RequestInterceptor implements ServiceRequestInterceptor<ServiceRequestBase<any, any>> {
+\trequest: ServiceRequestBase<any, any>;
+\texecutionContext: ServiceRequestContext;
+
+\tasync execute(request: ServiceRequestBase<any, any>, executionContext: ServiceRequestContext): Promise<ServiceRequestBase<any, any>> {
+\t\t// todo: checkAuthorization 
+\t\treturn request;
+\t}
+}
+`.replace(/\t/g, config.indentString);
+	fs.writeFileSync(path.join(config.serviceDirectory, 'request.interceptor.ts'), fileContent);
+}
