@@ -1,18 +1,27 @@
 import { Observable, Observer } from 'rxjs';
 
-import { ClientConfig, ServiceManager } from '..';
+import { KindOfResponsibility, ServiceManager, ServiceRequestInterceptor } from '..';
 
-export class NocatClient implements ServiceManager {
-	config: ClientConfig;
+export interface NocatBrowserClientConfig {
+	apiUrl?: string;
+	protocol?: 'http' | 'websocket';
+	requestInterceptors?: ServiceRequestInterceptor<any>[];
+	handleError?: (e: any) => Promise<void>;
+	isResponsible: (serviceName: string) => KindOfResponsibility;
+}
 
-	constructor(config?: ClientConfig) {
+export class NocatBrowserClient implements ServiceManager {
+	config: NocatBrowserClientConfig;
+
+	constructor(config?: NocatBrowserClientConfig) {
 		this.config = {
 			...{
 				apiUrl: '/api',
 				protocol: 'http',
 				exceptionHandler: this.defaultExceptionHandler,
 				requestInterceptors: [],
-				responseInterceptors: []
+				responseInterceptors: [],
+				isResponsible: () => KindOfResponsibility.yes,
 			},
 			...(config || {})
 		};
@@ -27,6 +36,10 @@ export class NocatClient implements ServiceManager {
 			}
 			this.config.apiUrl = window.location.protocol + '//' + this.config.apiUrl;
 		}
+	}
+
+	isResponsible(serviceName: string): KindOfResponsibility {
+		return this.config.isResponsible(serviceName);
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {

@@ -8,5 +8,13 @@ export interface ServiceManager {
 
 	isStream?(serviceName: string): boolean;
 
+	isResponsible(serviceName: string): KindOfResponsibility;
+
 	init(): Promise<void>;
+}
+
+export enum KindOfResponsibility {
+	yes = 'yes',
+	no = 'no',
+	fallback = 'fallback'
 }

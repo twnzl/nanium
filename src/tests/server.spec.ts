@@ -1,4 +1,4 @@
-import { LogMode, ServiceExecutionScope } from '..';
+import { KindOfResponsibility, LogMode, ServiceExecutionScope } from '..';
 import { Nocat } from '../core';
 import { NocatServer } from '../managers/server';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
@@ -15,10 +15,11 @@ describe('execute TestRequest on server \n', function (): void {
 	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
-		await Nocat.init(new NocatServer({
+		await Nocat.init([new NocatServer({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: [TestServerRequestInterceptor],
+			isResponsible: () => KindOfResponsibility.yes,
 			handleError: async (err: any): Promise<any> => {
 				if (err instanceof ServiceResponseMessage) {
 					return new ServiceResponseBase({}, { errors: [err] });
@@ -28,7 +29,7 @@ describe('execute TestRequest on server \n', function (): void {
 				}
 				throw err;
 			}
-		}));
+		})]);
 	});
 
 	describe('execute successful \n', function (): void {
@@ -138,7 +139,7 @@ describe('execute TestRequest on server \n', function (): void {
 
 		beforeEach(async function (): Promise<void> {
 			try {
-				privateResponse = await Nocat.execute(privateRequest, 'PrivateStuff', { scope: ServiceExecutionScope.public });
+				privateResponse = await Nocat.execute(privateRequest, 'NocatSelf.PrivateStuff', { scope: ServiceExecutionScope.public });
 			} catch (e) {
 				err = e;
 			}

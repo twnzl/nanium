@@ -4,15 +4,49 @@ import * as findFiles from 'recursive-readdir';
 import { Observable, Observer } from 'rxjs';
 
 import {
+	KindOfResponsibility,
 	LogMode,
 	Nocat,
-	ServerConfig,
+	RequestChannel,
 	ServiceExecutionContext,
 	ServiceExecutionScope,
 	ServiceExecutor,
 	ServiceManager,
+	ServiceRequestInterceptor,
 	StreamServiceExecutor
 } from '..';
+
+export interface NocatServerConfig {
+	/**
+	 * root path where nocat should searches for service executor implementations (default: /service)
+	 */
+	servicePath: string;
+
+	/**
+	 * array of transport adaptors
+	 */
+	requestChannels?: RequestChannel[];
+
+	/**
+	 * array of interceptors (code that runs bevore each request is executed)
+	 */
+	requestInterceptors?: (new() => ServiceRequestInterceptor<any>)[];
+
+	/**
+	 * which log output should be made?
+	 */
+	logMode?: LogMode;
+
+	/**
+	 * exception handling function
+	 */
+	handleError: (e: Error | any) => Promise<void>;
+
+	/**
+	 * returns if the Manager is responsible for the given Service
+	 */
+	isResponsible: (serviceName: string) => KindOfResponsibility,
+}
 
 export class NocatRepository {
 	[serviceName: string]: {
@@ -24,15 +58,16 @@ export class NocatRepository {
 let repository: NocatRepository;
 
 export class NocatServer implements ServiceManager {
-	config: ServerConfig = {
+	config: NocatServerConfig = {
 		servicePath: 'services',
 		requestInterceptors: [],
+		isResponsible: () => KindOfResponsibility.yes,
 		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}
 	};
 
-	constructor(config: ServerConfig) {
+	constructor(config: NocatServerConfig) {
 		this.config = {
 			...this.config,
 			...config
@@ -47,7 +82,7 @@ export class NocatServer implements ServiceManager {
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
 		for (const file of files) {
 			const executor: any = require(path.resolve(file)).default;
-			const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName + 'Request'];
+			const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName.split('.')[1] + 'Request'];
 			repository[executor.serviceName] = {
 				Executor: executor,
 				Request: request
@@ -63,6 +98,10 @@ export class NocatServer implements ServiceManager {
 				await channel.init(repository);
 			}
 		}
+	}
+
+	isResponsible(serviceName: string): KindOfResponsibility {
+		return this.config.isResponsible(serviceName);
 	}
 
 	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {
@@ -84,7 +123,9 @@ export class NocatServer implements ServiceManager {
 			}
 
 			// execution
-			await this.executeRequestInterceptors(request, context, repository[serviceName].Request);
+			if (context.scope === ServiceExecutionScope.public) {
+				await this.executeRequestInterceptors(request, context, repository[serviceName].Request);
+			}
 			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
 			return await executor.execute(request, context);
 		} catch (e) {

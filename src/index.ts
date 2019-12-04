@@ -1,11 +1,7 @@
 export * from './channels/http.channel';
 export * from './channels/rest.channel';
 
-export * from './interfaces/clientConfig';
-export {
-	ServerConfig,
-	LogMode
-} from './interfaces/serverConfig';
+export * from './interfaces/logMode';
 export * from './interfaces/serviceConfig';
 export * from './interfaces/serviceExecutor';
 export * from './interfaces/serviceManager';

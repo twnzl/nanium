@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import * as fs from 'fs';
+import { Stats } from 'fs';
 import * as path from 'path';
 import * as shell from 'shelljs';
+import * as findFiles from 'recursive-readdir';
 
 export class NocatToolConfig {
 	serviceDirectory: string;
 	indentString: string;
+	namespace: string;
 }
 
 // define dictionary with action-functions
@@ -23,7 +26,8 @@ const actions: { [actionName: string]: Function } = {
 	sdk: function (): void {
 		console.log('creating a binary for the app is not yet implemented');
 	},
-	rm: removeFiles
+	rm: removeFiles,
+	namespace: setNamespace
 };
 
 
@@ -31,11 +35,12 @@ const actions: { [actionName: string]: Function } = {
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
 	console.log(`
 nocat init
-nocat generate | g {directory.}*{service name}
+nocat generate | g {directory.}*{service name} {private|public} {namespace}
 nocat rename {old service name} {new service name}
 nocat pkg
 nocat ccp {srcPath} {dstPath} -- like bash cp but cares about creating destination path and removes old files in destination path
 nocat rm {file or folder} -- removes the file or folder
+nocat namespace {namespace}
 `);
 	process.exit(0);
 }
@@ -49,9 +54,15 @@ const config: NocatToolConfig = (function (): NocatToolConfig {
 		configFile = path.join(root, 'nocat.json');
 		if (fs.existsSync(configFile)) {
 			configFromFile = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+			if (!configFromFile.namespace) {
+				throw new Error('nocat.json: namespace not found');
+			}
 			break;
 		}
 		if (path.resolve(path.join(root, '/..')) === root) {
+			if (!configFromFile) {
+				throw new Error('nocat.json not found');
+			}
 			break;
 		}
 		root = path.resolve(path.join(root, '/..'));
@@ -59,7 +70,8 @@ const config: NocatToolConfig = (function (): NocatToolConfig {
 	return {
 		...{
 			serviceDirectory: 'src/server/services',
-			indentString: '\t'
+			indentString: '\t',
+			namespace: 'NocatTest'
 		},
 		...configFromFile
 	};
@@ -97,6 +109,7 @@ function generateService(args: string[]): void {
 	const executorFileName: string = path.join(config.serviceDirectory, subPath, serviceLastName + '.executor.ts');
 	const contractFileName: string = path.join(config.serviceDirectory, subPath, serviceLastName + '.contract.ts');
 	const scope: string = args[1] || 'private';
+	const prefix: string = args[2] || config.namespace;
 
 	// todo check if service with that name already exists
 
@@ -107,7 +120,7 @@ import { ${serviceName}Request, ${serviceName}Response } from './${serviceLastNa
 import { ServiceRequestContext } from '${relativeToRoot}serviceRequestContext';
 
 export default class ${serviceName}Executor implements ServiceExecutor<${serviceName}Request, ${serviceName}Response> {
-${config.indentString}static serviceName: string = '${serviceName}';
+${config.indentString}static serviceName: string = '${prefix}.${serviceName}';
 
 ${config.indentString}async execute(request: ${serviceName}Request, executionContext: ServiceRequestContext): Promise<${serviceName}Response> {
 ${config.indentString}${config.indentString}return new ${serviceName}Response({});
@@ -126,7 +139,7 @@ import { ServiceResponseBase } from '${relativeToRoot}serviceResponseBase';
 import { ServiceExecutionScope } from 'nocat';
 
 export class ${serviceName}Request extends ServiceRequestBase<${serviceName}RequestBody, ${serviceName}ResponseBody> {
-${config.indentString}static serviceName: string = '${serviceName}';
+${config.indentString}static serviceName: string = '${prefix}.${serviceName}';
 ${config.indentString}static scope: ServiceExecutionScope = ServiceExecutionScope.${scope};
 ${config.indentString}static skipInterceptors: boolean = false;
 }
@@ -244,4 +257,17 @@ export class RequestInterceptor implements ServiceRequestInterceptor<ServiceRequ
 }
 `.replace(/\t/g, config.indentString);
 	fs.writeFileSync(path.join(config.serviceDirectory, 'request.interceptor.ts'), fileContent);
+}
+
+async function setNamespace([namespace]: string): Promise<void> {
+	let fileContent: string;
+	const files: string[] = await findFiles(config.serviceDirectory,
+		[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.ts') && !f.endsWith('.contract.ts')]);
+	for (const file of files) {
+		fileContent = fs.readFileSync(file, { encoding: 'utf8' });
+		fileContent = fileContent
+			.replace(/static serviceName: string = '(.*?)\.(.*?)'/g, 'static serviceName: string = \'' + namespace + '.$2' + '\'') // if actually other namespace is defined
+			.replace(/static serviceName: string = '([^\.]*?)'/g, 'static serviceName: string = \'' + namespace + '.$1' + '\''); // if actually no namespace is defined
+		fs.writeFileSync(file, fileContent);
+	}
 }

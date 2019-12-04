@@ -3,7 +3,7 @@ import { TestGetRequest, TestGetResponse } from './get.contract';
 import { ServiceExecutor } from '../../..';
 
 export default class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
-	static serviceName: string = 'TestGet';
+	static serviceName: string = 'NocatSelf.TestGet';
 
 	async execute(request: TestGetRequest): Promise<TestGetResponse> {
 		if (request.body.input2 === 5) {

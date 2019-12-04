@@ -1,4 +1,5 @@
 {
-  "serviceDirectory": "src/tests/services2",
-  "indentString": "\t"
+  "serviceDirectory": "src/tests/services",
+  "indentString": "\t",
+  "namespace": "NocatTest"
 }

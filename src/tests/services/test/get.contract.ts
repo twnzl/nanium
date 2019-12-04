@@ -3,7 +3,7 @@ import { ServiceExecutionScope } from '../../..';
 import { ServiceResponseBase } from '../serviceResponseBase';
 
 export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
-	static serviceName: string = 'TestGet';
+	static serviceName: string = 'NocatSelf.TestGet';
 	static scope: ServiceExecutionScope = ServiceExecutionScope.public;
 	static skipInterceptors: boolean = false;
 }

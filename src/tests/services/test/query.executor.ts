@@ -1,9 +1,9 @@
 import { TestDto, TestQueryRequest } from './query.contract';
 import { Observable, Observer } from 'rxjs';
-import { StreamServiceExecutor } from '../../../interfaces/streamServiceExecutor';
+import { StreamServiceExecutor } from '../../..';
 
 export default class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
-	static serviceName: string = 'TestQuery';
+	static serviceName: string = 'NocatSelf.TestQuery';
 
 	stream(request: TestQueryRequest): Observable<TestDto> {
 		return new Observable((observer: Observer<TestDto>): void => {
