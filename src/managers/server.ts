@@ -115,7 +115,7 @@ export class NocatServer implements ServiceManager {
 			if (!repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, request, context);
 			}
-			if (context && context.scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
+			if (context?.scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
 				const requestConstructor: any = repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
 					return await this.config.handleError(new Error('unauthorized'), serviceName, request, context);
@@ -123,7 +123,7 @@ export class NocatServer implements ServiceManager {
 			}
 
 			// execution
-			if (context.scope === ServiceExecutionScope.public) {
+			if (context?.scope === ServiceExecutionScope.public) {
 				await this.executeRequestInterceptors(request, context, repository[serviceName].Request);
 			}
 			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
