@@ -21,7 +21,7 @@ export class NocatBrowserClient implements ServiceManager {
 				exceptionHandler: this.defaultExceptionHandler,
 				requestInterceptors: [],
 				responseInterceptors: [],
-				isResponsible: () => KindOfResponsibility.yes,
+				isResponsible: (): KindOfResponsibility => KindOfResponsibility.yes,
 			},
 			...(config || {})
 		};
@@ -138,6 +138,7 @@ export class NocatBrowserClient implements ServiceManager {
 					}
 				};
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
+				xhr.setRequestHeader('Content-Type', 'application/json');
 				xhr.send(JSON.stringify({ [serviceName]: request }));
 			} catch (e) {
 				reject(e);
