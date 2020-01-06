@@ -40,7 +40,7 @@ export interface NocatServerConfig {
 	/**
 	 * exception handling function
 	 */
-	handleError: (e: Error | any) => Promise<void>;
+	handleError: (e: Error | any, serviceName: string, request: any, context?: ServiceExecutionContext) => Promise<void>;
 
 	/**
 	 * returns if the Manager is responsible for the given Service
@@ -110,15 +110,15 @@ export class NocatServer implements ServiceManager {
 		try {
 			// validation
 			if (repository === undefined) {
-				return await this.config.handleError(new Error('nocat server is not initialized'));
+				return await this.config.handleError(new Error('nocat server is not initialized'), serviceName, request, context);
 			}
 			if (!repository.hasOwnProperty(serviceName)) {
-				return await this.config.handleError(new Error('unknown service ' + serviceName));
+				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, request, context);
 			}
 			if (context && context.scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
 				const requestConstructor: any = repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
-					return await this.config.handleError(new Error('unauthorized'));
+					return await this.config.handleError(new Error('unauthorized'), serviceName, request, context);
 				}
 			}
 
@@ -129,7 +129,7 @@ export class NocatServer implements ServiceManager {
 			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
 			return await executor.execute(request, context);
 		} catch (e) {
-			return await this.config.handleError(e);
+			return await this.config.handleError(e, serviceName, request, context);
 		}
 	}
 
@@ -156,7 +156,7 @@ export class NocatServer implements ServiceManager {
 						observer.next(value);
 					},
 					error: (e: any): void => {
-						this.config.handleError(e).then();
+						this.config.handleError(e, serviceName, request, context).then();
 						observer.error(e);
 					},
 					complete: (): void => {
