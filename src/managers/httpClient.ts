@@ -68,6 +68,9 @@ export class NocatHttpClient implements ServiceManager {
 		try {
 			return await NocatHttpClient.httpRequest(options);
 		} catch (e) {
+			if (e.statusCode === 500) {
+				throw e.error;
+			}
 			throw e;
 		}
 	}
