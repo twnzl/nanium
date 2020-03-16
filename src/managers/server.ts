@@ -28,9 +28,11 @@ export interface NocatServerConfig {
 	requestChannels?: RequestChannel[];
 
 	/**
-	 * array of interceptors (code that runs bevore each request is executed)
+	 * interceptors (code that runs before each request is executed)
 	 */
-	requestInterceptors?: (new() => ServiceRequestInterceptor<any>)[];
+	requestInterceptors?: {
+		[name: string]: new() => ServiceRequestInterceptor<any>
+	};
 
 	/**
 	 * which log output should be made?
@@ -60,7 +62,7 @@ let repository: NocatRepository;
 export class NocatServer implements ServiceManager {
 	config: NocatServerConfig = {
 		servicePath: 'services',
-		requestInterceptors: [],
+		requestInterceptors: {},
 		isResponsible: () => KindOfResponsibility.yes,
 		handleError: async (err: any): Promise<any> => {
 			throw err;
@@ -181,16 +183,15 @@ export class NocatServer implements ServiceManager {
 	 * execute request interceptors
 	 */
 	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext, requestType: any): Promise<void> {
-		if (this.config.requestInterceptors.length) {
-			for (const interceptor of this.config.requestInterceptors) {
-				if (
-					requestType.skipInterceptors === true ||
-					(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.indexOf(interceptor) >= 0)
-				) {
-					continue;
-				}
-				await new interceptor().execute(request, context);
+		for (const interceptorName of Object.keys(this.config.requestInterceptors)) {
+			const interceptor = this.config.requestInterceptors[interceptorName];
+			if (
+				requestType.skipInterceptors === true ||
+				(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.indexOf(interceptorName) >= 0)
+			) {
+				continue;
 			}
+			await new interceptor().execute(request, context);
 		}
 	}
 

@@ -18,7 +18,7 @@ describe('execute TestRequest on server \n', function (): void {
 		await Nocat.init([new NocatServer({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
-			requestInterceptors: [TestServerRequestInterceptor],
+			requestInterceptors: { test: TestServerRequestInterceptor },
 			isResponsible: () => KindOfResponsibility.yes,
 			handleError: async (err: any): Promise<any> => {
 				if (err instanceof ServiceResponseMessage) {
