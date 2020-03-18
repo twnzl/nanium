@@ -19,13 +19,13 @@ export class Nocat {
 	}
 
 	static isStream(serviceName: string): boolean {
-		const manager = this.getResponsibleManager(serviceName);
+		const manager: ServiceManager = this.getResponsibleManager(serviceName);
 		return manager.isStream(serviceName);
 	}
 
 	static async execute(request: any, serviceName?: string, context?: ServiceExecutionContext): Promise<any> {
 		serviceName = serviceName || request.constructor.serviceName;
-		const manager = this.getResponsibleManager(serviceName);
+		const manager: ServiceManager = this.getResponsibleManager(serviceName);
 		if (!manager) {
 			throw new Error('nocat has not been initialized');
 		}
@@ -35,7 +35,7 @@ export class Nocat {
 
 	static stream(request: any, serviceName?: string, context?: ServiceExecutionContext): Observable<any> {
 		serviceName = serviceName || request.constructor.serviceName;
-		const manager = this.getResponsibleManager(serviceName);
+		const manager: ServiceManager = this.getResponsibleManager(serviceName);
 		if (!manager) {
 			throw new Error('nocat has not been initialized');
 		}
@@ -43,7 +43,7 @@ export class Nocat {
 	}
 
 	static getResponsibleManager(serviceName: string): ServiceManager {
-		const result = this.managers.find((manager: ServiceManager) => manager.isResponsible(serviceName) === 'yes');
+		const result: ServiceManager = this.managers.find((manager: ServiceManager) => manager.isResponsible(serviceName) === 'yes');
 		if (result) {
 			return result;
 		}
