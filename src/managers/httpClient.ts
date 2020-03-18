@@ -9,7 +9,7 @@ export interface NocatHttpClientConfig {
 	proxy?: string;
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
 	handleError?: (e: any) => Promise<void>;
-	isResponsible: (serviceName: string) => KindOfResponsibility
+	isResponsible: (serviceName: string) => KindOfResponsibility;
 }
 
 export class NocatHttpClient implements ServiceManager {
@@ -22,8 +22,7 @@ export class NocatHttpClient implements ServiceManager {
 				proxy: null,
 				exceptionHandler: this.defaultExceptionHandler,
 				requestInterceptors: [],
-				responseInterceptors: [],
-				isResponsible: () => KindOfResponsibility.yes,
+				isResponsible: (): KindOfResponsibility => KindOfResponsibility.yes,
 			},
 			...(config || {})
 		};

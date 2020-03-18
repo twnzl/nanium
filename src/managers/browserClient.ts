@@ -20,7 +20,6 @@ export class NocatBrowserClient implements ServiceManager {
 				protocol: 'http',
 				exceptionHandler: this.defaultExceptionHandler,
 				requestInterceptors: [],
-				responseInterceptors: [],
 				isResponsible: (): KindOfResponsibility => KindOfResponsibility.yes,
 			},
 			...(config || {})
