@@ -5,6 +5,10 @@ export default class PrivateStuffExecutor implements ServiceExecutor<PrivateStuf
 	static serviceName: string = 'NocatSelf.PrivateStuff';
 
 	async execute(request: PrivateStuffRequest): Promise<PrivateStuffResponse> {
+		const errors: string[] = request.validate();
+		if (errors?.length) {
+			throw errors;
+		}
 		return new PrivateStuffResponse(request.body + 1);
 	}
 }
