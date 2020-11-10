@@ -153,7 +153,7 @@ describe('execute TestRequest on server \n', function (): void {
 	describe('When the request comes serialized over HTTP ore something else, the request that ist passed to the executor must be a real instance of the request type not only a DTO \n', function (): void {
 		beforeEach(async function (): Promise<void> {
 			const r = <PrivateStuffRequest>{ body: 1, head: { token: '1234' } };
-			await Nocat.execute(r, 'NocatSelf.PrivateStuff');
+			privateResponse = await Nocat.execute(r, 'NocatSelf.PrivateStuff');
 		});
 
 		it('--> \n', async function (): Promise<void> {
