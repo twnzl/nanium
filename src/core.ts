@@ -1,5 +1,4 @@
 import { Observable } from 'rxjs';
-
 import { ServiceManager } from './interfaces/serviceManager';
 import { ServiceExecutionContext } from './interfaces/serviceExecutionContext';
 import { LogMode } from './interfaces/logMode';

@@ -1,5 +1,5 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceExecutionScope } from '../../..';
+import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 
 export class AnonymousRequest extends ServiceRequestBase<void, string> {
 	static serviceName: string = 'NocatSelf.Anonymous';

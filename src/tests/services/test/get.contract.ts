@@ -1,6 +1,6 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceExecutionScope } from '../../..';
 import { ServiceResponseBase } from '../serviceResponseBase';
+import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 
 export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
 	static serviceName: string = 'NocatSelf.TestGet';

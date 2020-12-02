@@ -1,6 +1,7 @@
 import { ServiceRequestHead } from './serviceRequestHead';
 import { ServiceResponseBase } from './serviceResponseBase';
-import { Nocat, ServiceRequest } from '../..';
+import { ServiceRequest } from '../../interfaces/serviceRequest';
+import { Nocat } from '../../core';
 
 export class ServiceRequestBase<TRequestBody, TResponseBody> implements ServiceRequest<ServiceResponseBase<TResponseBody>> {
 

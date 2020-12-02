@@ -1,6 +1,6 @@
 import { Observable, Observer } from 'rxjs';
-
-import { KindOfResponsibility, ServiceManager, ServiceRequestInterceptor } from '..';
+import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
+import { KindOfResponsibility, ServiceManager } from '../interfaces/serviceManager';
 
 export interface NocatBrowserClientConfig {
 	apiUrl?: string;

@@ -1,6 +1,6 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceExecutionScope } from '../../..';
 import { ServiceResponseBase } from '../serviceResponseBase';
+import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 
 export class PrivateStuffRequest extends ServiceRequestBase<number, number> {
 	static serviceName: string = 'NocatSelf.PrivateStuff';

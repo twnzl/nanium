@@ -1,14 +1,11 @@
 {
-  "name": "nocat",
+  "name": "nocat-es6",
   "version": "0.6.9",
   "description": "software architecture framework for no communication & assembling trouble",
   "repository": {},
   "license": "UNLICENSED",
   "private": false,
   "main": "core.js",
-  "bin": {
-    "nocat": "tools/nocat.js"
-  },
   "types": "**/*.ts",
   "keywords": [
     "nanoservices",
@@ -19,25 +16,17 @@
   "scripts": {
     "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "clean": "rm -r dist",
-    "build": "tsc",
-    "cleanbuild": "npm run clean && tsc",
-    "test": "node $NODE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js",
-    "prepare": "",
-    "publishlist": "npm pack && tar -xvzf *.tgz && rm -rf package *.tgz",
-    "bundle": "cp package.json dist && npm publish ./dist",
-    "bundle-es6": "rm -r dist && tsc --build tsconfig-es6.json && cp package-es6.json dist/package.json && npm publish ./dist"
+    "build": "tsc --build tsconfig-es6.json",
+    "cleanbuild": "npm run clean && build",
+    "test": "node $NODE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js"
   },
   "files": [
     "core.js",
     "core.d.ts",
-    "channels/*.js",
-    "channels/*.ts",
     "interfaces/*.js",
     "interfaces/*.ts",
-    "managers/*.js",
-    "managers/*.ts",
-    "tools/*.js",
-    "tools/*.ts"
+    "managers/browserClient.d.ts",
+    "managers/browserClient.js"
   ],
   "dependencies": {
     "recursive-readdir": "^2.2.2",

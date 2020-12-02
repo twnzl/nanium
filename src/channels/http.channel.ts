@@ -2,9 +2,12 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { Observable } from 'rxjs';
 
 import { Nocat } from '../core';
-import { RequestChannel, RequestChannelConfig, ServiceExecutionContext, ServiceExecutionScope } from '..';
 import * as express from 'express';
 import { NocatRepository } from '../managers/server';
+import { RequestChannelConfig } from '../interfaces/requestChannelConfig';
+import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
+import { RequestChannel } from '../interfaces/requestChannel';
+import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
 
 export class NocatHttpChannelConfig implements RequestChannelConfig {
 	expressApp: express.Express;
@@ -17,7 +20,7 @@ export class NocatHttpChannel implements RequestChannel {
 	constructor(private config: NocatHttpChannelConfig) {
 	}
 
-	async init(serviceRepository: NocatRepository): Promise<void> {
+	async init(_serviceRepository: NocatRepository): Promise<void> {
 		this.config.expressApp.post(this.config.apiPath, async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
 			if (req['body']) {
 				await this.execute(req['body'], res);

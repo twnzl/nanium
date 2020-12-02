@@ -1,6 +1,6 @@
 import { TestDto, TestQueryRequest } from './query.contract';
+import { StreamServiceExecutor } from '../../../interfaces/streamServiceExecutor';
 import { Observable, Observer } from 'rxjs';
-import { StreamServiceExecutor } from '../../..';
 
 export default class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
 	static serviceName: string = 'NocatSelf.TestQuery';

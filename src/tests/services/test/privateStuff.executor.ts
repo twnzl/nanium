@@ -1,5 +1,5 @@
-import { ServiceExecutor } from '../../..';
 import { PrivateStuffRequest, PrivateStuffResponse } from './privateStuff.contract';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
 
 export default class PrivateStuffExecutor implements ServiceExecutor<PrivateStuffRequest, PrivateStuffResponse> {
 	static serviceName: string = 'NocatSelf.PrivateStuff';

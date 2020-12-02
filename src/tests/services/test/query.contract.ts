@@ -1,5 +1,5 @@
 import { StreamServiceRequestBase } from '../streamServiceRequestBase';
-import { ServiceExecutionScope } from '../../..';
+import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 
 export class TestQueryRequest extends StreamServiceRequestBase<TestQueryRequestBody, TestDto> {
 	static serviceName: string = 'NocatSelf.TestQuery';

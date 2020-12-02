@@ -2,19 +2,15 @@ import { Stats } from 'fs';
 import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
 import { Observable, Observer } from 'rxjs';
-
-import {
-	KindOfResponsibility,
-	LogMode,
-	Nocat,
-	RequestChannel,
-	ServiceExecutionContext,
-	ServiceExecutionScope,
-	ServiceExecutor,
-	ServiceManager,
-	ServiceRequestInterceptor,
-	StreamServiceExecutor
-} from '..';
+import { RequestChannel } from '../interfaces/requestChannel';
+import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
+import { LogMode } from '../interfaces/logMode';
+import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
+import { KindOfResponsibility, ServiceManager } from '../interfaces/serviceManager';
+import { Nocat } from '../core';
+import { ServiceExecutor } from '../interfaces/serviceExecutor';
+import { StreamServiceExecutor } from '../interfaces/streamServiceExecutor';
+import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
 
 export interface NocatServerConfig {
 	/**

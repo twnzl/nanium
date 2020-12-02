@@ -1,8 +1,8 @@
 import { Observable, Observer } from 'rxjs';
-
-import { KindOfResponsibility, ServiceManager, ServiceRequestInterceptor } from '..';
 import { RequestPromiseOptions } from 'request-promise';
 import { UrlOptions } from 'request';
+import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
+import { KindOfResponsibility, ServiceManager } from '../interfaces/serviceManager';
 
 export interface NocatHttpClientConfig {
 	apiUrl?: string;

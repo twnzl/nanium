@@ -1,8 +1,12 @@
 import * as express from 'express';
 import { Nocat } from '../core';
-import { LogMode, RequestChannel, RequestChannelConfig, ServiceExecutionContext, ServiceExecutionScope } from '..';
 import { NocatRepository } from '../managers/server';
 import { Observable } from 'rxjs';
+import { RequestChannelConfig } from '../interfaces/requestChannelConfig';
+import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
+import { RequestChannel } from '../interfaces/requestChannel';
+import { LogMode } from '../interfaces/logMode';
+import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
 
 export class NocatRestChannelConfig implements RequestChannelConfig {
 	expressApp: express.Express;
@@ -57,7 +61,7 @@ export class NocatRestChannel implements RequestChannel {
 		const parts: string[] = serviceName.match(/[A-Z][a-z]+/g);
 		const lastPart: string = parts.pop();
 		let path: string = this.config.apiBasePath + parts.join('/').toLowerCase();
-		let method: string = 'post';
+		let method: string;
 		switch (lastPart) {
 			case 'Query':
 			case 'Get':

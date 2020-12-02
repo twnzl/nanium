@@ -1,4 +1,3 @@
-import { KindOfResponsibility, LogMode, ServiceExecutionScope } from '..';
 import { Nocat } from '../core';
 import { NocatServer } from '../managers/server';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
@@ -7,6 +6,9 @@ import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
 import { AnonymousRequest } from './services/test/anonymous.contract';
+import { LogMode } from '../interfaces/logMode';
+import { KindOfResponsibility } from '../interfaces/serviceManager';
+import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' }, { token: '1234' });
