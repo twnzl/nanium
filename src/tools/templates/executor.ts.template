@@ -1,0 +1,11 @@
+import { ServiceExecutor } from 'nocat/interfaces/serviceExecutor';
+import { ${serviceName}Request } from './${serviceLastName}.contract';
+import { ServiceRequestContext } from '${relativeToRoot}serviceRequestContext';
+
+export default class ${serviceName}Executor implements ServiceExecutor<${serviceName}Request, ${serviceName}Response> {
+${indentString}static serviceName: string = '${prefix}.${serviceName}';
+
+${indentString}async execute(request: ${serviceName}Request, executionContext: ServiceRequestContext): Promise<${serviceName}Response> {
+${indentString}${indentString}return new ${serviceName}Response({});
+${indentString}}
+}

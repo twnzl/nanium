@@ -1,6 +1,6 @@
 {
   "name": "nocat",
-  "version": "0.6.9",
+  "version": "0.7.0",
   "description": "software architecture framework for no communication & assembling trouble",
   "repository": {},
   "license": "UNLICENSED",
@@ -19,7 +19,7 @@
   "scripts": {
     "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "clean": "rm -r dist",
-    "build": "tsc",
+    "build": "tsc && cp -R src/tools/templates dist/tools",
     "cleanbuild": "npm run clean && tsc",
     "test": "node $NODE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js",
     "prepare": "",
@@ -37,7 +37,8 @@
     "managers/*.js",
     "managers/*.ts",
     "tools/*.js",
-    "tools/*.ts"
+    "tools/*.ts",
+    "tools/templates/*"
   ],
   "dependencies": {
     "recursive-readdir": "^2.2.2",

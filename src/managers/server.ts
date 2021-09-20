@@ -43,7 +43,7 @@ export interface NocatServerConfig {
 	/**
 	 * returns if the Manager is responsible for the given Service
 	 */
-	isResponsible: (serviceName: string) => KindOfResponsibility,
+	isResponsible: (serviceName: string) => KindOfResponsibility;
 }
 
 export class NocatRepository {
@@ -59,7 +59,7 @@ export class NocatServer implements ServiceManager {
 	config: NocatServerConfig = {
 		servicePath: 'services',
 		requestInterceptors: {},
-		isResponsible: () => KindOfResponsibility.yes,
+		isResponsible: (): KindOfResponsibility => KindOfResponsibility.yes,
 		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}
@@ -104,7 +104,7 @@ export class NocatServer implements ServiceManager {
 
 	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {
 		context = context || {};
-		const realRequest = new repository[serviceName].Request();
+		const realRequest: any = new repository[serviceName].Request();
 		Object.assign(realRequest, request);
 
 		try {
@@ -135,7 +135,7 @@ export class NocatServer implements ServiceManager {
 
 	stream(serviceName: string, request: any, context?: ServiceExecutionContext): Observable<any> {// validation
 		context = context || {};
-		const realRequest = new repository[serviceName].Request();
+		const realRequest: any = new repository[serviceName].Request();
 		Object.assign(realRequest, request);
 
 		if (repository === undefined) {
@@ -185,7 +185,7 @@ export class NocatServer implements ServiceManager {
 	 */
 	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext, requestType: any): Promise<void> {
 		for (const interceptorName of Object.keys(this.config.requestInterceptors)) {
-			const interceptor = this.config.requestInterceptors[interceptorName];
+			const interceptor: new() => ServiceRequestInterceptor<any> = this.config.requestInterceptors[interceptorName];
 			if (
 				requestType.skipInterceptors === true ||
 				(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.indexOf(interceptorName) >= 0)

@@ -1,0 +1,19 @@
+import { ServiceExecutionContext } from 'nocat/interfaces/serviceExecutionContext';
+import { ServiceRequest } from 'nocat/interfaces/serviceRequest';
+import { ServiceRequestHead } from './serviceRequestHead';
+import { Nocat } from 'nocat/core';
+
+export class ServiceRequestBase<TRequestBody, TResponse> implements ServiceRequest<TResponse> {
+
+	head: ServiceRequestHead;
+	body: TRequestBody;
+
+	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
+		this.body = body || {} as TRequestBody;
+		this.head = head;
+	}
+
+	async execute(context?: ServiceExecutionContext): Promise<TResponse> {
+		return await Nocat.execute(this, undefined, context);
+	}
+}
