@@ -9,7 +9,12 @@
     "json",
     "node"
   ],
-  "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(ts|js)$",
+  "forceExit": true,
+  "detectOpenHandles": true,
+  "setupFilesAfterEnv": [
+    "@alex_neo/jest-expect-message"
+  ],
+  "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(ts)$",
   "coverageDirectory": "coverage",
   "collectCoverageFrom": [
     "src/**/*.{ts,js}",

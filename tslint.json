@@ -90,8 +90,6 @@
       "call-signature",
       "parameter",
       "member-variable-declaration",
-      "arrow-call-signature",
-      "arrow-parameter",
       "property-declaration",
       "variable-declaration",
       "object-destructuring",

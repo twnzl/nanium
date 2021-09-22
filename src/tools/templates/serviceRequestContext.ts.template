@@ -10,4 +10,11 @@ export class ServiceRequestContext implements ServiceExecutionContext {
 	constructor(data: Partial<ServiceRequestContext>) {
 		Object.assign(this, data);
 	}
+
+	asPrivate(): TestExecutionContext {
+		return new TestExecutionContext({
+			...this,
+			...{ scope: ServiceExecutionScope.private }
+		});
+	}
 }

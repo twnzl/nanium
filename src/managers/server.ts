@@ -6,11 +6,12 @@ import { RequestChannel } from '../interfaces/requestChannel';
 import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
 import { LogMode } from '../interfaces/logMode';
 import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
-import { KindOfResponsibility, ServiceManager } from '../interfaces/serviceManager';
+import { ServiceManager } from '../interfaces/serviceManager';
 import { Nocat } from '../core';
 import { ServiceExecutor } from '../interfaces/serviceExecutor';
 import { StreamServiceExecutor } from '../interfaces/streamServiceExecutor';
 import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
+import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 
 export interface NocatServerConfig {
 	/**
@@ -59,7 +60,7 @@ export class NocatServer implements ServiceManager {
 	config: NocatServerConfig = {
 		servicePath: 'services',
 		requestInterceptors: {},
-		isResponsible: (): KindOfResponsibility => KindOfResponsibility.yes,
+		isResponsible: (): KindOfResponsibility => 'yes',
 		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}

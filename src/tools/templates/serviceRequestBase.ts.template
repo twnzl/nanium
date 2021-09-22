@@ -1,7 +1,8 @@
+import { Nocat } from 'nocat/core';
 import { ServiceExecutionContext } from 'nocat/interfaces/serviceExecutionContext';
 import { ServiceRequest } from 'nocat/interfaces/serviceRequest';
+import { ServiceRequestQueueEntry } from 'nocat/interfaces/serviceRequestQueueEntry';
 import { ServiceRequestHead } from './serviceRequestHead';
-import { Nocat } from 'nocat/core';
 
 export class ServiceRequestBase<TRequestBody, TResponse> implements ServiceRequest<TResponse> {
 
@@ -15,5 +16,10 @@ export class ServiceRequestBase<TRequestBody, TResponse> implements ServiceReque
 
 	async execute(context?: ServiceExecutionContext): Promise<TResponse> {
 		return await Nocat.execute(this, undefined, context);
+	}
+
+	async enqueue(options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
+		const serviceName: string = (this.constructor as any).serviceName;
+		return await Nocat.enqueue({ serviceName, request: this, ...options });
 	}
 }

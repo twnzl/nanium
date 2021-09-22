@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs';
 import { ServiceExecutionContext } from './serviceExecutionContext';
+import { KindOfResponsibility } from './kindOfResponsibility';
 
 export interface ServiceManager {
 	execute?(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any>;
@@ -11,10 +12,4 @@ export interface ServiceManager {
 	isResponsible(serviceName: string): KindOfResponsibility;
 
 	init(): Promise<void>;
-}
-
-export enum KindOfResponsibility {
-	yes = 'yes',
-	no = 'no',
-	fallback = 'fallback'
 }

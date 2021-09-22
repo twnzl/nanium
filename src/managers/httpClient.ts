@@ -2,7 +2,8 @@ import { Observable, Observer } from 'rxjs';
 import { RequestPromiseOptions } from 'request-promise';
 import { UrlOptions } from 'request';
 import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
-import { KindOfResponsibility, ServiceManager } from '../interfaces/serviceManager';
+import { ServiceManager } from '../interfaces/serviceManager';
+import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 
 export interface NocatHttpClientConfig {
 	apiUrl?: string;
@@ -20,9 +21,9 @@ export class NocatHttpClient implements ServiceManager {
 			...{
 				apiUrl: 'localhost:8080/api',
 				proxy: null,
-				exceptionHandler: this.defaultExceptionHandler,
+				exceptionHandler: (response) => console.error(response),
 				requestInterceptors: [],
-				isResponsible: (): KindOfResponsibility => KindOfResponsibility.yes,
+				isResponsible: (): KindOfResponsibility => 'yes',
 			},
 			...(config || {})
 		};
@@ -33,10 +34,6 @@ export class NocatHttpClient implements ServiceManager {
 
 	isResponsible(serviceName: string): KindOfResponsibility {
 		return this.config.isResponsible(serviceName);
-	}
-
-	private defaultExceptionHandler(response: any): void {
-		console.log(response);
 	}
 
 	private static _httpRequest: Function;

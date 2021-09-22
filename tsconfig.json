@@ -11,7 +11,8 @@
     "experimentalDecorators": true,
     "types": [
       "node",
-      "jasmine"
+      "jest",
+      "jest-expect-message"
     ],
     "moduleResolution": "Node",
     "typeRoots": [

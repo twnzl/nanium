@@ -4,11 +4,11 @@ import { TestServerRequestInterceptor } from './interceptors/server/test.request
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
-import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
+import { ServiceResponseBase } from './services/serviceResponseBase';
 import { AnonymousRequest } from './services/test/anonymous.contract';
 import { LogMode } from '../interfaces/logMode';
-import { KindOfResponsibility } from '../interfaces/serviceManager';
 import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
+import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' }, { token: '1234' });
@@ -21,9 +21,9 @@ describe('execute TestRequest on server \n', function (): void {
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: { test: TestServerRequestInterceptor },
-			isResponsible: () => KindOfResponsibility.yes,
+			isResponsible: (): KindOfResponsibility => 'yes',
 			handleError: async (err: any): Promise<any> => {
-				if (err instanceof ServiceResponseMessage) {
+				if (err.hasOwnProperty('code')) {
 					return new ServiceResponseBase({}, { errors: [err] });
 				}
 				if (err instanceof Error && err.message === 'no!') {
@@ -41,8 +41,8 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('--> \n', async function (): Promise<void> {
-			expect(response.body.output1).toBe('hello world :-)', 'output1 should be correct');
-			expect(response.body.output2).toBe(2, 'output2 should be correct');
+			expect(response.body.output1, 'output1 should be correct').toBe('hello world :-)');
+			expect(response.body.output2, 'output2 should be correct').toBe(2);
 		});
 	});
 
@@ -54,7 +54,7 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('--> \n', async function (): Promise<void> {
-			expect(anonymousResponse.body).toBe(':-)', 'output should be correct');
+			expect(anonymousResponse.body, 'output should be correct').toBe(':-)');
 		});
 	});
 
@@ -64,12 +64,12 @@ describe('execute TestRequest on server \n', function (): void {
 			response = await request.execute();
 		});
 
-		it('-->  \n', async function (): Promise<void> {
-			expect(response.head).not.toBeUndefined('response head should be set');
-			expect(response.head.errors).not.toBeUndefined('response head.error should be set');
-			expect(response.head.errors.length).toBe(1, 'response.head.error should contain one exception');
-			expect(response.head.errors[0].code).toBe('E2', 'the error in the response should have the right code');
-			expect(response.head.errors[0].text).toBe('Error 2', 'the error in the response should have the right text');
+		test('-->  \n', async function (): Promise<void> {
+			expect(response.head, 'response head should be set').not.toBeUndefined();
+			expect(response.head.errors, 'response head.error should be set').not.toBeUndefined();
+			expect(response.head.errors.length, 'response.head.error should contain one exception').toBe(1);
+			expect(response.head.errors[0].code, 'the error in the response should have the right code').toBe('E2');
+			expect(response.head.errors[0].text, 'the error in the response should have the right text').toBe('Error 2');
 		});
 	});
 
@@ -80,11 +80,11 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('-->  \n', async function (): Promise<void> {
-			expect(response.head).not.toBeUndefined('response head should be set');
-			expect(response.head.exceptions).not.toBeUndefined('response head.exceptions should be set');
-			expect(response.head.exceptions.length).toBe(1, 'response.head.exceptions should contain one exception');
-			expect(response.head.exceptions[0].code).toBe('ErrorLogId0815', 'the exception in the response should have the right code');
-			expect(response.head.exceptions[0].text).toBeUndefined('the exception.text should be not set');
+			expect(response.head, 'response head should be set').not.toBeUndefined();
+			expect(response.head.exceptions, 'response head.exceptions should be set').not.toBeUndefined();
+			expect(response.head.exceptions.length, 'response.head.exceptions should contain one exception').toBe(1);
+			expect(response.head.exceptions[0].code, 'the exception in the response should have the right code').toBe('ErrorLogId0815');
+			expect(response.head.exceptions[0].text, 'the exception.text should be not set').toBeUndefined();
 		});
 	});
 
@@ -102,8 +102,8 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('-->  \n', async function (): Promise<void> {
-			expect(response).toBeUndefined('response should not be set');
-			expect(exception.message).toBe('no no!', 'promise should have been rejected with an object of type Error and the right message');
+			expect(response, 'response should not be set').toBeUndefined();
+			expect(exception.message, 'promise should have been rejected with an object of type Error and the right message').toBe('no no!');
 		});
 	});
 
@@ -122,7 +122,7 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('-->  \n', async function (): Promise<void> {
-			expect(dtoList.length).toBe(3, 'length of result list should be correct');
+			expect(dtoList.length, 'length of result list should be correct').toBe(3);
 		});
 	});
 
@@ -132,7 +132,7 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('--> \n', async function (): Promise<void> {
-			expect(privateResponse.body).toBe(2, 'result should be correct');
+			expect(privateResponse.body, 'result should be correct').toBe(2);
 		});
 	});
 
@@ -148,18 +148,18 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('--> \n', async function (): Promise<void> {
-			expect(err.message).toBe('unauthorized', 'result should be correct');
+			expect(err.message, 'result should be correct').toBe('unauthorized');
 		});
 	});
 
 	describe('When the request comes serialized over HTTP ore something else, the request that ist passed to the executor must be a real instance of the request type not only a DTO \n', function (): void {
 		beforeEach(async function (): Promise<void> {
-			const r = <PrivateStuffRequest>{ body: 1, head: { token: '1234' } };
+			const r: PrivateStuffRequest = <PrivateStuffRequest>{ body: 1, head: { token: '1234' } };
 			privateResponse = await Nocat.execute(r, 'NocatSelf.PrivateStuff');
 		});
 
 		it('--> \n', async function (): Promise<void> {
-			expect(privateResponse.body).toBe(2, 'result should be correct');
+			expect(privateResponse.body, 'result should be correct').toBe(2);
 		});
 	});
 });

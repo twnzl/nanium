@@ -1,6 +1,7 @@
 import { Observable, Observer } from 'rxjs';
 import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
-import { KindOfResponsibility, ServiceManager } from '../interfaces/serviceManager';
+import { ServiceManager } from '../interfaces/serviceManager';
+import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 
 export interface NocatBrowserClientConfig {
 	apiUrl?: string;
@@ -18,9 +19,9 @@ export class NocatBrowserClient implements ServiceManager {
 			...{
 				apiUrl: '/api',
 				protocol: 'http',
-				exceptionHandler: this.defaultExceptionHandler,
+				exceptionHandler: (response) => alert(response),
 				requestInterceptors: [],
-				isResponsible: (): KindOfResponsibility => KindOfResponsibility.yes,
+				isResponsible: (): KindOfResponsibility => 'yes',
 			},
 			...(config || {})
 		};
@@ -59,10 +60,6 @@ export class NocatBrowserClient implements ServiceManager {
 		}
 
 		return response;
-	}
-
-	private defaultExceptionHandler(response: any): void {
-		alert(response);
 	}
 
 	stream(serviceName: string, request: any): Observable<any> {
