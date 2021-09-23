@@ -47,9 +47,9 @@ export interface NocatNodejsProviderConfig {
 	isResponsible: (serviceName: string) => KindOfResponsibility;
 }
 
-let repository: NocatRepository;
 
 export class NocatNodejsProvider implements ServiceManager {
+	repository: NocatRepository;
 	config: NocatNodejsProviderConfig = {
 		servicePath: 'services',
 		requestInterceptors: {},
@@ -64,7 +64,7 @@ export class NocatNodejsProvider implements ServiceManager {
 			...this.config,
 			...config
 		};
-		repository = {};
+		this.repository = {};
 	}
 
 	async init(): Promise<void> {
@@ -75,7 +75,7 @@ export class NocatNodejsProvider implements ServiceManager {
 		for (const file of files) {
 			const executor: any = require(path.resolve(file)).default;
 			const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName.split('.')[1] + 'Request'];
-			repository[executor.serviceName] = {
+			this.repository[executor.serviceName] = {
 				Executor: executor,
 				Request: request
 			};
@@ -87,7 +87,7 @@ export class NocatNodejsProvider implements ServiceManager {
 		// init channels over which requests can come from public scope
 		if (this.config.requestChannels && this.config.requestChannels.length) {
 			for (const channel of this.config.requestChannels) {
-				await channel.init(repository);
+				await channel.init(this.repository);
 			}
 		}
 	}
@@ -98,19 +98,19 @@ export class NocatNodejsProvider implements ServiceManager {
 
 	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {
 		context = context || {};
-		const realRequest: any = new repository[serviceName].Request();
+		const realRequest: any = new this.repository[serviceName].Request();
 		Object.assign(realRequest, request);
 
 		try {
 			// validation
-			if (repository === undefined) {
+			if (this.repository === undefined) {
 				return await this.config.handleError(new Error('nocat server is not initialized'), serviceName, realRequest, context);
 			}
-			if (!repository.hasOwnProperty(serviceName)) {
+			if (!this.repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, realRequest, context);
 			}
 			if (context?.scope === 'public') {  // private is the default, all adaptors have to set the scope explicitly
-				const requestConstructor: any = repository[serviceName].Request;
+				const requestConstructor: any = this.repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 					return await this.config.handleError(new Error('unauthorized'), serviceName, realRequest, context);
 				}
@@ -118,9 +118,9 @@ export class NocatNodejsProvider implements ServiceManager {
 
 			// execution
 			if (context?.scope === 'public') {
-				await this.executeRequestInterceptors(realRequest, context, repository[serviceName].Request);
+				await this.executeRequestInterceptors(realRequest, context, this.repository[serviceName].Request);
 			}
-			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
+			const executor: ServiceExecutor<any, any> = new this.repository[serviceName].Executor();
 			return await executor.execute(realRequest, context);
 		} catch (e) {
 			return await this.config.handleError(e, serviceName, realRequest, context);
@@ -129,25 +129,25 @@ export class NocatNodejsProvider implements ServiceManager {
 
 	stream(serviceName: string, request: any, context?: ServiceExecutionContext): Observable<any> {// validation
 		context = context || {};
-		const realRequest: any = new repository[serviceName].Request();
-		Object.assign(realRequest, request);
 
-		if (repository === undefined) {
+		if (this.repository === undefined) {
 			return this.createErrorObservable(new Error('nocat server is not initialized'));
 		}
-		if (!repository.hasOwnProperty(serviceName)) {
+		if (!this.repository.hasOwnProperty(serviceName)) {
 			return this.createErrorObservable(new Error('unknown service ' + serviceName));
 		}
+		const realRequest: any = new this.repository[serviceName].Request();
+		Object.assign(realRequest, request);
 		if (context && context.scope === 'public') { // private is the default, all adaptors have to set the scope explicitly
-			const requestConstructor: any = repository[serviceName].Request;
+			const requestConstructor: any = this.repository[serviceName].Request;
 			if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 				return this.createErrorObservable(new Error('unauthorized'));
 			}
 		}
 
 		return new Observable<any>((observer: Observer<any>): void => {
-			this.executeRequestInterceptors(realRequest, context, repository[serviceName].Request).then(() => {
-				const executor: StreamServiceExecutor<any, any> = new repository[serviceName].Executor();
+			this.executeRequestInterceptors(realRequest, context, this.repository[serviceName].Request).then(() => {
+				const executor: StreamServiceExecutor<any, any> = new this.repository[serviceName].Executor();
 				executor.stream(realRequest, context).subscribe({
 					next: (value: any): void => {
 						observer.next(value);
@@ -165,7 +165,7 @@ export class NocatNodejsProvider implements ServiceManager {
 	}
 
 	isStream(serviceName: string): boolean {
-		return !!repository[serviceName].Executor.prototype.stream;
+		return !!this.repository[serviceName].Executor.prototype.stream;
 	}
 
 	private createErrorObservable(e: any): Observable<any> {
