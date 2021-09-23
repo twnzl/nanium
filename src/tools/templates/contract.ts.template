@@ -3,7 +3,7 @@ import { ServiceExecutionScope } from 'nocat/interfaces/serviceExecutionScope';
 
 export class ${serviceName}Request extends ServiceRequestBase<${serviceName}RequestBody, ${serviceName}Response> {
 ${indentString}static serviceName: string = '${prefix}.${serviceName}';
-${indentString}static scope: ServiceExecutionScope = ServiceExecutionScope.${scope};
+${indentString}static scope: ServiceExecutionScope = '${scope}';
 ${indentString}static skipInterceptors: boolean = false;
 }
 

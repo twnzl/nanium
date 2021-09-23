@@ -15,9 +15,12 @@ import { ServiceProviderManager } from '../../interfaces/serviceProviderManager'
 
 export interface NocatNodejsProviderConfig {
 	/**
-	 * root path where nocat should searches for service executor implementations (default: /service)
+	 * root path where nocat should search for service executor implementations
+	 * if not given - no automatic registration of the services is done,
+	 * but it can be done manually by using ServiceProviderManager.addService().
+	 * This may be useful for unit tests to register MockImplementations for some services
 	 */
-	servicePath: string;
+	servicePath?: string;
 
 	/**
 	 * array of transport adaptors
@@ -51,7 +54,6 @@ export interface NocatNodejsProviderConfig {
 export class NocatNodejsProvider implements ServiceProviderManager {
 	repository: NocatRepository;
 	config: NocatNodejsProviderConfig = {
-		servicePath: 'services',
 		requestInterceptors: {},
 		isResponsible: (): KindOfResponsibility => 'yes',
 		handleError: async (err: any): Promise<any> => {
@@ -80,14 +82,16 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 	async init(): Promise<void> {
 
 		// init repository
-		const files: string[] = await findFiles(this.config.servicePath,
-			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
-		for (const file of files) {
-			const executor: any = require(path.resolve(file)).default;
-			const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName.split('.')[1] + 'Request'];
-			this.addService(request, executor);
-			if (Nocat.logMode >= LogMode.info) {
-				console.log('service ready: ' + executor.serviceName);
+		if (this.config.servicePath) {
+			const files: string[] = await findFiles(this.config.servicePath,
+				[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
+			for (const file of files) {
+				const executor: any = require(path.resolve(file)).default;
+				const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName.split('.')[1] + 'Request'];
+				this.addService(request, executor);
+				if (Nocat.logMode >= LogMode.info) {
+					console.log('service ready: ' + executor.serviceName);
+				}
 			}
 		}
 
@@ -105,8 +109,7 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 
 	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {
 		context = context || {};
-		const realRequest: any = new this.repository[serviceName].Request();
-		Object.assign(realRequest, request);
+		let realRequest: any;
 
 		try {
 			// validation
@@ -122,6 +125,11 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 					return await this.config.handleError(new Error('unauthorized'), serviceName, realRequest, context);
 				}
 			}
+
+			// if the request comes from a communication channel it is normally a deserialized object,
+			// but we need real object that is constructed via the request constructor
+			realRequest = new this.repository[serviceName].Request();
+			Object.assign(realRequest, request);
 
 			// execution
 			if (context?.scope === 'public') {

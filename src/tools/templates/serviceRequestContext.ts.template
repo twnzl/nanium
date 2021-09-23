@@ -14,7 +14,7 @@ export class ServiceRequestContext implements ServiceExecutionContext {
 	asPrivate(): TestExecutionContext {
 		return new TestExecutionContext({
 			...this,
-			...{ scope: ServiceExecutionScope.private }
+			...{ scope: 'private' }
 		});
 	}
 }
