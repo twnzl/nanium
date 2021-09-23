@@ -5,13 +5,13 @@ import { Observable, Observer } from 'rxjs';
 import { RequestChannel } from '../../interfaces/requestChannel';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { LogMode } from '../../interfaces/logMode';
-import { ServiceManager } from '../../interfaces/serviceManager';
 import { Nocat } from '../../core';
 import { ServiceExecutor } from '../../interfaces/serviceExecutor';
 import { StreamServiceExecutor } from '../../interfaces/streamServiceExecutor';
 import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NocatRepository } from '../../interfaces/serviceRepository';
+import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 
 export interface NocatNodejsProviderConfig {
 	/**
@@ -48,7 +48,7 @@ export interface NocatNodejsProviderConfig {
 }
 
 
-export class NocatNodejsProvider implements ServiceManager {
+export class NocatNodejsProvider implements ServiceProviderManager {
 	repository: NocatRepository;
 	config: NocatNodejsProviderConfig = {
 		servicePath: 'services',
@@ -67,6 +67,16 @@ export class NocatNodejsProvider implements ServiceManager {
 		this.repository = {};
 	}
 
+	addService<T>(
+		requestClass: new () => T,
+		executorClass: new () => ServiceExecutor<T, any>,
+	): void {
+		this.repository[(executorClass as any).serviceName] = {
+			Executor: executorClass,
+			Request: requestClass
+		};
+	}
+
 	async init(): Promise<void> {
 
 		// init repository
@@ -75,10 +85,7 @@ export class NocatNodejsProvider implements ServiceManager {
 		for (const file of files) {
 			const executor: any = require(path.resolve(file)).default;
 			const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName.split('.')[1] + 'Request'];
-			this.repository[executor.serviceName] = {
-				Executor: executor,
-				Request: request
-			};
+			this.addService(request, executor);
 			if (Nocat.logMode >= LogMode.info) {
 				console.log('service ready: ' + executor.serviceName);
 			}
