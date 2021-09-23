@@ -2,18 +2,19 @@ import { Stats } from 'fs';
 import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
 import { Observable, Observer } from 'rxjs';
-import { RequestChannel } from '../interfaces/requestChannel';
-import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
-import { LogMode } from '../interfaces/logMode';
-import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
-import { ServiceManager } from '../interfaces/serviceManager';
-import { Nocat } from '../core';
-import { ServiceExecutor } from '../interfaces/serviceExecutor';
-import { StreamServiceExecutor } from '../interfaces/streamServiceExecutor';
-import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
-import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
+import { RequestChannel } from '../../interfaces/requestChannel';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
+import { LogMode } from '../../interfaces/logMode';
+import { ServiceExecutionScope } from '../../interfaces/serviceExecutionScope';
+import { ServiceManager } from '../../interfaces/serviceManager';
+import { Nocat } from '../../core';
+import { ServiceExecutor } from '../../interfaces/serviceExecutor';
+import { StreamServiceExecutor } from '../../interfaces/streamServiceExecutor';
+import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
+import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
+import { NocatRepository } from '../../interfaces/serviceRepository';
 
-export interface NocatServerConfig {
+export interface NocatNodejsProviderConfig {
 	/**
 	 * root path where nocat should searches for service executor implementations (default: /service)
 	 */
@@ -47,17 +48,10 @@ export interface NocatServerConfig {
 	isResponsible: (serviceName: string) => KindOfResponsibility;
 }
 
-export class NocatRepository {
-	[serviceName: string]: {
-		Executor: any, // upper case because it are constructors
-		Request: any
-	}
-}
-
 let repository: NocatRepository;
 
-export class NocatServer implements ServiceManager {
-	config: NocatServerConfig = {
+export class NocatNodejsProvider implements ServiceManager {
+	config: NocatNodejsProviderConfig = {
 		servicePath: 'services',
 		requestInterceptors: {},
 		isResponsible: (): KindOfResponsibility => 'yes',
@@ -66,7 +60,7 @@ export class NocatServer implements ServiceManager {
 		}
 	};
 
-	constructor(config: NocatServerConfig) {
+	constructor(config: NocatNodejsProviderConfig) {
 		this.config = {
 			...this.config,
 			...config

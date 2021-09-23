@@ -1,9 +1,9 @@
 import { Observable, Observer } from 'rxjs';
-import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
-import { ServiceManager } from '../interfaces/serviceManager';
-import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
+import { ServiceManager } from '../../interfaces/serviceManager';
+import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 
-export interface NocatBrowserClientConfig {
+export interface NocatConsumerBrowserConfig {
 	apiUrl?: string;
 	protocol?: 'http' | 'websocket';
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
@@ -11,10 +11,10 @@ export interface NocatBrowserClientConfig {
 	isResponsible: (serviceName: string) => KindOfResponsibility;
 }
 
-export class NocatBrowserClient implements ServiceManager {
-	config: NocatBrowserClientConfig;
+export class NocatConsumerBrowser implements ServiceManager {
+	config: NocatConsumerBrowserConfig;
 
-	constructor(config?: NocatBrowserClientConfig) {
+	constructor(config?: NocatConsumerBrowserConfig) {
 		this.config = {
 			...{
 				apiUrl: '/api',

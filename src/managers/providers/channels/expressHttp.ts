@@ -1,23 +1,23 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { Observable } from 'rxjs';
 
-import { Nocat } from '../core';
+import { Nocat } from '../../../core';
 import * as express from 'express';
-import { NocatRepository } from '../managers/server';
-import { RequestChannelConfig } from '../interfaces/requestChannelConfig';
-import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
-import { RequestChannel } from '../interfaces/requestChannel';
-import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
+import { RequestChannelConfig } from '../../../interfaces/requestChannelConfig';
+import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
+import { RequestChannel } from '../../../interfaces/requestChannel';
+import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
+import { NocatRepository } from '../../../interfaces/serviceRepository';
 
-export class NocatHttpChannelConfig implements RequestChannelConfig {
+export class NocatExpressHttpChannelConfig implements RequestChannelConfig {
 	expressApp: express.Express;
 	apiPath: string;
 	executionContextConstructor: new(data: ServiceExecutionContext) => ServiceExecutionContext;
 }
 
-export class NocatHttpChannel implements RequestChannel {
+export class NocatExpressHttpChannel implements RequestChannel {
 
-	constructor(private config: NocatHttpChannelConfig) {
+	constructor(private config: NocatExpressHttpChannelConfig) {
 	}
 
 	async init(_serviceRepository: NocatRepository): Promise<void> {

@@ -1,5 +1,5 @@
 import { Nocat } from '../core';
-import { NocatServer } from '../managers/server';
+import { NocatNodejsProvider } from '../managers/providers/nodejs';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
@@ -17,7 +17,7 @@ describe('execute TestRequest on server \n', function (): void {
 	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
-		await Nocat.init([new NocatServer({
+		await Nocat.init([new NocatNodejsProvider({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: { test: TestServerRequestInterceptor },

@@ -1,25 +1,25 @@
 import * as express from 'express';
-import { Nocat } from '../core';
-import { NocatRepository } from '../managers/server';
+import { Nocat } from '../../../core';
 import { Observable } from 'rxjs';
-import { RequestChannelConfig } from '../interfaces/requestChannelConfig';
-import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
-import { RequestChannel } from '../interfaces/requestChannel';
-import { LogMode } from '../interfaces/logMode';
-import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
+import { RequestChannelConfig } from '../../../interfaces/requestChannelConfig';
+import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
+import { RequestChannel } from '../../../interfaces/requestChannel';
+import { LogMode } from '../../../interfaces/logMode';
+import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
+import { NocatRepository } from '../../../interfaces/serviceRepository';
 
-export class NocatRestChannelConfig implements RequestChannelConfig {
+export class NocatExpressRestChannelConfig implements RequestChannelConfig {
 	expressApp: express.Express;
 	apiBasePath?: string;
 	executionContextConstructor: new(data: ServiceExecutionContext) => ServiceExecutionContext;
 	getHttpStatusCode?: (err: any) => number;
 }
 
-export class NocatRestChannel implements RequestChannel {
-	private config: NocatRestChannelConfig;
+export class NocatExpressRestChannel implements RequestChannel {
+	private config: NocatExpressRestChannelConfig;
 	private serviceRepository: NocatRepository;
 
-	constructor(config: NocatRestChannelConfig) {
+	constructor(config: NocatExpressRestChannelConfig) {
 		this.config = config;
 		this.config.getHttpStatusCode = this.config.getHttpStatusCode || ((): number => {
 			return 500;

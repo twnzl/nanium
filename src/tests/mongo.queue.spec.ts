@@ -1,5 +1,5 @@
 import { Nocat } from '../core';
-import { NocatServer } from '../managers/server';
+import { NocatNodejsProvider } from '../managers/providers/nodejs';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { TestGetRequest } from './services/test/get.contract';
 import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceResponseBase';
@@ -27,7 +27,7 @@ describe('MongoQueue Tests \n', function (): void {
 			isResponsible: (): KindOfResponsibility => 'yes',
 		});
 		await Nocat.init([
-			new NocatServer({
+			new NocatNodejsProvider({
 				logMode: LogMode.error,
 				servicePath: 'dist/tests/services',
 				requestInterceptors: { test: TestServerRequestInterceptor },

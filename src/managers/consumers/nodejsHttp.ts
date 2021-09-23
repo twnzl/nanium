@@ -1,11 +1,11 @@
 import { Observable, Observer } from 'rxjs';
 import { RequestPromiseOptions } from 'request-promise';
 import { UrlOptions } from 'request';
-import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
-import { ServiceManager } from '../interfaces/serviceManager';
-import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
+import { ServiceManager } from '../../interfaces/serviceManager';
+import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 
-export interface NocatHttpClientConfig {
+export interface NocatConsumerNodejsHttpConfig {
 	apiUrl?: string;
 	proxy?: string;
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
@@ -13,10 +13,10 @@ export interface NocatHttpClientConfig {
 	isResponsible: (serviceName: string) => KindOfResponsibility;
 }
 
-export class NocatHttpClient implements ServiceManager {
-	config: NocatHttpClientConfig;
+export class NocatConsumerNodejsHttp implements ServiceManager {
+	config: NocatConsumerNodejsHttpConfig;
 
-	constructor(config?: NocatHttpClientConfig) {
+	constructor(config?: NocatConsumerNodejsHttpConfig) {
 		this.config = {
 			...{
 				apiUrl: 'localhost:8080/api',
@@ -62,7 +62,7 @@ export class NocatHttpClient implements ServiceManager {
 			options.rejectUnauthorized = false;
 		}
 		try {
-			return await NocatHttpClient.httpRequest(options);
+			return await NocatConsumerNodejsHttp.httpRequest(options);
 		} catch (e) {
 			if (e.statusCode === 500) {
 				throw e.error;
