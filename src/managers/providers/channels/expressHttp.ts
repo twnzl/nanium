@@ -6,7 +6,6 @@ import * as express from 'express';
 import { RequestChannelConfig } from '../../../interfaces/requestChannelConfig';
 import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
 import { RequestChannel } from '../../../interfaces/requestChannel';
-import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 import { NocatRepository } from '../../../interfaces/serviceRepository';
 
 export class NocatExpressHttpChannelConfig implements RequestChannelConfig {
@@ -53,7 +52,7 @@ export class NocatExpressHttpChannel implements RequestChannel {
 		const request: any = json[serviceName];
 		res.setHeader('Content-Type', 'application/json; charset=utf-8');
 		if (Nocat.isStream(serviceName)) {
-			const result: Observable<any> = Nocat.stream(request, serviceName, new this.config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
+			const result: Observable<any> = Nocat.stream(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 			res.statusCode = 200;
 			result.subscribe({
 				next: (value: any): void => {
@@ -70,7 +69,7 @@ export class NocatExpressHttpChannel implements RequestChannel {
 			});
 		} else {
 			try {
-				const result: any = await Nocat.execute(request, serviceName, new this.config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
+				const result: any = await Nocat.execute(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
 					res.write(JSON.stringify(result)); // todo: user nocat.serialize()
 				}

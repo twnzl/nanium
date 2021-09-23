@@ -3,7 +3,7 @@ import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope
 
 export class TestQueryRequest extends StreamServiceRequestBase<TestQueryRequestBody, TestDto> {
 	static serviceName: string = 'NocatSelf.TestQuery';
-	static scope: ServiceExecutionScope = ServiceExecutionScope.public;
+	static scope: ServiceExecutionScope = 'public';
 }
 
 export class TestQueryRequestBody {

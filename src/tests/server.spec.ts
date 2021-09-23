@@ -7,7 +7,6 @@ import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/priva
 import { ServiceResponseBase } from './services/serviceResponseBase';
 import { AnonymousRequest } from './services/test/anonymous.contract';
 import { LogMode } from '../interfaces/logMode';
-import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 
 describe('execute TestRequest on server \n', function (): void {
@@ -141,7 +140,7 @@ describe('execute TestRequest on server \n', function (): void {
 
 		beforeEach(async function (): Promise<void> {
 			try {
-				privateResponse = await Nocat.execute(privateRequest, 'NocatSelf.PrivateStuff', { scope: ServiceExecutionScope.public });
+				privateResponse = await Nocat.execute(privateRequest, 'NocatSelf.PrivateStuff', { scope: 'public' });
 			} catch (e) {
 				err = e;
 			}

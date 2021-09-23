@@ -5,7 +5,6 @@ import { Observable, Observer } from 'rxjs';
 import { RequestChannel } from '../../interfaces/requestChannel';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { LogMode } from '../../interfaces/logMode';
-import { ServiceExecutionScope } from '../../interfaces/serviceExecutionScope';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { Nocat } from '../../core';
 import { ServiceExecutor } from '../../interfaces/serviceExecutor';
@@ -110,15 +109,15 @@ export class NocatNodejsProvider implements ServiceManager {
 			if (!repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, realRequest, context);
 			}
-			if (context?.scope === ServiceExecutionScope.public) {  // private is the default, all adaptors have to set the scope explicitly
+			if (context?.scope === 'public') {  // private is the default, all adaptors have to set the scope explicitly
 				const requestConstructor: any = repository[serviceName].Request;
-				if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
+				if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 					return await this.config.handleError(new Error('unauthorized'), serviceName, realRequest, context);
 				}
 			}
 
 			// execution
-			if (context?.scope === ServiceExecutionScope.public) {
+			if (context?.scope === 'public') {
 				await this.executeRequestInterceptors(realRequest, context, repository[serviceName].Request);
 			}
 			const executor: ServiceExecutor<any, any> = new repository[serviceName].Executor();
@@ -139,9 +138,9 @@ export class NocatNodejsProvider implements ServiceManager {
 		if (!repository.hasOwnProperty(serviceName)) {
 			return this.createErrorObservable(new Error('unknown service ' + serviceName));
 		}
-		if (context && context.scope === ServiceExecutionScope.public) { // private is the default, all adaptors have to set the scope explicitly
+		if (context && context.scope === 'public') { // private is the default, all adaptors have to set the scope explicitly
 			const requestConstructor: any = repository[serviceName].Request;
-			if (!requestConstructor.scope || requestConstructor.scope !== ServiceExecutionScope.public) {
+			if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 				return this.createErrorObservable(new Error('unauthorized'));
 			}
 		}

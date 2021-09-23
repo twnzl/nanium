@@ -2,7 +2,6 @@ import * as express from 'express';
 import { Nocat } from '../../../core';
 import { Observable } from 'rxjs';
 import { RequestChannelConfig } from '../../../interfaces/requestChannelConfig';
-import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 import { RequestChannel } from '../../../interfaces/requestChannel';
 import { LogMode } from '../../../interfaces/logMode';
 import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
@@ -43,7 +42,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 				continue;
 			}
 			const request: any = serviceRepository[key].Request;
-			if (request.scope === ServiceExecutionScope.public) {
+			if (request.scope === 'public') {
 				const { method, path }: { method: string; path: string; } = this.getMethodAndPath(request.serviceName);
 				this.config.expressApp[method](path, (req: express.Request, res: express.Response) => {
 					const serviceRequest: object = this.createRequest(req);
@@ -95,7 +94,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 
 	private async execute(serviceName: string, serviceRequest: any, res: express.Response): Promise<any> {
 		try {
-			const result: any = await Nocat.execute(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
+			const result: any = await Nocat.execute(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 			if (result !== undefined && result !== null) {
 				res.write(JSON.stringify(result)); // todo: user nocat.serialize()
 			}
@@ -108,7 +107,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 	}
 
 	private stream(serviceName: string, serviceRequest: object, res: express.Response): void {
-		const result: Observable<any> = Nocat.stream(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: ServiceExecutionScope.public }));
+		const result: Observable<any> = Nocat.stream(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 		res.statusCode = 200;
 		result.subscribe({
 			next: (value: any): void => {

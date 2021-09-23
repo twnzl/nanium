@@ -4,7 +4,7 @@ import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope
 
 export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
 	static serviceName: string = 'NocatSelf.TestGet';
-	static scope: ServiceExecutionScope = ServiceExecutionScope.public;
+	static scope: ServiceExecutionScope = 'public';
 	static skipInterceptors: boolean = false;
 }
 
