@@ -24,7 +24,7 @@
     "test": "node $NODnpE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js --random=false",
     "prepare": "",
     "publishlist": "cp package.json dist && npm pack ./dist && tar -xvzf *.tgz && rm -rf package *.tgz",
-    "bundle": "npm run build && cp package.json dist && npm publish ./dist",
+    "bundle": "npm run cleanbuild && cp package.json dist && npm publish ./dist",
     "bundle-es6": "rm -r dist && tsc --build tsconfig-es6.json && cp package-es6.json dist/package.json && npm publish ./dist"
   },
   "files": [
@@ -32,17 +32,15 @@
     "core.d.ts",
     "helper.js",
     "helper.d.ts",
-    "channels/*.js",
-    "channels/*.ts",
-    "interfaces/*.js",
-    "interfaces/*.ts",
-    "managers/*.js",
-    "managers/*.ts",
-    "queues/*.js",
-    "queues/*.ts",
-    "tools/*.js",
-    "tools/*.ts",
-    "tools/templates/*"
+    "interfaces/**/*.js",
+    "interfaces/**/*.ts",
+    "managers/**/*.js",
+    "managers/**/*.ts",
+    "queues/**/*.js",
+    "queues/**/*.ts",
+    "tools/**/*.js",
+    "tools/**/*.ts",
+    "tools/templates/**/*"
   ],
   "dependencies": {
     "mongodb": "^4.1.2",
