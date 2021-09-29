@@ -18,14 +18,14 @@
   "author": "twnzl",
   "scripts": {
     "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
-    "clean": "rm -r dist",
-    "build": "tsc && cp -R src/tools/templates dist/tools",
-    "cleanbuild": "npm run clean && tsc",
+    "clean": "ts-node src/tools/nocat.ts rm -r dist",
+    "build": "tsc && ts-node src/tools/nocat.ts cp src/tools/templates dist/tools/templates",
+    "cleanbuild": "npm run clean && npm run build",
     "test": "node $NODnpE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js --random=false",
     "prepare": "",
-    "publishlist": "cp package.json dist && npm pack ./dist && tar -xvzf *.tgz && rm -rf package *.tgz",
+    "publishlist": "cp package.json dist && npm pack ./dist && tar -xvzf *.tgz && ts-node src/tools/nocat.ts rm -rf package *.tgz",
     "bundle": "npm run cleanbuild && cp package.json dist && npm publish ./dist",
-    "bundle-es6": "rm -r dist && tsc --build tsconfig-es6.json && cp package-es6.json dist/package.json && npm publish ./dist"
+    "bundle-es6": "npm run cleanbuild && tsc --build tsconfig-es6.json && ts-node src/tools/nocat.ts ccp package-es6.json dist/package.json && npm publish ./dist"
   },
   "files": [
     "core.js",
@@ -40,7 +40,7 @@
     "queues/**/*.ts",
     "tools/**/*.js",
     "tools/**/*.ts",
-    "tools/templates/**/*"
+    "tools/**/*.template"
   ],
   "dependencies": {
     "mongodb": "^4.1.2",

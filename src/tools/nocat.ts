@@ -22,6 +22,7 @@ const actions: { [actionName: string]: Function } = {
 	pkg: function (): void {
 		console.log('creating a binary for the app is not yet implemented');
 	},
+	cp: copyFiles,
 	ccp: cleanAndCopyFiles,
 	sdk: function (): void {
 		console.log('crate or update a sdk to to use the services in other projects');
@@ -38,9 +39,17 @@ nocat init
 nocat generate | g {directory.}*{service name} {private|public} {namespace}
 nocat rename {old service name} {new service name}
 nocat pkg
-nocat ccp {srcPath} {dstPath} -- like bash cp but cares about creating destination path and removes old files in destination path
-nocat rm {file or folder} -- removes the file or folder
-nocat namespace {namespace} -- set namespace for all services that don't have a namespace
+nocat rm {file or folder}
+		removes the file or folder
+nocat cp {srcPath} {dstPath}
+  	creates the destination path (recursively) if it does not exist
+  	and copies files from srcPath recursively to dstPath
+nocat ccp {srcPath} {dstPath}
+	  creates the destination path (recursively) if it does not exist,
+	  removes old files in the destination path
+	  and than copies files from srcPath recursively to dstPath
+nocat namespace {namespace}
+		set namespace for all services that don't have a namespace
 `);
 	process.exit(0);
 }
@@ -85,6 +94,13 @@ const command: string = process.argv[2];
 actions[command](process.argv.slice(3));
 
 // action functions
+function copyFiles(args: string[]): void {
+	const src: string = args[0];
+	const dst: string = args[1];
+	shell.mkdir('-p', dst);
+	shell.cp('-R', src + '/*', dst);
+}
+
 function cleanAndCopyFiles(args: string[]): void {
 	const src: string = args[0];
 	const dst: string = args[1];
@@ -201,7 +217,7 @@ async function setNamespace([namespace]: string): Promise<void> {
 }
 
 function fromTemplate(name: string, data?: object): string {
-	const template: string = fs.readFileSync(path.join(__dirname, 'templates/' + name), { encoding: 'utf8'})
+	const template: string = fs.readFileSync(path.join(__dirname, 'templates/' + name), { encoding: 'utf8' })
 		.replace(/\t/g, config.indentString);
 	if (data) {
 		return template.replace(/\${([^}]*)}/g, (r: string, k: string) => data[k]);

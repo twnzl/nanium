@@ -71,9 +71,9 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 
 	addService<T>(
 		requestClass: new () => T,
-		executorClass: new () => ServiceExecutor<T, any>,
+		executorClass: new () => ServiceExecutor<T, any>
 	): void {
-		this.repository[(executorClass as any).serviceName] = {
+		this.repository[(requestClass as any).serviceName] = {
 			Executor: executorClass,
 			Request: requestClass
 		};
@@ -84,10 +84,15 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		// init repository
 		if (this.config.servicePath) {
 			const files: string[] = await findFiles(this.config.servicePath,
-				[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.js')]);
+				[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
 			for (const file of files) {
-				const executor: any = require(path.resolve(file)).default;
-				const request: any = require(path.resolve(file.replace(/\.executor\.js$/, '.contract.js')))[executor.serviceName.split('.')[1] + 'Request'];
+				const request: any = NocatNodejsProvider.findClassWithServiceNameProperty(require(path.resolve(file)));
+				if (!request) {
+					console.warn('invalid contract file (no request class found): ' + file);
+					continue;
+				}
+				const executor: any = NocatNodejsProvider.findClassWithServiceNameProperty(
+					require(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
 				this.addService(request, executor);
 				if (Nocat.logMode >= LogMode.info) {
 					console.log('service ready: ' + executor.serviceName);
@@ -103,6 +108,14 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		}
 	}
 
+	private static findClassWithServiceNameProperty(module: any): any {
+		for (const requestModuleKey in module) {
+			if (module[requestModuleKey].hasOwnProperty('serviceName')) {
+				return module[requestModuleKey];
+			}
+		}
+	}
+
 	isResponsible(serviceName: string): KindOfResponsibility {
 		return this.config.isResponsible(serviceName);
 	}
@@ -114,15 +127,15 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		try {
 			// validation
 			if (this.repository === undefined) {
-				return await this.config.handleError(new Error('nocat server is not initialized'), serviceName, realRequest, context);
+				return await this.config.handleError(new Error('nocat server is not initialized'), serviceName, request, context);
 			}
 			if (!this.repository.hasOwnProperty(serviceName)) {
-				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, realRequest, context);
+				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, request, context);
 			}
 			if (context?.scope === 'public') {  // private is the default, all adaptors have to set the scope explicitly
 				const requestConstructor: any = this.repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
-					return await this.config.handleError(new Error('unauthorized'), serviceName, realRequest, context);
+					return await this.config.handleError(new Error('unauthorized'), serviceName, request, context);
 				}
 			}
 
@@ -138,7 +151,7 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 			const executor: ServiceExecutor<any, any> = new this.repository[serviceName].Executor();
 			return await executor.execute(realRequest, context);
 		} catch (e) {
-			return await this.config.handleError(e, serviceName, realRequest, context);
+			return await this.config.handleError(e, serviceName, request, context);
 		}
 	}
 
@@ -151,10 +164,10 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		if (!this.repository.hasOwnProperty(serviceName)) {
 			return this.createErrorObservable(new Error('unknown service ' + serviceName));
 		}
-		const realRequest: any = new this.repository[serviceName].Request();
+		const requestConstructor: any = this.repository[serviceName].Request;
+		const realRequest: any = new requestConstructor();
 		Object.assign(realRequest, request);
 		if (context && context.scope === 'public') { // private is the default, all adaptors have to set the scope explicitly
-			const requestConstructor: any = this.repository[serviceName].Request;
 			if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 				return this.createErrorObservable(new Error('unauthorized'));
 			}
