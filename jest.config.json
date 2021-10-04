@@ -1,5 +1,6 @@
 {
   "testEnvironment": "node",
+  "testTimeout": 100000,
   "transform": {
     "^.+\\.ts$": "ts-jest"
   },

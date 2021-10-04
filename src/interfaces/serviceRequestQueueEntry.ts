@@ -3,7 +3,7 @@ import { ServiceRequestQueueEntryState } from './serviceRequestQueueEntryState';
 /**
  * this is how a service request queue entry must look like
  */
-export interface ServiceRequestQueueEntry {
+export interface ServiceRequestQueueEntry<TParams = any> {
 	/**
 	 * id of the request queue entry
 	 */
@@ -54,6 +54,11 @@ export interface ServiceRequestQueueEntry {
 	 * date after which no further request shall be executed
 	 */
 	endOfInterval?: Date;
+
+	/**
+	 * space for individual data e.g. to use it in the isResponsible Function or whatever
+	 */
+	params?: TParams;
 }
 
 export interface ServiceRequestQueueEntryQueryConditions {

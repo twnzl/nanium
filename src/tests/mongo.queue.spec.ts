@@ -6,7 +6,6 @@ import { ServiceResponseBase, ServiceResponseMessage } from './services/serviceR
 import { LogMode } from '../interfaces/logMode';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { NocatMongoQueue } from '../queues/mongo.queue';
-import * as mongoUnit from 'mongo-unit';
 import { ServiceRequestQueueEntry } from '../interfaces/serviceRequestQueueEntry';
 import { Collection, Db, MongoClient } from 'mongodb';
 import { TestExecutionContext } from './services/serviceExecutionContext';
@@ -18,33 +17,30 @@ let mongoQueue: NocatMongoQueue;
 describe('MongoQueue Tests \n', function (): void {
 
 	beforeEach(async function (): Promise<void> {
-		mongoQueue = await NocatMongoQueue.create({
+		await Nocat.addManager(new NocatNodejsProvider({
+			logMode: LogMode.error,
+			servicePath: 'dist/tests/services',
+			requestInterceptors: { test: TestServerRequestInterceptor },
+			isResponsible: (): KindOfResponsibility => 'yes',
+			handleError: async (err: any): Promise<any> => {
+				if (err instanceof ServiceResponseMessage) {
+					return new ServiceResponseBase({}, { errors: [err] });
+				}
+				if (err instanceof Error && err.message === 'no!') {
+					return new ServiceResponseBase({}, { exceptions: [{ code: 'ErrorLogId0815' }] });
+				}
+				throw err;
+			}
+		}));
+		mongoQueue = new NocatMongoQueue({
 			checkInterval: 1,
-			serverUrl: await mongoUnit.start({ port: 27020 }), // 'mongodb://localhost:27017',
+			serverUrl: /*await mongoUnit.start({ port: 27020 }),*/ 'mongodb://localhost:27017',
 			databaseName: 'nocat_test',
 			collectionName: 'rq',
 			getExecutionContext: () => new TestExecutionContext(),
 			isResponsible: (): KindOfResponsibility => 'yes',
 		});
-		await Nocat.init([
-			new NocatNodejsProvider({
-				logMode: LogMode.error,
-				servicePath: 'dist/tests/services',
-				requestInterceptors: { test: TestServerRequestInterceptor },
-				isResponsible: (): KindOfResponsibility => 'yes',
-				handleError: async (err: any): Promise<any> => {
-					if (err instanceof ServiceResponseMessage) {
-						return new ServiceResponseBase({}, { errors: [err] });
-					}
-					if (err instanceof Error && err.message === 'no!') {
-						return new ServiceResponseBase({}, { exceptions: [{ code: 'ErrorLogId0815' }] });
-					}
-					throw err;
-				}
-			})
-		], [
-			mongoQueue
-		]);
+		await Nocat.addQueue(mongoQueue);
 		await mongoQueue.removeEntries();
 	});
 

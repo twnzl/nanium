@@ -6,6 +6,8 @@ import { RequestChannel } from '../../../interfaces/requestChannel';
 import { LogMode } from '../../../interfaces/logMode';
 import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
 import { NocatRepository } from '../../../interfaces/serviceRepository';
+import { ServiceRequest } from '../../../interfaces/serviceRequest';
+import { StreamServiceRequest } from '../../../interfaces/streamServiceRequest';
 
 export class NocatExpressRestChannelConfig implements RequestChannelConfig {
 	expressApp: express.Express;
@@ -41,15 +43,18 @@ export class NocatExpressRestChannel implements RequestChannel {
 			if (!serviceRepository.hasOwnProperty(key)) {
 				continue;
 			}
-			const request: any = serviceRepository[key].Request;
-			if (request.scope === 'public') {
-				const { method, path }: { method: string; path: string; } = this.getMethodAndPath(request.serviceName);
+			const requestConstructor: any = serviceRepository[key].Request;
+			if (requestConstructor.scope === 'public') {
+				const {
+					method,
+					path
+				}: { method: string; path: string; } = this.getMethodAndPath(requestConstructor.serviceName);
 				this.config.expressApp[method](path, (req: express.Request, res: express.Response) => {
-					const serviceRequest: object = this.createRequest(req);
-					if (Nocat.isStream(request.serviceName)) {
-						this.stream(request.serviceName, serviceRequest, res);
+					const serviceRequest: ServiceRequest<any> | StreamServiceRequest<any> = this.createRequest(req, requestConstructor);
+					if (Nocat.isStream(serviceRequest, requestConstructor.serviceName)) {
+						this.stream(requestConstructor.serviceName, serviceRequest as StreamServiceRequest<any>, res);
 					} else {
-						this.execute(request.serviceName, serviceRequest, res);
+						this.execute(requestConstructor.serviceName, serviceRequest as ServiceRequest<any>, res);
 					}
 				});
 			}
@@ -106,7 +111,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 		res.end();
 	}
 
-	private stream(serviceName: string, serviceRequest: object, res: express.Response): void {
+	private stream(serviceName: string, serviceRequest: StreamServiceRequest<any>, res: express.Response): void {
 		const result: Observable<any> = Nocat.stream(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 		res.statusCode = 200;
 		result.subscribe({
@@ -124,7 +129,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 		});
 	}
 
-	createRequest(req: express.Request): any {
+	createRequest(req: express.Request, requestConstructor: new () => any): ServiceRequest<any> | StreamServiceRequest<any> {
 		const request: any = { ...req.body };
 		for (const property in req.query) {
 			if (!req.query.hasOwnProperty(property)) {
@@ -147,6 +152,8 @@ export class NocatExpressRestChannel implements RequestChannel {
 		request['$$headers'] = req.headers || {};
 		request['$$rawBody'] = req['$$rawBody'];
 		request['$$requestSource'] = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-		return request;
+		const realRequest: any = new requestConstructor();
+		Object.assign(realRequest, request);
+		return realRequest;
 	}
 }

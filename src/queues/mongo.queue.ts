@@ -19,12 +19,8 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 	private checkTimeoutHandle: any;
 	private cleanupTimeoutHandle: any;
 
-	//#region ServiceRequestQueue
-	public static async create(config: MongoQueueServiceRequestQueueConfig): Promise<NocatMongoQueue> {
-		const result: NocatMongoQueue = new NocatMongoQueue();
-
-		// set config
-		result.config = {
+	constructor(config: MongoQueueServiceRequestQueueConfig) {
+		this.config = {
 			...{
 				checkInterval: 10, // default: 10 seconds
 				cleanupInterval: 3600, // default: one hour
@@ -33,42 +29,43 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 			},
 			...(config)
 		};
+	}
 
+	//#region ServiceRequestQueue
+	public async init(): Promise<void> {
 		// init db connection
-		result.mongoClient = await MongoClient.connect(result.config.serverUrl, {});
-		result.database = await result.mongoClient.db(result.config.databaseName);
-		result.collection = await result.database.collection(result.config.collectionName);
-
+		this.mongoClient = await MongoClient.connect(this.config.serverUrl);
+		this.database = this.mongoClient.db(this.config.databaseName);
+		this.collection = this.database.collection(this.config.collectionName);
 		// init check interval
 		const processReadyRequests: () => Promise<void> = async () => {
-			if (!result.isShutdownInitiated) {
-				const readyEntries: ServiceRequestQueueEntry[] = await result.getEntries({
+			if (!this.isShutdownInitiated) {
+				const readyEntries: ServiceRequestQueueEntry[] = await this.getEntries({
 					states: ['ready']
 				});
 				for (const entry of readyEntries) {
-					Nocat.onReadyQueueEntry(entry, result).then();
+					Nocat.onReadyQueueEntry(entry, this).then();
 				}
-				result.checkTimeoutHandle = setTimeout(processReadyRequests, result.config.checkInterval * 1000);
+				this.checkTimeoutHandle = setTimeout(processReadyRequests, this.config.checkInterval * 1000);
 			}
 		};
 		await processReadyRequests();
 
 		// init cleanup interval
 		const cleanUp: Function = async (): Promise<void> => {
-			await result.removeEntries({
-				states: ['done', 'canceled', 'failed'],
-				finishedBefore: DateHelper.addSeconds(-result.config.cleanupAge)
-			});
-			result.cleanupTimeoutHandle = setTimeout(cleanUp, result.config.cleanupInterval * 1000);
+			if (!this.isShutdownInitiated) {
+				await this.removeEntries({
+					states: ['done', 'canceled', 'failed'],
+					finishedBefore: DateHelper.addSeconds(-this.config.cleanupAge)
+				});
+				this.cleanupTimeoutHandle = setTimeout(cleanUp, this.config.cleanupInterval * 1000);
+			}
 		};
 		await cleanUp();
-
-		// return the initialized queue instance
-		return result;
 	}
 
-	public isResponsible(serviceName: string): KindOfResponsibility {
-		return this.config.isResponsible(serviceName);
+	public isResponsible(entry: ServiceRequestQueueEntry): KindOfResponsibility {
+		return this.config.isResponsible(entry);
 	}
 
 	public async stop(): Promise<void> {

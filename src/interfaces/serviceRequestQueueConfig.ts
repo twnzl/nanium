@@ -1,6 +1,7 @@
 import { KindOfResponsibility } from './kindOfResponsibility';
 import { ServiceExecutionContext } from './serviceExecutionContext';
 import { ServiceRequest } from './serviceRequest';
+import { ServiceRequestQueueEntry } from './serviceRequestQueueEntry';
 
 export class ServiceRequestQueueConfig {
 
@@ -29,5 +30,5 @@ export class ServiceRequestQueueConfig {
 	 * must return 'yes', if this queue is responsible for requests with the given name
 	 * or 'fallback', if it is only responsible if no other queue is responsible
 	 */
-	isResponsible?: (requestName: string) => KindOfResponsibility;
+	isResponsible?: (entry: ServiceRequestQueueEntry) => KindOfResponsibility;
 }

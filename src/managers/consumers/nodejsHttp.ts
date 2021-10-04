@@ -4,13 +4,15 @@ import { UrlOptions } from 'request';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
+import { ServiceRequest } from '../../interfaces/serviceRequest';
+import { StreamServiceRequest } from '../../interfaces/streamServiceRequest';
 
 export interface NocatConsumerNodejsHttpConfig {
 	apiUrl?: string;
 	proxy?: string;
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
 	handleError?: (e: any) => Promise<void>;
-	isResponsible: (serviceName: string) => KindOfResponsibility;
+	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => KindOfResponsibility;
 }
 
 export class NocatConsumerNodejsHttp implements ServiceManager {
@@ -32,8 +34,8 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 	async init(): Promise<void> {
 	}
 
-	isResponsible(serviceName: string): KindOfResponsibility {
-		return this.config.isResponsible(serviceName);
+	isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): KindOfResponsibility {
+		return this.config.isResponsible(request, serviceName);
 	}
 
 	private static _httpRequest: Function;

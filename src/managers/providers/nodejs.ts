@@ -12,6 +12,8 @@ import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContex
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NocatRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
+import { ServiceRequest } from '../../interfaces/serviceRequest';
+import { StreamServiceRequest } from '../../interfaces/streamServiceRequest';
 
 export interface NocatNodejsProviderConfig {
 	/**
@@ -47,7 +49,7 @@ export interface NocatNodejsProviderConfig {
 	/**
 	 * returns if the Manager is responsible for the given Service
 	 */
-	isResponsible: (serviceName: string) => KindOfResponsibility;
+	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => KindOfResponsibility;
 }
 
 
@@ -116,8 +118,8 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		}
 	}
 
-	isResponsible(serviceName: string): KindOfResponsibility {
-		return this.config.isResponsible(serviceName);
+	isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): KindOfResponsibility {
+		return this.config.isResponsible(request, serviceName);
 	}
 
 	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {

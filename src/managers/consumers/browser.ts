@@ -2,13 +2,15 @@ import { Observable, Observer } from 'rxjs';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
+import { ServiceRequest } from '../../interfaces/serviceRequest';
+import { StreamServiceRequest } from '../../interfaces/streamServiceRequest';
 
 export interface NocatConsumerBrowserConfig {
 	apiUrl?: string;
 	protocol?: 'http' | 'websocket';
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
 	handleError?: (e: any) => Promise<void>;
-	isResponsible: (serviceName: string) => KindOfResponsibility;
+	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => KindOfResponsibility;
 }
 
 export class NocatConsumerBrowser implements ServiceManager {
@@ -38,8 +40,8 @@ export class NocatConsumerBrowser implements ServiceManager {
 		}
 	}
 
-	isResponsible(serviceName: string): KindOfResponsibility {
-		return this.config.isResponsible(serviceName);
+	isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): KindOfResponsibility {
+		return this.config.isResponsible(request, serviceName);
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {

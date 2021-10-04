@@ -15,11 +15,13 @@ export class NocatExpressHttpChannelConfig implements RequestChannelConfig {
 }
 
 export class NocatExpressHttpChannel implements RequestChannel {
+	private serviceRepository: NocatRepository;
 
 	constructor(private config: NocatExpressHttpChannelConfig) {
 	}
 
-	async init(_serviceRepository: NocatRepository): Promise<void> {
+	async init(serviceRepository: NocatRepository): Promise<void> {
+		this.serviceRepository = serviceRepository;
 		this.config.expressApp.post(this.config.apiPath, async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
 			if (req['body']) {
 				await this.execute(req['body'], res);
@@ -49,9 +51,10 @@ export class NocatExpressHttpChannel implements RequestChannel {
 
 	async execute(json: any, res: ServerResponse): Promise<any> {
 		const serviceName: string = Object.keys(json)[0];
-		const request: any = json[serviceName];
+		const request: any = new this.serviceRepository[serviceName].Request();
+		Object.assign(request, json[serviceName]);
 		res.setHeader('Content-Type', 'application/json; charset=utf-8');
-		if (Nocat.isStream(serviceName)) {
+		if (Nocat.isStream(request, serviceName)) {
 			const result: Observable<any> = Nocat.stream(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 			res.statusCode = 200;
 			result.subscribe({

@@ -16,7 +16,7 @@ describe('execute TestRequest on server \n', function (): void {
 	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
-		await Nocat.init([new NocatNodejsProvider({
+		await Nocat.addManager(new NocatNodejsProvider({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: { test: TestServerRequestInterceptor },
@@ -30,7 +30,7 @@ describe('execute TestRequest on server \n', function (): void {
 				}
 				throw err;
 			}
-		})]);
+		}));
 	});
 
 	describe('execute successful \n', function (): void {
