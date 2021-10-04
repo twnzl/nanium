@@ -129,7 +129,7 @@ function generateService(args: string[]): void {
 	}
 	const relativeToRoot: string = '../'.repeat(parts.length - 1) || './';
 	const subPath: string = parts.slice(0, parts.length - 1).join('/');
-	const serviceName: string = parts.map((n: string) => n[0].toUpperCase() + n.substring(1)).join('');
+	const coreClassName: string = parts.map((n: string) => n[0].toUpperCase() + n.substring(1)).join('');
 	const serviceLastName: string = parts.slice(-1).join('');
 	const executorFileName: string = path.join(root, config.serviceDirectory, subPath, serviceLastName + '.executor.ts');
 	const contractFileName: string = path.join(root, config.serviceDirectory, subPath, serviceLastName + '.contract.ts');
@@ -144,7 +144,8 @@ function generateService(args: string[]): void {
 
 	const templateData: object = {
 		relativeToRoot,
-		serviceName,
+		subPath: subPath,
+		coreClassName: coreClassName,
 		serviceLastName,
 		prefix,
 		indentString: config.indentString,

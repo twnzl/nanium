@@ -20,6 +20,6 @@ export class ServiceRequestBase<TRequestBody, TResponseBody> implements ServiceR
 
 	async enqueue(options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
 		const serviceName: string = (this.constructor as any).serviceName;
-		return await Nocat.enqueue({ serviceName, request: this, ...options });
+		return await Nocat.enqueue({ serviceName: serviceName, request: this, ...options });
 	}
 }
