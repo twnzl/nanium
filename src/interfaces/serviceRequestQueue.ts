@@ -18,10 +18,15 @@ export interface ServiceRequestQueue {
 	isShutdownInitiated: boolean;
 
 	/**
-	 * must return 'yes' if this queue is responsible for requests with the given name
-	 * @param serviceName
+	 * initialize th queue. Nocat will call this when the queue is added to the nocat queues via Nocat.addQueue
 	 */
-	isResponsible(serviceName: string): KindOfResponsibility;
+	init(): Promise<void>;
+
+	/**
+	 * must return 'yes' if this queue is responsible for requests with the given name
+	 * @param entry
+	 */
+	isResponsible(entry: ServiceRequestQueueEntry): KindOfResponsibility;
 
 	/**
 	 * enqueue a new entry into the queue
