@@ -28,7 +28,8 @@ const actions: { [actionName: string]: Function } = {
 		console.log('crate or update a sdk to to use the services in other projects');
 	},
 	rm: removeFiles,
-	namespace: setNamespace
+	namespace: setNamespace,
+	rsn: refreshServiceNames
 };
 
 
@@ -50,6 +51,8 @@ nocat ccp {srcPath} {dstPath}
 	  and than copies files from srcPath recursively to dstPath
 nocat namespace {namespace}
 		set namespace for all services that don't have a namespace
+nocat rsn
+		refresh service names. Set property serviceName of all requests and executors to the default (Namespace:RelativePath)
 `);
 	process.exit(0);
 }
@@ -211,8 +214,23 @@ async function setNamespace([namespace]: string): Promise<void> {
 	for (const file of files) {
 		fileContent = fs.readFileSync(file, { encoding: 'utf8' });
 		fileContent = fileContent
-			.replace(/static serviceName: string = '(.*?)\.(.*?)'/g, 'static serviceName: string = \'' + namespace + '.$2' + '\'') // if actually other namespace is defined
-			.replace(/static serviceName: string = '([^.]*?)'/g, 'static serviceName: string = \'' + namespace + '.$1' + '\''); // if actually no namespace is defined
+			.replace(/static serviceName: string = '(.*?)\.(.*?)'/g, 'static serviceName: string = \'' + namespace + ':$2' + '\'') // if actually other namespace is defined
+			.replace(/static serviceName: string = '([^.]*?)'/g, 'static serviceName: string = \'' + namespace + ':$1' + '\''); // if actually no namespace is defined
+		fs.writeFileSync(file, fileContent);
+	}
+}
+
+async function refreshServiceNames(): Promise<void> {
+	let fileContent: string;
+	const files: string[] = await findFiles(config.serviceDirectory,
+		[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.ts') && !f.endsWith('.contract.ts')]);
+	for (const file of files) {
+		let relativeFileName: string = file.split(config.serviceDirectory)[1];
+		relativeFileName = relativeFileName.substr(1, relativeFileName.length - 13);
+		fileContent = fs.readFileSync(file, { encoding: 'utf8' });
+		fileContent = fileContent
+			.replace(/static serviceName: string = '(.*?)\.(.*?)'/g, 'static serviceName: string = \'' + config.namespace + ':' + relativeFileName + '\'') // if actually other namespace is defined
+			.replace(/static serviceName: string = '([^.]*?)'/g, 'static serviceName: string = \'' + config.namespace + ':' + relativeFileName + '\''); // if actually no namespace is defined
 		fs.writeFileSync(file, fileContent);
 	}
 }
