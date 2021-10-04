@@ -24,11 +24,11 @@ export class ServiceRequestQueueConfig {
 	 * function to build the execution context for each queued request,
 	 * that shall be used for the execution
 	 */
-	getExecutionContext: (requestName: string, request: ServiceRequest<any>) => ServiceExecutionContext;
+	getExecutionContext: (requestName: string, request: ServiceRequest<any>) => Promise<ServiceExecutionContext>;
 
 	/**
 	 * must return 'yes', if this queue is responsible for requests with the given name
 	 * or 'fallback', if it is only responsible if no other queue is responsible
 	 */
-	isResponsible?: (entry: ServiceRequestQueueEntry) => KindOfResponsibility;
+	isResponsible?: (entry: ServiceRequestQueueEntry) => Promise<KindOfResponsibility>;
 }

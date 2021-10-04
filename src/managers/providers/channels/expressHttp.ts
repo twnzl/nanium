@@ -54,7 +54,7 @@ export class NocatExpressHttpChannel implements RequestChannel {
 		const request: any = new this.serviceRepository[serviceName].Request();
 		Object.assign(request, json[serviceName]);
 		res.setHeader('Content-Type', 'application/json; charset=utf-8');
-		if (Nocat.isStream(request, serviceName)) {
+		if (await Nocat.isStream(request, serviceName)) {
 			const result: Observable<any> = Nocat.stream(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 			res.statusCode = 200;
 			result.subscribe({

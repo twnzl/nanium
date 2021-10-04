@@ -12,7 +12,7 @@ export interface NocatConsumerNodejsHttpConfig {
 	proxy?: string;
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
 	handleError?: (e: any) => Promise<void>;
-	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => KindOfResponsibility;
+	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
 export class NocatConsumerNodejsHttp implements ServiceManager {
@@ -25,7 +25,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 				proxy: null,
 				exceptionHandler: (response) => console.error(response),
 				requestInterceptors: [],
-				isResponsible: (): KindOfResponsibility => 'yes',
+				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			},
 			...(config || {})
 		};
@@ -34,8 +34,8 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 	async init(): Promise<void> {
 	}
 
-	isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): KindOfResponsibility {
-		return this.config.isResponsible(request, serviceName);
+	async isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<KindOfResponsibility> {
+		return await this.config.isResponsible(request, serviceName);
 	}
 
 	private static _httpRequest: Function;

@@ -13,14 +13,14 @@ export interface ServiceManager {
 	 * must return true if the Service implements the stream method to stream the partial Results via an Observable
 	 * @param serviceName
 	 */
-	isStream?(serviceName: string): boolean;
+	isStream?(serviceName: string): Promise<boolean>;
 
 	/**
 	 * must return 'yes' if this manager is responsible for requests with the given name
 	 * @param request
 	 * @param serviceName
 	 */
-	isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): KindOfResponsibility;
+	isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<KindOfResponsibility>;
 
 	/**
 	 * initialize the manager.

@@ -5,25 +5,24 @@ import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { ServiceRequest } from '../../interfaces/serviceRequest';
 import { StreamServiceRequest } from '../../interfaces/streamServiceRequest';
 
-export interface NocatConsumerBrowserConfig {
+export interface NocatConsumerBrowserHttpConfig {
 	apiUrl?: string;
-	protocol?: 'http' | 'websocket';
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
 	handleError?: (e: any) => Promise<void>;
-	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => KindOfResponsibility;
+	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
-export class NocatConsumerBrowser implements ServiceManager {
-	config: NocatConsumerBrowserConfig;
+export class NocatConsumerBrowserHttp implements ServiceManager {
+	config: NocatConsumerBrowserHttpConfig;
 
-	constructor(config?: NocatConsumerBrowserConfig) {
+	constructor(config?: NocatConsumerBrowserHttpConfig) {
 		this.config = {
 			...{
 				apiUrl: '/api',
 				protocol: 'http',
 				exceptionHandler: (response) => alert(response),
 				requestInterceptors: [],
-				isResponsible: (): KindOfResponsibility => 'yes',
+				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			},
 			...(config || {})
 		};
@@ -40,8 +39,8 @@ export class NocatConsumerBrowser implements ServiceManager {
 		}
 	}
 
-	isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): KindOfResponsibility {
-		return this.config.isResponsible(request, serviceName);
+	async isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<KindOfResponsibility> {
+		return await this.config.isResponsible(request, serviceName);
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {
@@ -55,11 +54,7 @@ export class NocatConsumerBrowser implements ServiceManager {
 
 		// execute the request
 		let response: any;
-		if (this.config.protocol === 'websocket') {
-			response = await this.executeWebsocket(serviceName, request);
-		} else {
-			response = await this.executeHttp(serviceName, request);
-		}
+		response = await this.executeHttp(serviceName, request);
 
 		return response;
 	}
@@ -142,13 +137,5 @@ export class NocatConsumerBrowser implements ServiceManager {
 				reject(e);
 			}
 		});
-	}
-
-	private async executeWebsocket(serviceName: string, request: any): Promise<any> {
-		if (!serviceName && !request) {
-			throw new Error('not yet implemented:');
-		}
-		throw new Error('not yet implemented:');
-		// todo implement websocket protocol
 	}
 }

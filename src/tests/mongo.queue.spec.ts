@@ -21,7 +21,7 @@ describe('MongoQueue Tests \n', function (): void {
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: { test: TestServerRequestInterceptor },
-			isResponsible: (): KindOfResponsibility => 'yes',
+			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			handleError: async (err: any): Promise<any> => {
 				if (err instanceof ServiceResponseMessage) {
 					return new ServiceResponseBase({}, { errors: [err] });
@@ -37,8 +37,8 @@ describe('MongoQueue Tests \n', function (): void {
 			serverUrl: /*await mongoUnit.start({ port: 27020 }),*/ 'mongodb://localhost:27017',
 			databaseName: 'nocat_test',
 			collectionName: 'rq',
-			getExecutionContext: () => new TestExecutionContext(),
-			isResponsible: (): KindOfResponsibility => 'yes',
+			getExecutionContext: () => Promise.resolve(new TestExecutionContext()),
+			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		});
 		await Nocat.addQueue(mongoQueue);
 		await mongoQueue.removeEntries();

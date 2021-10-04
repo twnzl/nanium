@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from './interfaces/serviceManager';
 import { ServiceExecutionContext } from './interfaces/serviceExecutionContext';
 import { LogMode } from './interfaces/logMode';
@@ -30,14 +30,14 @@ export class Nocat {
 		await Nocat.startQueue(queue);
 	}
 
-	static isStream(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): boolean {
-		const manager: ServiceManager = this.getResponsibleManager(request, serviceName);
-		return manager.isStream((request.constructor as any).serviceName);
+	static async isStream(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<boolean> {
+		const manager: ServiceManager = await this.getResponsibleManager(request, serviceName);
+		return await manager.isStream((request.constructor as any).serviceName);
 	}
 
 	static async execute(request: ServiceRequest<any>, serviceName?: string, context?: ServiceExecutionContext): Promise<any> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
-		const manager: ServiceManager = this.getResponsibleManager(request, serviceName);
+		const manager: ServiceManager = await this.getResponsibleManager(request, serviceName);
 		if (!manager) {
 			throw new Error('no responsible manager for Service "' + serviceName + '" found');
 		}
@@ -47,17 +47,32 @@ export class Nocat {
 
 	static stream(request: StreamServiceRequest<any>, serviceName?: string, context?: ServiceExecutionContext): Observable<any> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
-		const manager: ServiceManager = this.getResponsibleManager(request, serviceName);
-		if (!manager) {
-			throw new Error('nocat has not been initialized');
-		}
-		return manager.stream(serviceName, request, context);
+		const managerPromise: Promise<ServiceManager> = this.getResponsibleManager(request, serviceName);
+		return new Observable((observer: Observer<any>): void => {
+			managerPromise.then(manager => {
+				if (!manager) {
+					observer.error('no responsible service provider found');
+				} else {
+					manager.stream(serviceName, request, context).subscribe({
+						next: (value) => {
+							observer.next(value);
+						},
+						complete: () => {
+							observer.complete();
+						},
+						error: (e: any): void => {
+							observer.error(e);
+						}
+					});
+				}
+			});
+		});
 	}
 
 	static async enqueue<TRequest>(
 		entry: ServiceRequestQueueEntry
 	): Promise<ServiceRequestQueueEntry> {
-		const queue: ServiceRequestQueue = this.getResponsibleQueue(entry);
+		const queue: ServiceRequestQueue = await this.getResponsibleQueue(entry);
 		if (!queue) {
 			throw new Error('nocat: no queue has been initialized');
 		}
@@ -70,20 +85,20 @@ export class Nocat {
 		return result;
 	}
 
-	static getResponsibleManager(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): ServiceManager {
-		const result: ServiceManager = this.managers.find((manager: ServiceManager) => manager.isResponsible(request, serviceName) === 'yes');
+	static async getResponsibleManager(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<ServiceManager> {
+		const result: ServiceManager = this.managers.find(async (manager: ServiceManager) => (await manager.isResponsible(request, serviceName)) === 'yes');
 		if (result) {
 			return result;
 		}
-		return this.managers.find((manager: ServiceManager) => manager.isResponsible(request, serviceName) === 'fallback');
+		return this.managers.find(async (manager: ServiceManager) => (await manager.isResponsible(request, serviceName)) === 'fallback');
 	}
 
-	static getResponsibleQueue(entry: ServiceRequestQueueEntry): ServiceRequestQueue {
-		const result: ServiceRequestQueue = this.queues.find((queue: ServiceRequestQueue) => queue.isResponsible(entry) === 'yes');
+	static async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
+		const result: ServiceRequestQueue = this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'yes');
 		if (result) {
 			return result;
 		}
-		return this.queues.find((queue: ServiceRequestQueue) => queue.isResponsible(entry) === 'fallback');
+		return this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'fallback');
 	}
 
 	//#region queue
@@ -106,7 +121,7 @@ export class Nocat {
 				entry.response = await Nocat.execute(
 					entry.request,
 					entry.serviceName,
-					requestQueue.config.getExecutionContext(entry.serviceName, entry.request));
+					await requestQueue.config.getExecutionContext(entry.serviceName, entry.request));
 				entry.state = 'done';
 				entry.endDate = new Date();
 				await requestQueue.updateEntry(entry);

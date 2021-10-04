@@ -20,7 +20,7 @@ describe('execute TestRequest on server \n', function (): void {
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: { test: TestServerRequestInterceptor },
-			isResponsible: (): KindOfResponsibility => 'yes',
+			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			handleError: async (err: any): Promise<any> => {
 				if (err.hasOwnProperty('code')) {
 					return new ServiceResponseBase({}, { errors: [err] });

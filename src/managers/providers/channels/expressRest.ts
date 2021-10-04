@@ -49,12 +49,12 @@ export class NocatExpressRestChannel implements RequestChannel {
 					method,
 					path
 				}: { method: string; path: string; } = this.getMethodAndPath(requestConstructor.serviceName);
-				this.config.expressApp[method](path, (req: express.Request, res: express.Response) => {
+				this.config.expressApp[method](path, async (req: express.Request, res: express.Response) => {
 					const serviceRequest: ServiceRequest<any> | StreamServiceRequest<any> = this.createRequest(req, requestConstructor);
-					if (Nocat.isStream(serviceRequest, requestConstructor.serviceName)) {
+					if (await Nocat.isStream(serviceRequest, requestConstructor.serviceName)) {
 						this.stream(requestConstructor.serviceName, serviceRequest as StreamServiceRequest<any>, res);
 					} else {
-						this.execute(requestConstructor.serviceName, serviceRequest as ServiceRequest<any>, res);
+						await this.execute(requestConstructor.serviceName, serviceRequest as ServiceRequest<any>, res);
 					}
 				});
 			}

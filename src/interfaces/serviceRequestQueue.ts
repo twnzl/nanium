@@ -26,7 +26,7 @@ export interface ServiceRequestQueue {
 	 * must return 'yes' if this queue is responsible for requests with the given name
 	 * @param entry
 	 */
-	isResponsible(entry: ServiceRequestQueueEntry): KindOfResponsibility;
+	isResponsible(entry: ServiceRequestQueueEntry): Promise<KindOfResponsibility>;
 
 	/**
 	 * enqueue a new entry into the queue
