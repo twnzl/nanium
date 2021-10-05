@@ -1,17 +1,11 @@
 import { KindOfResponsibility } from './kindOfResponsibility';
 import { ServiceRequestQueueEntry, ServiceRequestQueueEntryQueryConditions } from './serviceRequestQueueEntry';
-import { ServiceRequestQueueConfig } from './serviceRequestQueueConfig';
+import { ServiceExecutionContext } from './serviceExecutionContext';
 
 /**
  * a request queue that can be used by bocl has to implement these members
  */
 export interface ServiceRequestQueue {
-
-	/**
-	 * configuration parameters of this Queue
-	 */
-	config: ServiceRequestQueueConfig;
-
 	/**
 	 * if true, no new requests will be started
 	 */
@@ -48,6 +42,13 @@ export interface ServiceRequestQueue {
 	 * @returns true if it was successful, false if vor example someone else has already taken the entry
 	 */
 	tryTake(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry>;
+
+	/**
+	 * create an execution context for a specific entry. It will be used for the execution of the request
+	 * @param serviceName
+	 * @param entry
+	 */
+	getExecutionContext(serviceName: string, entry: ServiceRequestQueueEntry): Promise<ServiceExecutionContext>;
 
 	/**
 	 * update an entry

@@ -29,6 +29,14 @@ export class Nocat {
 		await Nocat.startQueue(queue);
 	}
 
+	static async removeQueue(fn: (q: ServiceRequestQueue) => boolean): Promise<void> {
+		const queues: ServiceRequestQueue[] = this.queues.filter(fn);
+		await Promise.all(queues.map(queue => {
+			return queue.stop();
+		}));
+		this.queues = this.queues.filter((q: ServiceRequestQueue) => !fn(q));
+	}
+
 	static async execute(request: any, serviceName?: string, context?: ServiceExecutionContext): Promise<any> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
 		const manager: ServiceManager = await this.getResponsibleManager(request, serviceName);
@@ -107,76 +115,74 @@ export class Nocat {
 
 	// execute an request considering the settings of startDate, interval, etc.
 	private static executeTimeControlled(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): void {
-
-		const start: () => Promise<void> = async (): Promise<void> => {
-			try {
-				entry = await requestQueue.onBeforeStart(entry);
-				entry.startDate = entry.startDate || new Date();
-				await requestQueue.updateEntry(entry);
-				entry.response = await Nocat.execute(
-					entry.request,
-					entry.serviceName,
-					await requestQueue.config.getExecutionContext(entry.serviceName, entry.request));
-				entry.state = 'done';
-				entry.endDate = new Date();
-				await requestQueue.updateEntry(entry);
-			} catch (error) {
-				try {
-					entry.response = error.stack ? error.stack?.toString() : JSON.stringify(error, null, 2);
-					entry.state = 'failed';
-					entry.endDate = new Date();
-					await requestQueue.updateEntry(entry);
-				} catch (e) {
-					console.log(JSON.stringify(error));
-					console.log(JSON.stringify(e));
-				}
-			}
-		};
-
-		const tryStart: () => Promise<boolean> = async (): Promise<boolean> => {
-			if (entry.endOfInterval && new Date() >= entry.endOfInterval) {
-				entry.endDate = new Date();
-				entry.state = 'canceled';
-				await requestQueue.updateEntry(entry);
-				return;
-			}
-			entry = await requestQueue.tryTake(entry);
-			if (!entry) {
-				return;
-			}
-			let lastRun: Date;
-			try {
-				lastRun = new Date();
-				await start();
-			} catch (e) {
-				console.log(e);
-			} finally {
-				entry = await requestQueue.refreshEntry(entry);
-				let nextRun: Date = DateHelper.addSeconds(entry.interval, lastRun);
-				if (entry.interval) {
-					if (nextRun < new Date()) {
-						nextRun = new Date();
-					}
-					if (!entry.endOfInterval || nextRun < new Date(entry.endOfInterval)) {
-						const nextEntry: ServiceRequestQueueEntry = { ...entry };
-						delete nextEntry.response;
-						delete nextEntry.endDate;
-						delete nextEntry.id;
-						nextEntry.startDate = nextRun;
-						nextEntry.state = 'ready';
-						await requestQueue.enqueue(nextEntry); // every execution is a new entry, so you have state and result of each execution
-					}
-				}
-			}
-			return true;
-		};
-
-		// logic
 		if (!this.isShutDownInitiated && !requestQueue.isShutdownInitiated) {
 			if (!entry.startDate || new Date(entry.startDate) < new Date()) {
-				tryStart().then();
+				this.tryStart(entry, requestQueue).then();
 			}
 		}
+	}
+
+	private static async start(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
+		try {
+			entry = await requestQueue.onBeforeStart(entry);
+			entry.startDate = entry.startDate || new Date();
+			await requestQueue.updateEntry(entry);
+			entry.response = await Nocat.execute(
+				entry.request,
+				entry.serviceName,
+				await requestQueue.getExecutionContext(entry.serviceName, entry));
+			entry.state = 'done';
+			entry.endDate = new Date();
+			await requestQueue.updateEntry(entry);
+		} catch (error) {
+			try {
+				entry.response = error.stack ? error.stack?.toString() : JSON.stringify(error, null, 2);
+				entry.state = 'failed';
+				entry.endDate = new Date();
+				await requestQueue.updateEntry(entry);
+			} catch (e) {
+				console.log(JSON.stringify(error));
+				console.log(JSON.stringify(e));
+			}
+		}
+	}
+
+	private static async tryStart(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<boolean> {
+		if (entry.endOfInterval && new Date() >= entry.endOfInterval) {
+			entry.endDate = new Date();
+			entry.state = 'canceled';
+			await requestQueue.updateEntry(entry);
+			return;
+		}
+		entry = await requestQueue.tryTake(entry);
+		if (!entry) {
+			return;
+		}
+		let lastRun: Date;
+		try {
+			lastRun = new Date();
+			await this.start(entry, requestQueue);
+		} catch (e) {
+			console.log(e);
+		} finally {
+			entry = await requestQueue.refreshEntry(entry);
+			let nextRun: Date = DateHelper.addSeconds(entry.interval, lastRun);
+			if (entry.interval) {
+				if (nextRun < new Date()) {
+					nextRun = new Date();
+				}
+				if (!entry.endOfInterval || nextRun < new Date(entry.endOfInterval)) {
+					const nextEntry: ServiceRequestQueueEntry = { ...entry };
+					delete nextEntry.response;
+					delete nextEntry.endDate;
+					delete nextEntry.id;
+					nextEntry.startDate = nextRun;
+					nextEntry.state = 'ready';
+					await requestQueue.enqueue(nextEntry); // every execution is a new entry, so you have state and result of each execution
+				}
+			}
+		}
+		return true;
 	}
 
 	static async shutdown(): Promise<void> {
@@ -195,7 +201,7 @@ export class Nocat {
 	private static async startQueue(requestQueue: ServiceRequestQueue): Promise<void> {
 		// load all current entries that have not been started so far and start them as configured
 		const readyEntries: ServiceRequestQueueEntry[] = await requestQueue
-			.getEntries({ states: ['ready'] });
+			.getEntries({ states: ['ready'], startDateReached: true });
 		for (const entry of readyEntries) {
 			await Nocat.executeTimeControlled(entry, requestQueue);
 		}

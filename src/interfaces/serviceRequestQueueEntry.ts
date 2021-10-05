@@ -64,4 +64,5 @@ export interface ServiceRequestQueueEntry {
 export interface ServiceRequestQueueEntryQueryConditions {
 	states?: ServiceRequestQueueEntryState[];
 	finishedBefore?: Date;
+	startDateReached?: boolean;
 }

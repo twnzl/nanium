@@ -4,10 +4,10 @@ import {
 	ServiceRequestQueueEntryQueryConditions
 } from '../interfaces/serviceRequestQueueEntry';
 import { Collection, Db, InsertOneResult, ModifyResult, MongoClient, ObjectId } from 'mongodb';
-import { ServiceRequestQueueConfig } from '../interfaces/serviceRequestQueueConfig';
 import { Nocat } from '../core';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { DateHelper } from '../helper';
+import { ServiceExecutionContext } from '../interfaces/serviceExecutionContext';
 
 export class NocatMongoQueue implements ServiceRequestQueue {
 	public isShutdownInitiated: boolean;
@@ -110,6 +110,11 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 		return NocatMongoQueue.toExternalEntry(result.value);
 	}
 
+	async getExecutionContext(serviceName: string, entry: ServiceRequestQueueEntry): Promise<ServiceExecutionContext> {
+		return await this.config.getExecutionContext(serviceName, entry);
+	}
+
+
 	public async updateEntry(entry: ServiceRequestQueueEntry): Promise<void> {
 		await this.store(entry);
 	}
@@ -158,6 +163,9 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 			if (conditions.finishedBefore) {
 				query.endDate = { $lt: conditions.finishedBefore };
 			}
+			if (conditions.startDateReached === true) {
+				query['$or'] = [{ startDate: null }, { startDate: { $lt: new Date() } }];
+			}
 		}
 		return query;
 	}
@@ -177,7 +185,7 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 
 type ServiceRequestQueueEntryInternal = Omit<ServiceRequestQueueEntry, 'id'> & { _id: ObjectId };
 
-export class MongoQueueServiceRequestQueueConfig extends ServiceRequestQueueConfig {
+export class MongoQueueServiceRequestQueueConfig {
 	/**
 	 * Seconds to wait between checks for changes (e.g. new requests) in the queue
 	 */
@@ -192,4 +200,40 @@ export class MongoQueueServiceRequestQueueConfig extends ServiceRequestQueueConf
 	 * if a request entry is older than this ans has a final state, then it will be removed from the queue
 	 */
 	cleanupAge?: number;
+
+	/**
+	 * connection url for the mongodb server
+	 */
+	serverUrl: string;
+
+	/**
+	 * name of the database where the request collection is in.
+	 */
+	databaseName: string;
+
+	/**
+	 * name of the collection where the requests shall be stored
+	 */
+	collectionName: string = 'requestQueue';
+
+	/**
+	 * must return 'yes', if this queue is responsible for requests with the given name
+	 * or 'fallback', if it is only responsible if no other queue is responsible
+	 */
+	isResponsible?: (entry: ServiceRequestQueueEntry) => Promise<KindOfResponsibility>;
+
+	/**
+	 * create an execution context for a specific entry. It will be used for the execution of the request
+	 * @param serviceName
+	 * @param entry
+	 */
+	getExecutionContext: (serviceName: string, entry: ServiceRequestQueueEntry) => Promise<ServiceExecutionContext>;
+
+	/**
+	 * Will run, after an entry is set to running but before it ist started.
+	 * So for example this could set some values in the params property of the entry
+	 * @param entry
+	 * @returns the changed entry
+	 */
+	onBeforeStart?(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry>;
 }

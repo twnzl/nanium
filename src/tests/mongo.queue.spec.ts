@@ -12,6 +12,7 @@ import { AsyncHelper, DateHelper } from '../helper';
 import { DateMock } from './mocks/date.mock';
 import { MyServiceRequestQueueEntry } from './services/serviceRequestQueueEntry';
 import { ServiceRequestContext } from './services/serviceRequestContext';
+import * as mongoUnit from 'mongo-unit';
 
 let mongoQueue: NocatMongoQueue;
 
@@ -35,7 +36,7 @@ describe('MongoQueue Tests \n', function (): void {
 		}));
 		mongoQueue = new NocatMongoQueue({
 			checkInterval: 1,
-			serverUrl: /*await mongoUnit.start({ port: 27020 }),*/ 'mongodb://localhost:27017',
+			serverUrl: await mongoUnit.start({ port: 27020 }), /* 'mongodb://localhost:27017',*/
 			databaseName: 'nocat_test',
 			collectionName: 'rq',
 			getExecutionContext: () => Promise.resolve(new ServiceRequestContext('private')),
@@ -99,5 +100,20 @@ describe('MongoQueue Tests \n', function (): void {
 		expect(entries[0].state, 'state should be done').toBe('done');
 		expect(entries[0].response.body.output1).toBe('1 :-)');
 		await mongoClient.close();
+	});
+
+	it('removeQueue --> \n', async function (): Promise<void> {
+		await Nocat.addQueue(new NocatMongoQueue({
+			checkInterval: 1,
+			serverUrl: await mongoUnit.start({ port: 27020 }), // 'mongodb://localhost:27017',
+			databaseName: 'nocat_test2',
+			collectionName: 'rq',
+			getExecutionContext: () => Promise.resolve(new ServiceRequestContext('private')),
+			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+		}));
+		expect(Nocat.queues.length, 'there should be two mongo queues registered').toBe(2);
+		await Nocat.removeQueue((q: NocatMongoQueue) => q.config.databaseName === 'nocat_test2');
+		expect(Nocat.queues.length, 'one of two registered queues should be removed').toBe(1);
+		expect((Nocat.queues[0] as NocatMongoQueue).config.databaseName, 'the right queue (with database name nocat_test2) should be removed').toBe('nocat_test');
 	});
 });
