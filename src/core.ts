@@ -1,3 +1,4 @@
+// todo: optimize rxjs import. Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nocat as a commonJs module
 import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from './interfaces/serviceManager';
 import { ServiceExecutionContext } from './interfaces/serviceExecutionContext';
@@ -5,8 +6,6 @@ import { LogMode } from './interfaces/logMode';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { DateHelper } from './helper';
-import { ServiceRequest } from './interfaces/serviceRequest';
-import { StreamServiceRequest } from './interfaces/streamServiceRequest';
 
 export class Nocat {
 	static #isShutDownInitiated: boolean;
@@ -30,12 +29,7 @@ export class Nocat {
 		await Nocat.startQueue(queue);
 	}
 
-	static async isStream(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<boolean> {
-		const manager: ServiceManager = await this.getResponsibleManager(request, serviceName);
-		return await manager.isStream((request.constructor as any).serviceName);
-	}
-
-	static async execute(request: ServiceRequest<any>, serviceName?: string, context?: ServiceExecutionContext): Promise<any> {
+	static async execute(request: any, serviceName?: string, context?: ServiceExecutionContext): Promise<any> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
 		const manager: ServiceManager = await this.getResponsibleManager(request, serviceName);
 		if (!manager) {
@@ -45,7 +39,7 @@ export class Nocat {
 		return await manager.execute(serviceName, request, context);
 	}
 
-	static stream(request: StreamServiceRequest<any>, serviceName?: string, context?: ServiceExecutionContext): Observable<any> {
+	static stream(request: any, serviceName?: string, context?: ServiceExecutionContext): Observable<any> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
 		const managerPromise: Promise<ServiceManager> = this.getResponsibleManager(request, serviceName);
 		return new Observable((observer: Observer<any>): void => {
@@ -85,7 +79,7 @@ export class Nocat {
 		return result;
 	}
 
-	static async getResponsibleManager(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<ServiceManager> {
+	static async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {
 		const result: ServiceManager = this.managers.find(async (manager: ServiceManager) => (await manager.isResponsible(request, serviceName)) === 'yes');
 		if (result) {
 			return result;
@@ -116,6 +110,7 @@ export class Nocat {
 
 		const start: () => Promise<void> = async (): Promise<void> => {
 			try {
+				entry = await requestQueue.onBeforeStart(entry);
 				entry.startDate = entry.startDate || new Date();
 				await requestQueue.updateEntry(entry);
 				entry.response = await Nocat.execute(

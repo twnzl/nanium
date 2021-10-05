@@ -1,6 +1,6 @@
-import { ServiceRequestHead } from './serviceRequestHead';
-import { Nocat } from '../../core';
+import { Nocat } from 'nocat/core';
 import { Observable } from 'rxjs';
+import { ServiceRequestHead } from './serviceRequestHead';
 
 export class StreamServiceRequestBase<TRequestBody, TResult> {
 

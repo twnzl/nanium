@@ -6,8 +6,6 @@ import { RequestChannel } from '../../../interfaces/requestChannel';
 import { LogMode } from '../../../interfaces/logMode';
 import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
 import { NocatRepository } from '../../../interfaces/serviceRepository';
-import { ServiceRequest } from '../../../interfaces/serviceRequest';
-import { StreamServiceRequest } from '../../../interfaces/streamServiceRequest';
 
 export class NocatExpressRestChannelConfig implements RequestChannelConfig {
 	expressApp: express.Express;
@@ -50,11 +48,15 @@ export class NocatExpressRestChannel implements RequestChannel {
 					path
 				}: { method: string; path: string; } = this.getMethodAndPath(requestConstructor.serviceName);
 				this.config.expressApp[method](path, async (req: express.Request, res: express.Response) => {
-					const serviceRequest: ServiceRequest<any> | StreamServiceRequest<any> = this.createRequest(req, requestConstructor);
-					if (await Nocat.isStream(serviceRequest, requestConstructor.serviceName)) {
-						this.stream(requestConstructor.serviceName, serviceRequest as StreamServiceRequest<any>, res);
+					const serviceRequest: any = this.createRequest(req, requestConstructor);
+					if (req.headers['streamed'] === 'true') {
+						if (!serviceRequest.stream) {
+							res.statusCode = 500;
+							res.write(JSON.stringify('the service does not support result streaming'));
+						}
+						this.stream(requestConstructor.serviceName, serviceRequest, res);
 					} else {
-						await this.execute(requestConstructor.serviceName, serviceRequest as ServiceRequest<any>, res);
+						await this.execute(requestConstructor.serviceName, serviceRequest, res);
 					}
 				});
 			}
@@ -111,7 +113,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 		res.end();
 	}
 
-	private stream(serviceName: string, serviceRequest: StreamServiceRequest<any>, res: express.Response): void {
+	private stream(serviceName: string, serviceRequest: any, res: express.Response): void {
 		const result: Observable<any> = Nocat.stream(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 		res.statusCode = 200;
 		result.subscribe({
@@ -129,7 +131,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 		});
 	}
 
-	createRequest(req: express.Request, requestConstructor: new () => any): ServiceRequest<any> | StreamServiceRequest<any> {
+	createRequest(req: express.Request, requestConstructor: new () => any): any {
 		const request: any = { ...req.body };
 		for (const property in req.query) {
 			if (!req.query.hasOwnProperty(property)) {

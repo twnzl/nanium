@@ -2,14 +2,12 @@ import { Observable, Observer } from 'rxjs';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
-import { ServiceRequest } from '../../interfaces/serviceRequest';
-import { StreamServiceRequest } from '../../interfaces/streamServiceRequest';
 
 export interface NocatConsumerBrowserHttpConfig {
 	apiUrl?: string;
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
 	handleError?: (e: any) => Promise<void>;
-	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsible: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
 export class NocatConsumerBrowserHttp implements ServiceManager {
@@ -39,7 +37,7 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 		}
 	}
 
-	async isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<KindOfResponsibility> {
+	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
@@ -53,55 +51,6 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 		}
 
 		// execute the request
-		let response: any;
-		response = await this.executeHttp(serviceName, request);
-
-		return response;
-	}
-
-	stream(serviceName: string, request: any): Observable<any> {
-		return new Observable<any>((observer: Observer<any>): void => {
-			const core: Function = (): void => {
-				const xhr: XMLHttpRequest = new XMLHttpRequest();
-				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-				let seenBytes: number = 0;
-				xhr.onreadystatechange = (): void => {
-					if (xhr.readyState === 3) {
-						const r: any = JSON.parse(xhr.response.substr(seenBytes));
-						if (Array.isArray(r)) {
-							for (const item of r) {
-								observer.next(item);
-							}
-						} else {
-							observer.next(r);
-						}
-						seenBytes = xhr.responseText.length;
-					}
-				};
-				xhr.addEventListener('error', (e: any) => {
-					this.config.handleError(e).then(() => {
-
-					});
-					observer.error(e);
-				});
-				xhr.send(JSON.stringify({ [serviceName]: request }));
-			};
-
-			// execute request interceptors
-			if (this.config.requestInterceptors.length) {
-				const promises: Promise<any>[] = [];
-				for (const interceptor of this.config.requestInterceptors) {
-					promises.push(interceptor.execute(request, {}));
-				}
-				Promise.all(promises).then(() => core());
-			} else {
-				core();
-			}
-		});
-
-	}
-
-	private async executeHttp(serviceName: string, request: any): Promise<any> {
 		return await new Promise<any>((resolve: Function, reject: Function): void => {
 			try {
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
@@ -132,10 +81,55 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 				};
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
 				xhr.setRequestHeader('Content-Type', 'application/json');
-				xhr.send(JSON.stringify({ [serviceName]: request }));
+				xhr.send(JSON.stringify({ serviceName, request }));
 			} catch (e) {
 				reject(e);
 			}
 		});
+	}
+
+	stream(serviceName: string, request: any): Observable<any> {
+		return new Observable<any>((observer: Observer<any>): void => {
+			const core: Function = (): void => {
+				const xhr: XMLHttpRequest = new XMLHttpRequest();
+				let seenBytes: number = 0;
+				xhr.onreadystatechange = (): void => {
+					if (xhr.readyState === 3) {
+						const r: any = JSON.parse(xhr.response.substr(seenBytes));
+						if (Array.isArray(r)) {
+							for (const item of r) {
+								observer.next(item);
+							}
+						} else {
+							observer.next(r);
+						}
+						seenBytes = xhr.responseText.length;
+					}
+				};
+				xhr.addEventListener('error', (e: any) => {
+					this.config.handleError(e).then(
+						() => {
+						},
+						(e: any) => {
+							observer.error(e);
+						});
+				});
+				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
+				xhr.setRequestHeader('Content-Type', 'application/json');
+				xhr.send(JSON.stringify({ serviceName, streamed: true, request }));
+			};
+
+			// execute request interceptors
+			if (this.config.requestInterceptors.length) {
+				const promises: Promise<any>[] = [];
+				for (const interceptor of this.config.requestInterceptors) {
+					promises.push(interceptor.execute(request, {}));
+				}
+				Promise.all(promises).then(() => core());
+			} else {
+				core();
+			}
+		});
+
 	}
 }

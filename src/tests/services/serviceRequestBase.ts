@@ -1,10 +1,15 @@
 import { ServiceRequestHead } from './serviceRequestHead';
 import { ServiceResponseBase } from './serviceResponseBase';
-import { ServiceRequest } from '../../interfaces/serviceRequest';
 import { Nocat } from '../../core';
 import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry';
+import { ServiceRequestContext } from './serviceRequestContext';
+import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
+import { Observable } from 'rxjs';
 
-export class ServiceRequestBase<TRequestBody, TResponseBody> implements ServiceRequest<ServiceResponseBase<TResponseBody>> {
+class TResult {
+}
+
+export class ServiceRequestBase<TRequestBody, TResponseBody> {
 
 	head: ServiceRequestHead;
 	body: TRequestBody;
@@ -14,12 +19,17 @@ export class ServiceRequestBase<TRequestBody, TResponseBody> implements ServiceR
 		this.head = head;
 	}
 
-	async execute(): Promise<ServiceResponseBase<TResponseBody>> {
-		return await Nocat.execute(this);
+	async execute(context: ServiceRequestContext): Promise<ServiceResponseBase<TResponseBody>> {
+		return await Nocat.execute(this, undefined, context);
 	}
 
-	async enqueue(options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
+	stream(): Observable<TResult> {
+		return Nocat.stream(this);
+	}
+
+	async enqueue(mandatorId: string, options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
 		const serviceName: string = (this.constructor as any).serviceName;
-		return await Nocat.enqueue({ serviceName: serviceName, request: this, ...options });
+		return await Nocat.enqueue(
+			<MyServiceRequestQueueEntry>{ serviceName: serviceName, request: this, ...options, mandatorId: mandatorId });
 	}
 }

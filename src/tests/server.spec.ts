@@ -8,10 +8,13 @@ import { ServiceResponseBase } from './services/serviceResponseBase';
 import { AnonymousRequest } from './services/test/anonymous.contract';
 import { LogMode } from '../interfaces/logMode';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
+import { ServiceRequestContext } from './services/serviceRequestContext';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' }, { token: '1234' });
 	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1, { token: '1234' });
+	const executionContext: ServiceRequestContext = new ServiceRequestContext('private');
+
 	let response: TestGetResponse;
 	let privateResponse: PrivateStuffResponse;
 
@@ -36,7 +39,7 @@ describe('execute TestRequest on server \n', function (): void {
 	describe('execute successful \n', function (): void {
 		beforeEach(async function (): Promise<void> {
 			request.body.input2 = null;
-			response = await request.execute();
+			response = await request.execute(executionContext);
 		});
 
 		it('--> \n', async function (): Promise<void> {
@@ -49,7 +52,7 @@ describe('execute TestRequest on server \n', function (): void {
 		const anonymousRequest: AnonymousRequest = new AnonymousRequest();
 		let anonymousResponse: ServiceResponseBase<string>;
 		beforeEach(async function (): Promise<void> {
-			anonymousResponse = await anonymousRequest.execute();
+			anonymousResponse = await anonymousRequest.execute(executionContext);
 		});
 
 		it('--> \n', async function (): Promise<void> {
@@ -60,7 +63,7 @@ describe('execute TestRequest on server \n', function (): void {
 	describe('execute with error \n', function (): void {
 		beforeEach(async function (): Promise<void> {
 			request.body.input2 = 4;
-			response = await request.execute();
+			response = await request.execute(executionContext);
 		});
 
 		test('-->  \n', async function (): Promise<void> {
@@ -75,7 +78,7 @@ describe('execute TestRequest on server \n', function (): void {
 	describe('execute with exception \n', function (): void {
 		beforeEach(async function (): Promise<void> {
 			request.body.input2 = 5;
-			response = await request.execute();
+			response = await request.execute(executionContext);
 		});
 
 		it('-->  \n', async function (): Promise<void> {
@@ -94,7 +97,7 @@ describe('execute TestRequest on server \n', function (): void {
 			response = undefined;
 			request.body.input2 = 10;
 			try {
-				response = await request.execute();
+				response = await request.execute(executionContext);
 			} catch (e) {
 				exception = e;
 			}
@@ -106,12 +109,12 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 	});
 
-	describe('stream successful response \n', function (): void {
+	describe('streamed successful response \n', function (): void {
 		const dtoList: TestDto[] = [];
 
 		beforeEach(async function (): Promise<void> {
 			await new Promise((resolve: Function): void => {
-				new TestQueryRequest({ input: 1 }, { token: '1234' }).execute().subscribe({
+				new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
 					next: (value: TestDto): void => {
 						dtoList.push(value);
 					},
@@ -125,9 +128,23 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 	});
 
+	describe('streamed service as Promise \n', function (): void {
+		let dtoList: TestDto[];
+
+		beforeEach(async function (): Promise<void> {
+			dtoList = await new TestQueryRequest({ input: 1 }, { token: '1234' }).execute();
+		});
+
+		it('-->  \n', async function (): Promise<void> {
+			expect(dtoList.length, 'length of result list should be correct').toBe(3);
+			expect(dtoList[0].a, 'property a of first result should be correct').toBe('1');
+			expect(dtoList[0].b, 'property b of first result should be correct').toBe(1);
+		});
+	});
+
 	describe('execute private service without scope \n', function (): void {
 		beforeEach(async function (): Promise<void> {
-			privateResponse = await privateRequest.execute();
+			privateResponse = await privateRequest.execute(executionContext);
 		});
 
 		it('--> \n', async function (): Promise<void> {

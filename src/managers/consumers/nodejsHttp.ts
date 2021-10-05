@@ -4,15 +4,13 @@ import { UrlOptions } from 'request';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
-import { ServiceRequest } from '../../interfaces/serviceRequest';
-import { StreamServiceRequest } from '../../interfaces/streamServiceRequest';
 
 export interface NocatConsumerNodejsHttpConfig {
 	apiUrl?: string;
 	proxy?: string;
 	requestInterceptors?: ServiceRequestInterceptor<any>[];
 	handleError?: (e: any) => Promise<void>;
-	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsible: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
 export class NocatConsumerNodejsHttp implements ServiceManager {
@@ -34,7 +32,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 	async init(): Promise<void> {
 	}
 
-	async isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<KindOfResponsibility> {
+	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
@@ -57,7 +55,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 			url: this.config.apiUrl + '#' + serviceName,
 			method: 'post',
 			json: true,
-			body: { [serviceName]: request }
+			body: { serviceName, request }
 		};
 		if (this.config.proxy) {
 			options.proxy = this.config.proxy;
@@ -99,7 +97,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 					});
 					observer.error(e);
 				});
-				xhr.send(JSON.stringify({ [serviceName]: request }));
+				xhr.send(JSON.stringify({ serviceName, streamed: true, request }));
 			};
 
 			// execute request interceptors

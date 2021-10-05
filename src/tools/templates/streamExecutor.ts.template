@@ -1,0 +1,16 @@
+import { ${coreClassName}Request } from './${serviceLastName}.contract';
+import { StreamServiceExecutor } from 'nocat/interfaces/streamServiceExecutor';
+import { Observable, Observer } from 'rxjs';
+import { ServiceRequestContext } from '${relativeToRoot}serviceRequestContext';
+
+export class ${coreClassName}Executor implements StreamServiceExecutor<${coreClassName}Request, ${coreClassName}Response> {
+	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
+
+	stream(request: ${coreClassName}Request, executionContext: ServiceRequestContext): Observable<${coreClassName}Response> {
+		return new Observable((observer: Observer<${coreClassName}Response>): void => {
+			// todo: call observer.next(value) for each result value
+			observer.next(...);
+			observer.complete();
+		});
+	}
+}

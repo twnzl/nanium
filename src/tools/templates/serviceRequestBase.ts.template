@@ -14,7 +14,7 @@ export class ServiceRequestBase<TRequestBody, TResponse> implements ServiceReque
 		this.head = head;
 	}
 
-	async execute(context?: ServiceExecutionContext): Promise<TResponse> {
+	async execute(context: ServiceExecutionContext): Promise<TResponse> {
 		return await Nocat.execute(this, undefined, context);
 	}
 

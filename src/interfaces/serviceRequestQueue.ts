@@ -35,6 +35,14 @@ export interface ServiceRequestQueue {
 	enqueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry>;
 
 	/**
+	 * Will run, after an entry is set to running but before it ist started.
+	 * So for example this could set some values in the params property of the entry
+	 * @param entry
+	 * @returns the changed entry
+	 */
+	onBeforeStart(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry>;
+
+	/**
 	 * take an entry and mark it as running, in one step, so that no other process can take it simultaneously
 	 * @param entry the entry
 	 * @returns true if it was successful, false if vor example someone else has already taken the entry

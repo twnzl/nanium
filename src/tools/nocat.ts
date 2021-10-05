@@ -13,23 +13,23 @@ export class NocatToolConfig {
 
 // define dictionary with action-functions
 const actions: { [actionName: string]: Function } = {
-	g: generateService,
-	generate: generateService,
-	rename: function (): void {
-		console.log('renaming of services is not yet implemented');
-	},
 	init: init,
-	pkg: function (): void {
-		console.log('creating a binary for the app is not yet implemented');
+	g: generateService,
+	gs: generateStreamService,
+	namespace: setNamespace,
+	rsn: refreshServiceNames,
+	rename: function (): void {
+		console.log('renaming of services - not yet implemented');
 	},
 	cp: copyFiles,
 	ccp: cleanAndCopyFiles,
-	sdk: function (): void {
-		console.log('crate or update a sdk to to use the services in other projects');
-	},
 	rm: removeFiles,
-	namespace: setNamespace,
-	rsn: refreshServiceNames
+	sdk: function (): void {
+		console.log('crate or update a sdk to to use the services in other projects - not yet implemented');
+	},
+	pkg: function (): void {
+		console.log('creating a binary for the app - not yet implemented');
+	},
 };
 
 
@@ -37,7 +37,10 @@ const actions: { [actionName: string]: Function } = {
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
 	console.log(`
 nocat init
-nocat generate | g {directory.}*{service name} {private|public} {namespace}
+nocat g {directory.}*{service name} {private|public} {namespace}
+		generate files for a new service (contract + executor)
+nocat gs {directory.}*{service name} {private|public} {namespace}
+		generate files for a new streamed service (contract + executor)
 nocat rename {old service name} {new service name}
 nocat pkg
 nocat rm {file or folder}
@@ -117,16 +120,28 @@ function removeFiles(args: string[]): void {
 	console.log(shell.rm('-rf', args[0]).toString());
 }
 
-function generateService(args: string[]): void {
+
+function generateService([servicePath, scope, prefix]: [string, string, string]): void {
+	generateServiceCore('contract.ts.template', 'executor.ts.template', servicePath, scope, prefix);
+}
+
+function generateStreamService([servicePath, scope, prefix]: [string, string, string]): void {
+	generateServiceCore('streamContract.ts.template', 'streamExecutor.ts.template', servicePath, scope, prefix);
+}
+
+function generateServiceCore(
+	contractTemplate: string, executorTemplate: string,
+	servicePath: string, scope: string, prefix: string
+): void {
 	const cwdRelativeToServiceDirectory: string = process.cwd()
 		.replace(root, '')
 		.replace(config.serviceDirectory, '')
 		.replace(/^[\\/]/, '')
 		.replace(/^[\\/]/, '');
-	let parts: string[] = args[0].split(args[0].indexOf('/') >= 0 ? '/' : '.');
+	let parts: string[] = servicePath.split(servicePath.indexOf('/') >= 0 ? '/' : '.');
 	if (cwdRelativeToServiceDirectory) {
 		parts = [
-			...cwdRelativeToServiceDirectory.split(args[0].indexOf('/') >= 0 ? '/' : '.'),
+			...cwdRelativeToServiceDirectory.split(servicePath.indexOf('/') >= 0 ? '/' : '.'),
 			...parts
 		];
 	}
@@ -136,8 +151,8 @@ function generateService(args: string[]): void {
 	const serviceLastName: string = parts.slice(-1).join('');
 	const executorFileName: string = path.join(root, config.serviceDirectory, subPath, serviceLastName + '.executor.ts');
 	const contractFileName: string = path.join(root, config.serviceDirectory, subPath, serviceLastName + '.contract.ts');
-	const scope: string = args[1] || 'private';
-	const prefix: string = args[2] || config.namespace;
+	scope = scope ?? 'private';
+	prefix = prefix ?? config.namespace;
 
 	// check if service with that name already exists
 	if (fs.existsSync(executorFileName) || fs.existsSync(contractFileName)) {
@@ -157,13 +172,13 @@ function generateService(args: string[]): void {
 	};
 
 	// create executor file
-	const executorFileContent: string = fromTemplate('executor.ts.template', templateData);
+	const executorFileContent: string = fromTemplate(executorTemplate, templateData);
 	fs.mkdirSync(path.dirname(executorFileName), { recursive: true });
 	fs.writeFileSync(executorFileName, executorFileContent);
 	console.log('created: ' + executorFileName);
 
 	// create contract file
-	const contractFileContent: string = fromTemplate('contract.ts.template', templateData);
+	const contractFileContent: string = fromTemplate(contractTemplate, templateData);
 	fs.mkdirSync(path.dirname(contractFileName), { recursive: true });
 	fs.writeFileSync(contractFileName, contractFileContent);
 	console.log('created: ' + contractFileName);
@@ -193,6 +208,10 @@ function init(): void {
 	// serviceRequestBase.ts
 	fileContent = fromTemplate('serviceRequestBase.ts.template');
 	fs.writeFileSync(path.join(config.serviceDirectory, 'serviceRequestBase.ts'), fileContent);
+
+	// streamServiceRequestBase.ts
+	fileContent = fromTemplate('streamServiceRequestBase.ts.template');
+	fs.writeFileSync(path.join(config.serviceDirectory, 'streamServiceRequestBase.ts'), fileContent);
 
 	// serviceRequestHead.ts
 	fileContent = fromTemplate('serviceRequestHead.ts.template');

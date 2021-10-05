@@ -1,0 +1,11 @@
+import { ServiceExecutionScope } from 'nocat/interfaces/serviceExecutionScope';
+import { StreamServiceRequestBase } from '${relativeToRoot}streamServiceRequestBase';
+
+export class ${coreClassName}Request extends StreamServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
+	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
+	static scope: ServiceExecutionScope = '${scope}';
+	static skipInterceptors: boolean = false;
+}
+
+export class ${coreClassName}RequestBody {
+}

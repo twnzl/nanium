@@ -12,8 +12,6 @@ import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContex
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NocatRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
-import { ServiceRequest } from '../../interfaces/serviceRequest';
-import { StreamServiceRequest } from '../../interfaces/streamServiceRequest';
 
 export interface NocatNodejsProviderConfig {
 	/**
@@ -49,7 +47,7 @@ export interface NocatNodejsProviderConfig {
 	/**
 	 * returns if the Manager is responsible for the given Service
 	 */
-	isResponsible: (request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsible: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
 
@@ -90,7 +88,9 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 			for (const file of files) {
 				const request: any = NocatNodejsProvider.findClassWithServiceNameProperty(require(path.resolve(file)));
 				if (!request) {
-					console.warn('invalid contract file (no request class found): ' + file);
+					if (Nocat.logMode >= LogMode.warning) {
+						console.warn('invalid contract file (no request class found): ' + file);
+					}
 					continue;
 				}
 				const executor: any = NocatNodejsProvider.findClassWithServiceNameProperty(
@@ -118,7 +118,7 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		}
 	}
 
-	async isResponsible(request: ServiceRequest<any> | StreamServiceRequest<any>, serviceName: string): Promise<KindOfResponsibility> {
+	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
@@ -192,10 +192,6 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 				});
 			});
 		});
-	}
-
-	async isStream(serviceName: string): Promise<boolean> {
-		return !!this.repository[serviceName].Executor.prototype.stream;
 	}
 
 	private createErrorObservable(e: any): Observable<any> {

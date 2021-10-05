@@ -3,7 +3,7 @@ import { ServiceRequestQueueEntryState } from './serviceRequestQueueEntryState';
 /**
  * this is how a service request queue entry must look like
  */
-export interface ServiceRequestQueueEntry<TParams = any> {
+export interface ServiceRequestQueueEntry {
 	/**
 	 * id of the request queue entry
 	 */
@@ -55,10 +55,10 @@ export interface ServiceRequestQueueEntry<TParams = any> {
 	 */
 	endOfInterval?: Date;
 
-	/**
-	 * space for individual data e.g. to use it in the isResponsible Function or whatever
-	 */
-	params?: TParams;
+	// /**
+	//  * space for individual data e.g. to use it in the isResponsible Function or whatever
+	//  */
+	// params?: TParams;
 }
 
 export interface ServiceRequestQueueEntryQueryConditions {

@@ -26,6 +26,7 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 				cleanupInterval: 3600, // default: one hour
 				cleanupAge: 3600 * 24 * 7, // default: one week
 				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+				onBeforeStart: async (entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry> => entry
 			},
 			...(config)
 		};
@@ -66,6 +67,10 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 
 	public async isResponsible(entry: ServiceRequestQueueEntry): Promise<KindOfResponsibility> {
 		return await this.config.isResponsible(entry);
+	}
+
+	public async onBeforeStart(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry> {
+		return await this.config.onBeforeStart(entry);
 	}
 
 	public async stop(): Promise<void> {

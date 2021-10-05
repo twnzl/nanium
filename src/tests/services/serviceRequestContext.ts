@@ -3,5 +3,7 @@ import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContex
 
 export class ServiceRequestContext implements ServiceExecutionContext {
 	user: any;
-	scope: ServiceExecutionScope
+
+	constructor(public scope: ServiceExecutionScope) {
+	}
 }

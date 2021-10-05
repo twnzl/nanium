@@ -8,9 +8,10 @@ import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { NocatMongoQueue } from '../queues/mongo.queue';
 import { ServiceRequestQueueEntry } from '../interfaces/serviceRequestQueueEntry';
 import { Collection, Db, MongoClient } from 'mongodb';
-import { TestExecutionContext } from './services/serviceExecutionContext';
 import { AsyncHelper, DateHelper } from '../helper';
 import { DateMock } from './mocks/date.mock';
+import { MyServiceRequestQueueEntry } from './services/serviceRequestQueueEntry';
+import { ServiceRequestContext } from './services/serviceRequestContext';
 
 let mongoQueue: NocatMongoQueue;
 
@@ -37,7 +38,7 @@ describe('MongoQueue Tests \n', function (): void {
 			serverUrl: /*await mongoUnit.start({ port: 27020 }),*/ 'mongodb://localhost:27017',
 			databaseName: 'nocat_test',
 			collectionName: 'rq',
-			getExecutionContext: () => Promise.resolve(new TestExecutionContext()),
+			getExecutionContext: () => Promise.resolve(new ServiceRequestContext('private')),
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		});
 		await Nocat.addQueue(mongoQueue);
@@ -51,16 +52,17 @@ describe('MongoQueue Tests \n', function (): void {
 	});
 
 	it('immediate and successful --> \n', async function (): Promise<void> {
-		await new TestGetRequest({ input1: '1', input2: 2 }).enqueue();
+		await new TestGetRequest({ input1: '1', input2: 2 }).enqueue('0815');
 		await AsyncHelper.pause(500);
-		const entries: ServiceRequestQueueEntry[] = await mongoQueue.getEntries();
+		const entries: MyServiceRequestQueueEntry[] = await mongoQueue.getEntries();
 		expect(entries.length).toBe(1);
 		expect(entries[0].state).toBe('done');
 		expect(entries[0].response.body.output1).toBe('1 :-)');
+		expect(entries[0].mandatorId).toBe('0815');
 	});
 
 	it('immediate but with Exception --> \n', async function (): Promise<void> {
-		await new TestGetRequest({ input1: '1', input2: 10 }).enqueue();
+		await new TestGetRequest({ input1: '1', input2: 10 }).enqueue('0815');
 		await AsyncHelper.pause(500);
 		const entries: ServiceRequestQueueEntry[] = await mongoQueue.getEntries();
 		expect(entries.length, 'there should be one entry in the queue').toBe(1);
@@ -69,7 +71,7 @@ describe('MongoQueue Tests \n', function (): void {
 	});
 
 	it('immediate and with interval --> \n', async function (): Promise<void> {
-		await new TestGetRequest({ input1: '1', input2: 2 }).enqueue({ interval: 300 });
+		await new TestGetRequest({ input1: '1', input2: 2 }).enqueue('0815', { interval: 300 });
 		DateMock.start();
 		const nextRunDate: Date = DateHelper.addSeconds(300, DateMock.value);
 		await AsyncHelper.pause(500);
@@ -85,10 +87,11 @@ describe('MongoQueue Tests \n', function (): void {
 		const mongoClient: MongoClient = await MongoClient.connect(mongoQueue.config.serverUrl, {});
 		const database: Db = await mongoClient.db(mongoQueue.config.databaseName);
 		const collection: Collection<ServiceRequestQueueEntry> = await database.collection(mongoQueue.config.collectionName);
-		await collection.insertOne(<ServiceRequestQueueEntry>{
+		await collection.insertOne(<MyServiceRequestQueueEntry>{
 			state: 'ready',
 			serviceName: TestGetRequest.serviceName,
-			request: new TestGetRequest({ input1: '1', input2: 3 })
+			request: new TestGetRequest({ input1: '1', input2: 3 }),
+			mandatorId: '0815'
 		});
 		await AsyncHelper.pause(2000);
 		const entries: ServiceRequestQueueEntry[] = await collection.find().toArray();
