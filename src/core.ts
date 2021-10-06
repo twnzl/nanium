@@ -72,7 +72,8 @@ export class Nocat {
 	}
 
 	static async enqueue<TRequest>(
-		entry: ServiceRequestQueueEntry
+		entry: ServiceRequestQueueEntry,
+		executionContext?: ServiceExecutionContext
 	): Promise<ServiceRequestQueueEntry> {
 		const queue: ServiceRequestQueue = await this.getResponsibleQueue(entry);
 		if (!queue) {
@@ -82,7 +83,7 @@ export class Nocat {
 		delete entry.id;
 		entry.state = 'ready';
 
-		const result: ServiceRequestQueueEntry = await queue.enqueue(entry);
+		const result: ServiceRequestQueueEntry = await queue.enqueue(entry, executionContext);
 		Nocat.executeTimeControlled(result, queue);
 		return result;
 	}
@@ -130,7 +131,7 @@ export class Nocat {
 			entry.response = await Nocat.execute(
 				entry.request,
 				entry.serviceName,
-				await requestQueue.getExecutionContext(entry.serviceName, entry));
+				await requestQueue.getExecutionContext(entry));
 			entry.state = 'done';
 			entry.endDate = new Date();
 			await requestQueue.updateEntry(entry);
@@ -172,7 +173,7 @@ export class Nocat {
 					nextRun = new Date();
 				}
 				if (!entry.endOfInterval || nextRun < new Date(entry.endOfInterval)) {
-					const nextEntry: ServiceRequestQueueEntry = { ...entry };
+					const nextEntry: ServiceRequestQueueEntry = await requestQueue.copyEntry(entry);
 					delete nextEntry.response;
 					delete nextEntry.endDate;
 					delete nextEntry.id;

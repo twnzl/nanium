@@ -110,10 +110,9 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 		return NocatMongoQueue.toExternalEntry(result.value);
 	}
 
-	async getExecutionContext(serviceName: string, entry: ServiceRequestQueueEntry): Promise<ServiceExecutionContext> {
-		return await this.config.getExecutionContext(serviceName, entry);
+	async getExecutionContext(entry: ServiceRequestQueueEntry): Promise<ServiceExecutionContext> {
+		return await this.config.getExecutionContext(entry);
 	}
-
 
 	public async updateEntry(entry: ServiceRequestQueueEntry): Promise<void> {
 		await this.store(entry);
@@ -122,6 +121,10 @@ export class NocatMongoQueue implements ServiceRequestQueue {
 	public async refreshEntry(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry> {
 		const result: ServiceRequestQueueEntryInternal = await this.collection.findOne(new ObjectId(entry.id));
 		return NocatMongoQueue.toExternalEntry(result);
+	}
+
+	public async copyEntry(src: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry> {
+		return { ...src };
 	}
 
 	public async getEntries(conditions?: ServiceRequestQueueEntryQueryConditions): Promise<ServiceRequestQueueEntry[]> {
@@ -227,7 +230,7 @@ export class MongoQueueServiceRequestQueueConfig {
 	 * @param serviceName
 	 * @param entry
 	 */
-	getExecutionContext: (serviceName: string, entry: ServiceRequestQueueEntry) => Promise<ServiceExecutionContext>;
+	getExecutionContext: (entry: ServiceRequestQueueEntry) => Promise<ServiceExecutionContext>;
 
 	/**
 	 * Will run, after an entry is set to running but before it ist started.

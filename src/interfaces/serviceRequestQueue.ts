@@ -25,8 +25,9 @@ export interface ServiceRequestQueue {
 	/**
 	 * enqueue a new entry into the queue
 	 * @param entry
+	 * @param executionContext the context for the execution of the request
 	 */
-	enqueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry>;
+	enqueue(entry: ServiceRequestQueueEntry, executionContext?: ServiceExecutionContext): Promise<ServiceRequestQueueEntry>;
 
 	/**
 	 * Will run, after an entry is set to running but before it ist started.
@@ -45,10 +46,9 @@ export interface ServiceRequestQueue {
 
 	/**
 	 * create an execution context for a specific entry. It will be used for the execution of the request
-	 * @param serviceName
 	 * @param entry
 	 */
-	getExecutionContext(serviceName: string, entry: ServiceRequestQueueEntry): Promise<ServiceExecutionContext>;
+	getExecutionContext(entry: ServiceRequestQueueEntry): Promise<ServiceExecutionContext>;
 
 	/**
 	 * update an entry
@@ -64,6 +64,13 @@ export interface ServiceRequestQueue {
 	refreshEntry(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry>;
 
 	/**
+	 * creates an specific internal entry object for a specific queue implementation and copies the properties.
+	 * It will not be enqueued by this function, just constructed!
+	 * @param src
+	 */
+	copyEntry(src: ServiceRequestQueueEntry): Promise<ServiceRequestQueueEntry>;
+
+	/**
 	 * get all entries or all of the specified conditions
 	 */
 	getEntries(conditions: ServiceRequestQueueEntryQueryConditions): Promise<ServiceRequestQueueEntry[]>;
@@ -77,4 +84,5 @@ export interface ServiceRequestQueue {
 	 * start no further requests and wait until all started requests are finished
 	 */
 	stop(): Promise<void>;
+
 }
