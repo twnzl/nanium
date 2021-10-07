@@ -11,6 +11,7 @@ export class NocatToolConfig {
 	indentString: string;
 	namespace: string;
 	sdkPackage: any; // Package.json for the sdk package
+	sdkTsConfig: any;
 	outDir?: string;
 }
 
@@ -94,7 +95,21 @@ const config: NocatToolConfig = (function (): NocatToolConfig {
 			serviceDirectory: 'src/server/services',
 			indentString: '\t',
 			namespace: 'NocatTest',
-			sdkPackage: {}
+			sdkPackage: {},
+			sdkTsConfig: {
+				'compilerOptions': {
+					'module': 'commonjs',
+					'sourceMap': false,
+					'declaration': true,
+					'watch': false,
+					'noEmitOnError': false,
+					'emitDecoratorMetadata': true,
+					'experimentalDecorators': true,
+					'target': 'ES2020',
+					'lib': ['ES2020'],
+					'types': ['node']
+				}
+			}
 		},
 		...configFromFile
 	};
@@ -220,6 +235,20 @@ function init(): void {
 				'sdk',
 				'API'
 			]
+		},
+		sdkTsConfig: {
+			'compilerOptions': {
+				'module': 'commonjs',
+				'sourceMap': false,
+				'declaration': true,
+				'watch': false,
+				'noEmitOnError': false,
+				'emitDecoratorMetadata': true,
+				'experimentalDecorators': true,
+				'target': 'ES2020',
+				'lib': ['ES2020'],
+				'types': ['node']
+			}
 		}
 	}, null, 2);
 	fs.writeFileSync(path.join(process.cwd(), 'nocat.json'), fileContent);
@@ -283,7 +312,7 @@ function fromTemplate(name: string, data?: object): string {
 	}
 }
 
-async function sdk([kind]: ['p' | 'b' | 'u']): Promise<void> {
+async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
 	// output directory
 	const outDir: string = path.join(root, config.outDir ?? '');
 	if (!fs.existsSync(outDir)) {
@@ -300,6 +329,10 @@ async function sdk([kind]: ['p' | 'b' | 'u']): Promise<void> {
 
 	try {
 		const serviceSrcDir: string = path.join(root, config.serviceDirectory);
+		const tmpSrcDir: string = path.join(tmpDir, 'src');
+		const tmpDstDir: string = path.join(tmpDir, 'dst');
+		shell.mkdir('-p', tmpSrcDir);
+		shell.mkdir('-p', tmpDstDir);
 
 		// package.json
 		config.sdkPackage.version = packageJson.version;
@@ -310,23 +343,41 @@ async function sdk([kind]: ['p' | 'b' | 'u']): Promise<void> {
 			shell.cp(path.join(serviceSrcDir, 'README'), tmpDir);
 		}
 
-		// nocat basics
-		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), tmpDir);
-		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), tmpDir);
+		// tsconfig.json
+		config.sdkTsConfig.compilerOptions = config.sdkTsConfig.compilerOptions ?? {};
+		config.sdkTsConfig.compilerOptions.outDir = path.join(tmpDir, 'dst');
+		config.sdkTsConfig.include = [
+			'**/*.contract.ts',
+			'**/*.dto.ts'
+		];
+		fs.writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify(config.sdkTsConfig, null, 2));
 
-		// copy contract files
+		// nocat basics
+		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src'));
+		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), path.join(tmpDir, 'src'));
+
+		// copy contract ts files to src dir
 		// todo: remove .dto.ts - use only .contracts.ts
 		const files: string[] = await findFiles(serviceSrcDir,
 			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.ts') && !f.endsWith('.dto.ts')]);
 		let dstFile: string;
 		for (const file of files) {
-			dstFile = path.join(tmpDir, path.relative(serviceSrcDir, file));
+			dstFile = path.join(tmpDir, 'src', path.relative(serviceSrcDir, file));
 			shell.mkdir('-p', path.dirname(dstFile));
 			fs.copyFileSync(file, dstFile);
 		}
 
+		// compile contracts
+		shell.cd(path.join(tmpDir, 'src'));
+		shell.exec('tsc');
+
 		// bundle or publish package
-		shell.cd(tmpDir);
+		shell.cp(path.join(tmpDir, 'package.json'), path.join(tmpDstDir, 'package.json'));
+		if (fs.existsSync(path.join(tmpDir, 'README'))) {
+			shell.cp(path.join(tmpDir, 'README'), path.join(tmpDstDir, 'README'));
+		}
+
+		shell.cd(tmpDstDir);
 		if (kind === 'p') {
 			shell.exec('npm publish');
 		} else if (kind === 'u') {
@@ -335,7 +386,7 @@ async function sdk([kind]: ['p' | 'b' | 'u']): Promise<void> {
 			shell.exec('npm pack');
 			shell.cd(root);
 			let packageFileName: string = `${config.sdkPackage.name}-${config.sdkPackage.version}.tgz`;
-			packageFileName = path.join(tmpDir, packageFileName);
+			packageFileName = path.join(tmpDstDir, packageFileName);
 			shell.cp(packageFileName, outDir);
 		}
 	} catch (e) {

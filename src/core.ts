@@ -6,6 +6,7 @@ import { LogMode } from './interfaces/logMode';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { DateHelper } from './helper';
+import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
 
 export class Nocat {
 	static #isShutDownInitiated: boolean;
@@ -89,11 +90,17 @@ export class Nocat {
 	}
 
 	static async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {
-		const result: ServiceManager = this.managers.find(async (manager: ServiceManager) => (await manager.isResponsible(request, serviceName)) === 'yes');
-		if (result) {
-			return result;
+		const irResults: KindOfResponsibility[] = await Promise.all(
+			this.managers.map((manager: ServiceManager) => manager.isResponsible(request, serviceName)));
+		let idx: number = irResults.indexOf('yes');
+		if (idx >= 0) {
+			return this.managers[idx];
 		}
-		return this.managers.find(async (manager: ServiceManager) => (await manager.isResponsible(request, serviceName)) === 'fallback');
+		idx = irResults.indexOf('fallback');
+		if (idx >= 0) {
+			return this.managers[idx];
+		}
+		return undefined;
 	}
 
 	static async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
