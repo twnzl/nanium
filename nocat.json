@@ -1,5 +1,19 @@
 {
   "serviceDirectory": "src/tests/services",
   "indentString": "\t",
-  "namespace": "NocatTest"
+  "namespace": "NocatTest",
+  "outDir": "sdk",
+  "sdkPackage": {
+    "name": "nocat-test-sdk",
+    "description": "SDK for the nocat test services",
+    "author": "Tobias Wenzel",
+    "license": "UNLICENCED",
+    "private": false,
+    "keywords": [
+      "nocat",
+      "contracts",
+      "sdk",
+      "API"
+    ]
+  }
 }

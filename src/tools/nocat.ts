@@ -4,11 +4,14 @@ import { Stats } from 'fs';
 import * as path from 'path';
 import * as shell from 'shelljs';
 import * as findFiles from 'recursive-readdir';
+import * as util from 'util';
 
 export class NocatToolConfig {
 	serviceDirectory: string;
 	indentString: string;
 	namespace: string;
+	sdkPackage: any; // Package.json for the sdk package
+	outDir?: string;
 }
 
 // define dictionary with action-functions
@@ -24,9 +27,7 @@ const actions: { [actionName: string]: Function } = {
 	cp: copyFiles,
 	ccp: cleanAndCopyFiles,
 	rm: removeFiles,
-	sdk: function (): void {
-		console.log('crate or update a sdk to to use the services in other projects - not yet implemented');
-	},
+	sdk: sdk,
 	pkg: function (): void {
 		console.log('creating a binary for the app - not yet implemented');
 	},
@@ -56,6 +57,9 @@ nocat namespace {namespace}
 		set namespace for all services that don't have a namespace
 nocat rsn
 		refresh service names. Set property serviceName of all requests and executors to the default (Namespace:RelativePath)
+nocat sdk {b|p}
+		with parameter b: bundle the contract files to a .tgz file
+		with parameter p: use npm publish and the information of nocat.json.sdkPackage publish the contracts to npm repository
 `);
 	process.exit(0);
 }
@@ -89,11 +93,13 @@ const config: NocatToolConfig = (function (): NocatToolConfig {
 		...{
 			serviceDirectory: 'src/server/services',
 			indentString: '\t',
-			namespace: 'NocatTest'
+			namespace: 'NocatTest',
+			sdkPackage: {}
 		},
 		...configFromFile
 	};
 })();
+const packageJson: any = require(path.join(root, 'package.json'));
 
 // determine and execute action
 const command: string = process.argv[2];
@@ -201,7 +207,20 @@ function init(): void {
 	fileContent = JSON.stringify({
 		serviceDirectory: 'src/server/services',
 		indentString: '\t',
-		namespace: ''
+		namespace: '',
+		outDir: 'sdk',
+		sdkPackage: {
+			name: 'myServices',
+			description: 'SDK for my services',
+			author: 'unknown',
+			license: 'UNLICENCED',
+			keywords: [
+				'my',
+				'contracts',
+				'sdk',
+				'API'
+			]
+		}
 	}, null, 2);
 	fs.writeFileSync(path.join(process.cwd(), 'nocat.json'), fileContent);
 
@@ -226,7 +245,7 @@ function init(): void {
 	fs.writeFileSync(path.join(config.serviceDirectory, 'main.interceptor.ts'), fileContent);
 }
 
-async function setNamespace([namespace]: string): Promise<void> {
+async function setNamespace([namespace]: [string]): Promise<void> {
 	let fileContent: string;
 	const files: string[] = await findFiles(config.serviceDirectory,
 		[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.ts') && !f.endsWith('.contract.ts')]);
@@ -261,5 +280,69 @@ function fromTemplate(name: string, data?: object): string {
 		return template.replace(/\${([^}]*)}/g, (r: string, k: string) => data[k]);
 	} else {
 		return template;
+	}
+}
+
+async function sdk([kind]: ['p' | 'b' | 'u']): Promise<void> {
+	// output directory
+	const outDir: string = path.join(root, config.outDir ?? '');
+	if (!fs.existsSync(outDir)) {
+		shell.mkdir('-p', outDir);
+	}
+
+	// create temp dir
+	let tmpDir: string = '_tmp';
+	while (fs.existsSync(path.join(outDir, tmpDir))) {
+		tmpDir = '_' + tmpDir;
+	}
+	tmpDir = path.join(outDir, tmpDir);
+	shell.mkdir(tmpDir);
+
+	try {
+		const serviceSrcDir: string = path.join(root, config.serviceDirectory);
+
+		// package.json
+		config.sdkPackage.version = packageJson.version;
+		fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(config.sdkPackage, null, 2));
+
+		// README
+		if (fs.existsSync(path.join(serviceSrcDir, 'README'))) {
+			shell.cp(path.join(serviceSrcDir, 'README'), tmpDir);
+		}
+
+		// nocat basics
+		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), tmpDir);
+		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), tmpDir);
+
+		// copy contract files
+		// todo: remove .dto.ts - use only .contracts.ts
+		const files: string[] = await findFiles(serviceSrcDir,
+			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.ts') && !f.endsWith('.dto.ts')]);
+		let dstFile: string;
+		for (const file of files) {
+			dstFile = path.join(tmpDir, path.relative(serviceSrcDir, file));
+			shell.mkdir('-p', path.dirname(dstFile));
+			fs.copyFileSync(file, dstFile);
+		}
+
+		// bundle or publish package
+		shell.cd(tmpDir);
+		if (kind === 'p') {
+			shell.exec('npm publish');
+		} else if (kind === 'u') {
+			shell.exec(`npm unpublish ${config.sdkPackage.name}@${config.sdkPackage.version}`);
+		} else {
+			shell.exec('npm pack');
+			shell.cd(root);
+			let packageFileName: string = `${config.sdkPackage.name}-${config.sdkPackage.version}.tgz`;
+			packageFileName = path.join(tmpDir, packageFileName);
+			shell.cp(packageFileName, outDir);
+		}
+	} catch (e) {
+		console.log(util.inspect(e, false, 3));
+	} finally {
+		// cleanup
+		shell.cd(root);
+		shell.rm('-R', tmpDir);
 	}
 }

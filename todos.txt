@@ -1,0 +1,18 @@
+nocat todos
+
+- sdk
+- nocat g -> muss auch in unterverzeichnissen der service verzeichnis funktionieren
+- events
+  - http  
+- real objects
+- websockets
+  - channel for Provider
+  - consumer
+  - events
+
+- Rename pack name ?
+	- bocl (basic organization and communication layer)
+	- fibs (Framework for I.. and Beautiful Software)
+	- (full stack software architecture framework)
+- README
+	- Detailierte Beschreibung
