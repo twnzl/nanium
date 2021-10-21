@@ -1,7 +1,7 @@
 nocat todos
 
 - sdk
-  - basics
+  # basics
   - only the public contracts
 - nocat g -> muss auch in unterverzeichnissen der service verzeichnis funktionieren
 - events
@@ -11,6 +11,7 @@ nocat todos
   - channel for Provider
   - consumer
   - events
+- aus den BrowserManagern die localhost-Logik entfernen bzw. Konfigurierbar machen oder so
 
 - Rename pack name ?
 	- bocl (basic organization and communication layer)

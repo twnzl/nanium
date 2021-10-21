@@ -17,9 +17,11 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 		this.config = {
 			...{
 				apiUrl: '/api',
-				protocol: 'http',
-				exceptionHandler: (response) => alert(response),
 				requestInterceptors: [],
+				handleError: (response) => {
+					alert(response);
+					return Promise.resolve();
+				},
 				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			},
 			...(config || {})

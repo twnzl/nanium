@@ -21,8 +21,11 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 			...{
 				apiUrl: 'localhost:8080/api',
 				proxy: null,
-				exceptionHandler: (response) => console.error(response),
 				requestInterceptors: [],
+				handleError: (response) => {
+					console.error(response);
+					return Promise.resolve();
+				},
 				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			},
 			...(config || {})
