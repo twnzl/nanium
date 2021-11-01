@@ -3,15 +3,22 @@ nocat todos
 - sdk
   # basics
   - only the public contracts
-- nocat g -> muss auch in unterverzeichnissen der service verzeichnis funktionieren
-- events
-  - http  
 - real objects
+  - restore real objects on the other side of the transmission (extended deserialization)
+  - sdk ignore .dto.js files and use type.js instead
+- nocat g -> must work in subdirectories of the service directory too
+- aus den BrowserManagern die localhost-Logik entfernen bzw. Konfigurierbar machen oder so
+
+- events
+  - http
+- TCP
+  - channel for Provider
+	- consumer
+	- events
 - websockets
   - channel for Provider
   - consumer
   - events
-- aus den BrowserManagern die localhost-Logik entfernen bzw. Konfigurierbar machen oder so
 
 - Rename pack name ?
 	- bocl (basic organization and communication layer)
@@ -19,10 +26,3 @@ nocat todos
 	- (full stack software architecture framework)
 - README
 	- Detailierte Beschreibung
-
-
-"grunt": "^1.1.0",
-		"grunt-contrib-copy": "^1.0.0",
-		"grunt-jison": "^1.3.3",
-
-npm install grunt grunt-contrib-copy grunt-jison

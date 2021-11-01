@@ -1,6 +1,7 @@
 node_modules
-.idea
+/.idea
 package-lock.json
-dist
-sdk
+/dist
+/sdk
 /package/
+/todos.txt
