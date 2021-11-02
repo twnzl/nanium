@@ -1,6 +1,6 @@
 {
   "name": "nocat",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "description": "software architecture framework for NO Communication & Assembling Trouble",
   "repository": {},
   "license": "UNLICENSED",
@@ -21,7 +21,7 @@
     "clean": "ts-node src/tools/nocat.ts rm dist",
     "build": "tsc && ts-node src/tools/nocat.ts cp src/tools/templates dist/tools/templates",
     "cleanbuild": "npm run clean && npm run build",
-    "test": "node $NODnpE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js --random=false",
+    "test": "jest",
     "prepare": "",
     "publishlist": "cp package.json dist && npm pack ./dist && tar -xvzf *.tgz && ts-node src/tools/nocat.ts rm package *.tgz",
     "bundle": "npm run cleanbuild && cp package.json dist && npm publish ./dist",

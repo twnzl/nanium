@@ -58,9 +58,10 @@ nocat namespace {namespace}
 		set namespace for all services that don't have a namespace
 nocat rsn
 		refresh service names. Set property serviceName of all requests and executors to the default (Namespace:RelativePath)
-nocat sdk {b|p}
+nocat sdk {b|p|u}
 		with parameter b: bundle the contract files to a .tgz file
-		with parameter p: use npm publish and the information of nocat.json.sdkPackage publish the contracts to npm repository
+		with parameter p: use npm publish and the information of nocat.json.sdkPackage to publish the contracts to npm repository
+		with parameter u: use npm publish and the information of nocat.json.sdkPackage to unpublish the contracts in npm repository
 `);
 	process.exit(0);
 }
@@ -355,16 +356,26 @@ async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
 		// nocat basics
 		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src'));
 		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), path.join(tmpDir, 'src'));
+		shell.cp(path.join(serviceSrcDir, 'serviceRequestQueueEntry.ts'), path.join(tmpDir, 'src'));
 
 		// copy contract ts files to src dir
-		// todo: remove .dto.ts - use only .contracts.ts
-		const files: string[] = await findFiles(serviceSrcDir,
-			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.ts') && !f.endsWith('.dto.ts')]);
+		const files: string[] = await findFiles(serviceSrcDir, [(f: string, stats: Stats): boolean =>
+			!stats.isDirectory() &&
+			!f.endsWith('.contract.ts') &&
+			!f.endsWith('\\contractpart.ts') && !f.endsWith('/contractpart.ts') && !f.endsWith('.contractpart.ts') &&
+			!f.endsWith('\\dto.ts') && !f.endsWith('/dto.ts') && !f.endsWith('.dto.ts')
+		]);
 		let dstFile: string;
+		let srcFileContent: string;
 		for (const file of files) {
-			dstFile = path.join(tmpDir, 'src', path.relative(serviceSrcDir, file));
-			shell.mkdir('-p', path.dirname(dstFile));
-			fs.copyFileSync(file, dstFile);
+			srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
+			// check if a request is public
+			// todo: maybe using the typescript-compiler-api is a bit safer
+			if (!srcFileContent.match(/static\s+scope\s*(.*?)=\s*['"`]private['"`]/g)) {
+				dstFile = path.join(tmpDir, 'src', path.relative(serviceSrcDir, file));
+				shell.mkdir('-p', path.dirname(dstFile));
+				fs.copyFileSync(file, dstFile);
+			}
 		}
 
 		// compile contracts
