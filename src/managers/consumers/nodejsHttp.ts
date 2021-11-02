@@ -1,16 +1,14 @@
 import { Observable, Observer } from 'rxjs';
 import { RequestPromiseOptions } from 'request-promise';
 import { UrlOptions } from 'request';
-import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
+import { NocatJsonSerializer } from '../../serializers/json';
 
-export interface NocatConsumerNodejsHttpConfig {
+export interface NocatConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
 	proxy?: string;
-	requestInterceptors?: ServiceRequestInterceptor<any>[];
-	handleError?: (e: any) => Promise<void>;
-	isResponsible: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
 export class NocatConsumerNodejsHttp implements ServiceManager {
@@ -22,6 +20,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 				apiUrl: 'localhost:8080/api',
 				proxy: null,
 				requestInterceptors: [],
+				serializer: new NocatJsonSerializer(),
 				handleError: (response) => {
 					console.error(response);
 					return Promise.resolve();
@@ -77,13 +76,13 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
-			const core: Function = (): void => {
+			const core: Function = async (): Promise<void> => {
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
 				let seenBytes: number = 0;
-				xhr.onreadystatechange = (): void => {
+				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						const r: any = JSON.parse(xhr.response.substr(seenBytes));
+						const r: any = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
 						if (Array.isArray(r)) {
 							for (const item of r) {
 								observer.next(item);
@@ -100,7 +99,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 					});
 					observer.error(e);
 				});
-				xhr.send(JSON.stringify({ serviceName, streamed: true, request }));
+				xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
 			};
 
 			// execute request interceptors

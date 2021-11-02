@@ -1,13 +1,11 @@
 import { Observable, Observer } from 'rxjs';
-import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
+import { NocatJsonSerializer } from '../../serializers/json';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 
-export interface NocatConsumerBrowserHttpConfig {
+export interface NocatConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
-	requestInterceptors?: ServiceRequestInterceptor<any>[];
-	handleError?: (e: any) => Promise<void>;
-	isResponsible: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
 export class NocatConsumerBrowserHttp implements ServiceManager {
@@ -18,6 +16,7 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 			...{
 				apiUrl: '/api',
 				requestInterceptors: [],
+				serializer: new NocatJsonSerializer(),
 				handleError: (response) => {
 					alert(response);
 					return Promise.resolve();
@@ -53,7 +52,7 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 		}
 
 		// execute the request
-		return await new Promise<any>((resolve: Function, reject: Function): void => {
+		return await new Promise<any>(async (resolve: Function, reject: Function): Promise<void> => {
 			try {
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
 				xhr.onabort = (e: any): void => {
@@ -62,17 +61,17 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 				xhr.onerror = (e: any): void => {
 					reject(e);
 				};
-				xhr.onload = (): void => {
+				xhr.onload = async (): Promise<void> => {
 					if (xhr.status === 200) {
 						const result: any = xhr.response;
 						if (result !== null && result !== undefined && result !== '') {
-							resolve(JSON.parse(result));
+							resolve(await this.config.serializer.deserialize(result));
 						} else {
 							resolve();
 						}
 					} else {
 						try {
-							this.config.handleError(JSON.parse(xhr.response)).then(() => {
+							this.config.handleError(await this.config.serializer.deserialize(xhr.response)).then(() => {
 							}, (e: any) => {
 								reject(e);
 							});
@@ -83,7 +82,7 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 				};
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
 				xhr.setRequestHeader('Content-Type', 'application/json');
-				xhr.send(JSON.stringify({ serviceName, request }));
+				xhr.send(await this.config.serializer.serialize({ serviceName, request }));
 			} catch (e) {
 				reject(e);
 			}
@@ -92,12 +91,12 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
-			const core: Function = (): void => {
+			const core: Function = async (): Promise<void> => {
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
 				let seenBytes: number = 0;
-				xhr.onreadystatechange = (): void => {
+				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						const r: any = JSON.parse(xhr.response.substr(seenBytes));
+						const r: any = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
 						if (Array.isArray(r)) {
 							for (const item of r) {
 								observer.next(item);
@@ -118,7 +117,7 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 				});
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
 				xhr.setRequestHeader('Content-Type', 'application/json');
-				xhr.send(JSON.stringify({ serviceName, streamed: true, request }));
+				xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
 			};
 
 			// execute request interceptors

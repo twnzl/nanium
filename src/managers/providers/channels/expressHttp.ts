@@ -4,20 +4,29 @@ import { Observable } from 'rxjs';
 import { Nocat } from '../../../core';
 import * as express from 'express';
 import { RequestChannelConfig } from '../../../interfaces/requestChannelConfig';
-import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
 import { RequestChannel } from '../../../interfaces/requestChannel';
 import { NocatRepository } from '../../../interfaces/serviceRepository';
+import { NocatJsonSerializer } from '../../../serializers/json';
 
-export class NocatExpressHttpChannelConfig implements RequestChannelConfig {
+export interface NocatExpressHttpChannelConfig extends RequestChannelConfig {
 	expressApp: express.Express;
 	apiPath: string;
-	executionContextConstructor: new(data: ServiceExecutionContext) => ServiceExecutionContext;
 }
 
 export class NocatExpressHttpChannel implements RequestChannel {
 	private serviceRepository: NocatRepository;
+	private config: NocatExpressHttpChannelConfig;
 
-	constructor(private config: NocatExpressHttpChannelConfig) {
+	constructor(config: NocatExpressHttpChannelConfig) {
+		this.config = {
+			...{
+				expressApp: undefined,
+				apiPath: undefined,
+				serializer: new NocatJsonSerializer(),
+				executionContextConstructor: Object
+			},
+			...(config || {})
+		};
 	}
 
 	async init(serviceRepository: NocatRepository): Promise<void> {
@@ -32,10 +41,9 @@ export class NocatExpressHttpChannel implements RequestChannel {
 				}).on('end', async () => {
 					const body: string = Buffer.concat(data).toString();
 					let done: boolean = false;
-					// todo: for now only json is supported. later here the nocat.deserialize() function should be used which uses the registered Format-Adaptors to deserialize and serialize
 					if (body.length && body[0] === '{') {
 						try {
-							const json: NocatExpressHttpChannelBody = JSON.parse(body);
+							const json: NocatExpressHttpChannelBody = await this.config.serializer.deserialize(body);
 							await this.process(json, res);
 							done = true;
 						} catch (e) {
@@ -56,7 +64,7 @@ export class NocatExpressHttpChannel implements RequestChannel {
 		if (json.streamed) {
 			if (!request.stream) {
 				res.statusCode = 500;
-				res.write(JSON.stringify('the service does not support result streaming'));
+				res.write(await this.config.serializer.serialize('the service does not support result streaming'));
 			}
 			res.setHeader('Cache-Control', 'no-cache');
 			res.setHeader('Content-Type', 'text/event-stream');
@@ -66,8 +74,8 @@ export class NocatExpressHttpChannel implements RequestChannel {
 			const result: Observable<any> = Nocat.stream(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 			res.statusCode = 200;
 			result.subscribe({
-				next: (value: any): void => {
-					res.write(JSON.stringify(value) + '\n');
+				next: async (value: any): Promise<void> => {
+					res.write(await this.config.serializer.serialize(value) + '\n');
 					if (res['flush']) { // if compression is enabled we have to call flush
 						res['flush']();
 					}
@@ -75,9 +83,9 @@ export class NocatExpressHttpChannel implements RequestChannel {
 				complete: (): void => {
 					res.end();
 				},
-				error: (e: any): void => {
+				error: async (e: any): Promise<void> => {
 					res.statusCode = 500;
-					res.write(JSON.stringify(e));
+					res.write(await this.config.serializer.serialize(e));
 				}
 			});
 		} else {
@@ -85,12 +93,12 @@ export class NocatExpressHttpChannel implements RequestChannel {
 				res.setHeader('Content-Type', 'application/json; charset=utf-8');
 				const result: any = await Nocat.execute(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
-					res.write(JSON.stringify(result)); // todo: user nocat.serialize()
+					res.write(await this.config.serializer.serialize(result));
 				}
 				res.statusCode = 200;
 			} catch (e) {
 				res.statusCode = 500;
-				res.write(JSON.stringify(e)); // todo: user nocat.serialize()
+				res.write(await this.config.serializer.serialize(e));
 			}
 			res.end();
 		}

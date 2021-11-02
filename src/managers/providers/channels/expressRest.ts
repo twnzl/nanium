@@ -4,13 +4,12 @@ import { Observable } from 'rxjs';
 import { RequestChannelConfig } from '../../../interfaces/requestChannelConfig';
 import { RequestChannel } from '../../../interfaces/requestChannel';
 import { LogMode } from '../../../interfaces/logMode';
-import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
 import { NocatRepository } from '../../../interfaces/serviceRepository';
+import { NocatJsonSerializer } from '../../../serializers/json';
 
-export class NocatExpressRestChannelConfig implements RequestChannelConfig {
+export interface NocatExpressRestChannelConfig extends RequestChannelConfig {
 	expressApp: express.Express;
 	apiBasePath?: string;
-	executionContextConstructor: new(data: ServiceExecutionContext) => ServiceExecutionContext;
 	getHttpStatusCode?: (err: any) => number;
 }
 
@@ -33,6 +32,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 				config.apiBasePath = '/' + config.apiBasePath;
 			}
 		}
+		config.serializer = config.serializer ?? new NocatJsonSerializer();
 	}
 
 	async init(serviceRepository: NocatRepository): Promise<void> {
@@ -52,7 +52,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 					if (req.headers['streamed'] === 'true') {
 						if (!serviceRequest.stream) {
 							res.statusCode = 500;
-							res.write(JSON.stringify('the service does not support result streaming'));
+							res.write(await this.config.serializer.serialize('the service does not support result streaming'));
 						}
 						this.stream(requestConstructor.serviceName, serviceRequest, res);
 					} else {
@@ -103,12 +103,12 @@ export class NocatExpressRestChannel implements RequestChannel {
 		try {
 			const result: any = await Nocat.execute(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 			if (result !== undefined && result !== null) {
-				res.write(JSON.stringify(result)); // todo: user nocat.serialize()
+				res.write(await this.config.serializer.serialize(result));
 			}
 			res.statusCode = 200;
 		} catch (e) {
 			res.statusCode = this.config.getHttpStatusCode(e);
-			res.write(JSON.stringify(e)); // todo: user nocat.serialize()
+			res.write(await this.config.serializer.serialize(e));
 		}
 		res.end();
 	}
@@ -117,16 +117,16 @@ export class NocatExpressRestChannel implements RequestChannel {
 		const result: Observable<any> = Nocat.stream(serviceRequest, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 		res.statusCode = 200;
 		result.subscribe({
-			next: (value: any): void => {
-				res.write(JSON.stringify(value) + '\n');
+			next: async (value: any): Promise<void> => {
+				res.write(await this.config.serializer.serialize(value) + '\n');
 				res['flush']();
 			},
 			complete: (): void => {
 				res.end();
 			},
-			error: (e: any): void => {
+			error: async (e: any): Promise<void> => {
 				res.statusCode = this.config.getHttpStatusCode(e);
-				res.write(JSON.stringify(e));
+				res.write(await this.config.serializer.serialize(e));
 			}
 		});
 	}
