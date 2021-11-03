@@ -39,7 +39,7 @@ describe('MongoQueue Tests \n', function (): void {
 			serverUrl: await mongoUnit.start({ port: 27020 }), /* 'mongodb://localhost:27017',*/
 			databaseName: 'nocat_test',
 			collectionName: 'rq',
-			getExecutionContext: () => Promise.resolve(new ServiceRequestContext('private')),
+			getExecutionContext: () => Promise.resolve(new ServiceRequestContext({ scope: 'private' })),
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		});
 		await Nocat.addQueue(mongoQueue);
@@ -108,7 +108,7 @@ describe('MongoQueue Tests \n', function (): void {
 			serverUrl: await mongoUnit.start({ port: 27020 }), // 'mongodb://localhost:27017',
 			databaseName: 'nocat_test2',
 			collectionName: 'rq',
-			getExecutionContext: () => Promise.resolve(new ServiceRequestContext('private')),
+			getExecutionContext: () => Promise.resolve(new ServiceRequestContext({ scope: 'private' })),
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		}));
 		expect(Nocat.queues.length, 'there should be two mongo queues registered').toBe(2);

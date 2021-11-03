@@ -13,7 +13,7 @@ import { ServiceRequestContext } from './services/serviceRequestContext';
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' }, { token: '1234' });
 	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1, { token: '1234' });
-	const executionContext: ServiceRequestContext = new ServiceRequestContext('private');
+	const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 
 	let response: TestGetResponse;
 	let privateResponse: PrivateStuffResponse;

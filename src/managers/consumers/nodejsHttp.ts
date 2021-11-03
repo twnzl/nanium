@@ -1,14 +1,17 @@
 import { Observable, Observer } from 'rxjs';
-import { RequestPromiseOptions } from 'request-promise';
-import { UrlOptions } from 'request';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { NocatJsonSerializer } from '../../serializers/json';
+import * as http from 'http';
+import { ClientRequest, RequestOptions as HttpRequestOptions } from 'http';
+import * as https from 'https';
+import { RequestOptions as HttpsRequestOptions } from 'https';
+import { URL } from 'url';
 
 export interface NocatConsumerNodejsHttpConfig extends ServiceConsumerConfig {
-	apiUrl?: string;
-	proxy?: string;
+	apiUrl: string;
+	options?: HttpRequestOptions | HttpsRequestOptions;
 }
 
 export class NocatConsumerNodejsHttp implements ServiceManager {
@@ -38,9 +41,48 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	private static _httpRequest: Function;
-	private static get httpRequest(): Function {
-		return this._httpRequest || (this._httpRequest = require('request-promise-native'));
+	private async httpRequest(serviceName: string, body: any): Promise<any> {
+		return new Promise<any>((resolve, reject) => {
+			const uri: URL = new URL(this.config.apiUrl);
+			const options: HttpRequestOptions | HttpsRequestOptions = {
+				...{
+					host: uri.hostname,
+					path: uri.pathname + '#' + serviceName,
+					port: uri.port,
+					method: 'POST',
+					protocol: uri.protocol,
+				},
+				...this.config.options
+			};
+			let requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest;
+			if (uri.protocol.startsWith('https')) {
+				requestFn = https.request;
+			} else {
+				requestFn = http.request;
+			}
+			try {
+				const req: ClientRequest = requestFn(options, (response) => {
+					let str: string = '';
+					response.on('data', (chunk: string) => {
+						str += chunk;
+					});
+					response.on('end', async () => {
+						try {
+							resolve(await this.config.serializer.deserialize(str));
+						} catch (e) {
+							reject(e);
+						}
+					});
+				});
+				req.write(JSON.stringify(body));
+				req.end();
+			} catch (e) {
+				if (e.statusCode === 500) {
+					reject(e.error);
+				}
+				reject(e);
+			}
+		});
 	}
 
 	async execute<T>(serviceName: string, request: any): Promise<any> {
@@ -52,25 +94,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 			}
 		}
 
-		// execute the request
-		const options: UrlOptions & RequestPromiseOptions = {
-			url: this.config.apiUrl + '#' + serviceName,
-			method: 'post',
-			json: true,
-			body: { serviceName, request }
-		};
-		if (this.config.proxy) {
-			options.proxy = this.config.proxy;
-			options.rejectUnauthorized = false;
-		}
-		try {
-			return await NocatConsumerNodejsHttp.httpRequest(options);
-		} catch (e) {
-			if (e.statusCode === 500) {
-				throw e.error;
-			}
-			throw e;
-		}
+		return await this.httpRequest(serviceName, { serviceName, request });
 	}
 
 
