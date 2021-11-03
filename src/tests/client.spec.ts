@@ -81,7 +81,7 @@ describe('host Test2Request via http \n', function (): void {
 
 		await Nocat.addManager(new NocatConsumerNodejsHttp({
 			apiUrl: 'http://localhost:8888/api',
-			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			handleError: async (err: any): Promise<any> => {
 				throw err;
 			}
@@ -167,7 +167,7 @@ describe('host Test2Request via https \n', function (): void {
 				rejectUnauthorized: false,
 				timeout: 1000
 			},
-			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			handleError: async (err: any): Promise<any> => {
 				throw err;
 			}
