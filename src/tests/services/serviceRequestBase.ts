@@ -6,12 +6,13 @@ import { ServiceRequestContext } from './serviceRequestContext';
 import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
 import { Observable } from 'rxjs';
 
-class TResult {
-}
+// @addTypeInfo
+export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = any> {
 
-export class ServiceRequestBase<TRequestBody, TResponseBody> {
-
+	// @Type(() => ServiceRequestHead)
 	head: ServiceRequestHead;
+
+	// @Type(() => Test2Dto)
 	body: TRequestBody;
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
@@ -23,7 +24,7 @@ export class ServiceRequestBase<TRequestBody, TResponseBody> {
 		return await Nocat.execute(this, undefined, context);
 	}
 
-	stream(): Observable<TResult> {
+	stream(): Observable<TPartialResponse> {
 		return Nocat.stream(this);
 	}
 

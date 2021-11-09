@@ -2,7 +2,7 @@ import { ServiceResponseMessage } from '../serviceResponseBase';
 import { TestGetRequest, TestGetResponse } from './get.contract';
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
 
-export default class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
+export class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
 	static serviceName: string = 'NocatSelf.TestGet';
 
 	async execute(request: TestGetRequest): Promise<TestGetResponse> {

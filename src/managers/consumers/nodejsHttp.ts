@@ -68,7 +68,11 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 					});
 					response.on('end', async () => {
 						try {
-							resolve(await this.config.serializer.deserialize(str));
+							let r: any = await this.config.serializer.deserialize(str);
+							if (this.config.serializer.toClass) {
+								r = await this.config.serializer.toClass(r, body.request.constructor.__responseType__, body.request.constructor['__genericTypes__']);
+							}
+							resolve(r);
 						} catch (e) {
 							reject(e);
 						}
@@ -97,7 +101,6 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 		return await this.httpRequest(serviceName, { serviceName, request });
 	}
 
-
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
 			const core: Function = async (): Promise<void> => {
@@ -106,7 +109,10 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 				let seenBytes: number = 0;
 				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						const r: any = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
+						let r: any = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
+						if (this.config.serializer.toClass) {
+							r = await this.config.serializer.toClass(r, request.constructor.responseCoreConstructor, request.constructor['__genericTypes__']);
+						}
 						if (Array.isArray(r)) {
 							for (const item of r) {
 								observer.next(item);

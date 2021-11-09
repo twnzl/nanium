@@ -56,8 +56,13 @@ export class NocatHttpChannel implements RequestChannel {
 
 	static async processCore(config: RequestChannelConfig, serviceRepository: NocatRepository, deserialized: NocatHttpChannelBody, res: ServerResponse): Promise<any> {
 		const serviceName: string = deserialized.serviceName;
-		const request: any = new serviceRepository[serviceName].Request();
-		Object.assign(request, deserialized.request);
+		let request: any;
+		if (config.serializer.toClass) {
+			request = await config.serializer.toClass(deserialized.request, serviceRepository[serviceName].Request);
+		} else {
+			request = new serviceRepository[serviceName].Request();
+			Object.assign(request, deserialized.request);
+		}
 		if (deserialized.streamed) {
 			if (!request.stream) {
 				res.statusCode = 500;

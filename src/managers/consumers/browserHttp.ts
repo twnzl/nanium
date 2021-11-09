@@ -60,7 +60,12 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 					if (xhr.status === 200) {
 						const result: any = xhr.response;
 						if (result !== null && result !== undefined && result !== '') {
-							resolve(await this.config.serializer.deserialize(result));
+							const deserialized: any = await this.config.serializer.deserialize(result);
+							if (this.config.serializer.toClass) {
+								resolve(await this.config.serializer.toClass(deserialized, request.constructor.responseCoreConstructor, request.constructor['__genericTypes__']));
+							} else {
+								resolve(deserialized);
+							}
 						} else {
 							resolve();
 						}
@@ -91,7 +96,10 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 				let seenBytes: number = 0;
 				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						const r: any = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
+						let r: any = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
+						if (this.config.serializer.toClass) {
+							r = await this.config.serializer.toClass(r, request.constructor.responseCoreConstructor, request.constructor['__genericTypes__']);
+						}
 						if (Array.isArray(r)) {
 							for (const item of r) {
 								observer.next(item);

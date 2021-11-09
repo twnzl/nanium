@@ -3,7 +3,7 @@ import { StreamServiceExecutor } from '../../../interfaces/streamServiceExecutor
 import { ServiceRequestContext } from '../serviceRequestContext';
 import { Observable, Observer } from 'rxjs';
 
-export default class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
+export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
 	static serviceName: string = 'NocatSelf.TestQuery';
 
 	stream(request: TestQueryRequest, executionContext: ServiceRequestContext): Observable<TestDto> {

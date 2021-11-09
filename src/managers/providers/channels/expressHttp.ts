@@ -13,7 +13,7 @@ export interface NocatExpressHttpChannelConfig extends RequestChannelConfig {
 
 export class NocatExpressHttpChannel implements RequestChannel {
 	private serviceRepository: NocatRepository;
-	private config: NocatExpressHttpChannelConfig;
+	private readonly config: NocatExpressHttpChannelConfig;
 
 	constructor(config: NocatExpressHttpChannelConfig) {
 		this.config = {

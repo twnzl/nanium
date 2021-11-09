@@ -5,6 +5,7 @@ import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope
 export class PrivateStuffRequest extends ServiceRequestBase<number, number> {
 	static serviceName: string = 'NocatSelf.PrivateStuff';
 	static scope: ServiceExecutionScope = 'private';
+	static responseCoreConstructor: any = Number;
 
 	validate(): any[] {
 		if (this.body === 100) {
@@ -12,7 +13,6 @@ export class PrivateStuffRequest extends ServiceRequestBase<number, number> {
 		}
 	}
 }
-
 
 export class PrivateStuffResponse extends ServiceResponseBase<number> {
 }

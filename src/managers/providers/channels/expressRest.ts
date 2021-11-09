@@ -48,7 +48,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 					path
 				}: { method: string; path: string; } = this.getMethodAndPath(requestConstructor.serviceName);
 				this.config.expressApp[method](path, async (req: express.Request, res: express.Response) => {
-					const serviceRequest: any = this.createRequest(req, requestConstructor);
+					const serviceRequest: any = await this.createRequest(req, requestConstructor);
 					if (req.headers['streamed'] === 'true') {
 						if (!serviceRequest.stream) {
 							res.statusCode = 500;
@@ -131,7 +131,7 @@ export class NocatExpressRestChannel implements RequestChannel {
 		});
 	}
 
-	createRequest(req: express.Request, requestConstructor: new () => any): any {
+	async createRequest(req: express.Request, requestConstructor: new () => any): Promise<any> {
 		const request: any = { ...req.body };
 		for (const property in req.query) {
 			if (!req.query.hasOwnProperty(property)) {
@@ -154,8 +154,13 @@ export class NocatExpressRestChannel implements RequestChannel {
 		request['$$headers'] = req.headers || {};
 		request['$$rawBody'] = req['$$rawBody'];
 		request['$$requestSource'] = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-		const realRequest: any = new requestConstructor();
-		Object.assign(realRequest, request);
+		let realRequest: any;
+		if (this.config.serializer.toClass) {
+			realRequest = await this.config.serializer.toClass(request, requestConstructor);
+		} else {
+			realRequest = new requestConstructor();
+			Object.assign(realRequest, request);
+		}
 		return realRequest;
 	}
 }
