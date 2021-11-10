@@ -12,7 +12,6 @@ import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { NocatConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
-import { NocatJsonToClassSerializer } from '../serializers/jsonToClass';
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
@@ -57,7 +56,6 @@ export class TestHelper {
 			requestChannels: [
 				new NocatHttpChannel({
 					apiPath: '/api',
-					serializer: new NocatJsonToClassSerializer(),
 					server: TestHelper.httpServer,
 					executionContextConstructor: ServiceRequestContext
 				})
@@ -81,7 +79,6 @@ export class TestHelper {
 
 		await Nocat.addManager(new NocatConsumerNodejsHttp({
 			apiUrl: 'http://localhost:' + this.port + '/api',
-			serializer: new NocatJsonToClassSerializer(),
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			handleError: async (err: any): Promise<any> => {
 				throw err;

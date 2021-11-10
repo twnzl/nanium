@@ -1,11 +1,19 @@
 import { ServiceRequestBase } from '${relativeToRoot}serviceRequestBase';
-import { ServiceExecutionScope } from 'nocat/interfaces/serviceExecutionScope';
-
-export class ${coreClassName}Request extends ServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
-${indentString}static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
-${indentString}static scope: ServiceExecutionScope = '${scope}';
-${indentString}static skipInterceptors: boolean = false;
-}
+import { RequestType } from 'nocat/serializers/core';
 
 export class ${coreClassName}RequestBody {
+}
+
+export class ${coreClassName}Response {
+}
+
+@RequestType({
+${indentString}responseType: ${coreClassName}Response,
+${indentString}genericTypes: {
+${indentString}${indentString}TRequestBody: ${coreClassName}RequestBody
+${indentString}},
+${indentString}scope: '${scope}'
+})
+export class ${coreClassName}Request extends ServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
+${indentString}static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
 }

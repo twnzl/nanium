@@ -6,6 +6,7 @@ import { RequestChannel } from '../../../interfaces/requestChannel';
 import { LogMode } from '../../../interfaces/logMode';
 import { NocatRepository } from '../../../interfaces/serviceRepository';
 import { NocatJsonSerializer } from '../../../serializers/json';
+import { NocatSerializerCore } from '../../../serializers/core';
 
 export interface NocatExpressRestChannelConfig extends RequestChannelConfig {
 	expressApp: express.Express;
@@ -154,13 +155,6 @@ export class NocatExpressRestChannel implements RequestChannel {
 		request['$$headers'] = req.headers || {};
 		request['$$rawBody'] = req['$$rawBody'];
 		request['$$requestSource'] = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-		let realRequest: any;
-		if (this.config.serializer.toClass) {
-			realRequest = await this.config.serializer.toClass(request, requestConstructor);
-		} else {
-			realRequest = new requestConstructor();
-			Object.assign(realRequest, request);
-		}
-		return realRequest;
+		return NocatSerializerCore.plainToClass(request, requestConstructor);
 	}
 }

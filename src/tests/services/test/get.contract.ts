@@ -1,6 +1,7 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
 import { ServiceResponseBase } from '../serviceResponseBase';
-import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
+import { RequestType } from '../../../serializers/core';
+
 
 export class TestGetResponse extends ServiceResponseBase<TestGetResponseBody> {
 }
@@ -10,14 +11,19 @@ export class TestGetResponseBody {
 	output2: number;
 }
 
-export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
-	static serviceName: string = 'NocatSelf.TestGet';
-	static scope: ServiceExecutionScope = 'public';
-	static skipInterceptors: boolean = false;
-	static responseCoreConstructor: any = TestGetResponseBody;
-}
-
 export class TestGetRequestBody {
 	input1: string;
 	input2?: number;
+}
+
+@RequestType({
+	responseType: ServiceResponseBase,
+	genericTypes: {
+		TRequestBody: TestGetRequestBody,
+		TResponseBody: TestGetResponseBody
+	},
+	scope: 'public'
+})
+export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
+	static serviceName: string = 'NocatSelf.TestGet';
 }

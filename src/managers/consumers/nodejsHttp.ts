@@ -8,6 +8,7 @@ import { ClientRequest, RequestOptions as HttpRequestOptions } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
+import { genericTypesSymbol, NocatSerializerCore, responseTypeSymbol } from '../../serializers/core';
 
 export interface NocatConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -68,10 +69,10 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 					});
 					response.on('end', async () => {
 						try {
-							let r: any = await this.config.serializer.deserialize(str);
-							if (this.config.serializer.toClass) {
-								r = await this.config.serializer.toClass(r, body.request.constructor.__responseType__, body.request.constructor['__genericTypes__']);
-							}
+							const r: any = NocatSerializerCore.plainToClass(
+								await this.config.serializer.deserialize(str),
+								body.request.constructor[responseTypeSymbol],
+								body.request.constructor[genericTypesSymbol]);
 							resolve(r);
 						} catch (e) {
 							reject(e);
@@ -109,10 +110,11 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 				let seenBytes: number = 0;
 				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						let r: any = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
-						if (this.config.serializer.toClass) {
-							r = await this.config.serializer.toClass(r, request.constructor.responseCoreConstructor, request.constructor['__genericTypes__']);
-						}
+						const r: any = NocatSerializerCore.plainToClass(
+							await this.config.serializer.deserialize(xhr.response.substr(seenBytes)),
+							request.constructor[responseTypeSymbol],
+							request.constructor[genericTypesSymbol]
+						);
 						if (Array.isArray(r)) {
 							for (const item of r) {
 								observer.next(item);

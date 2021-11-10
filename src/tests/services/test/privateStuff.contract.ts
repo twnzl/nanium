@@ -1,11 +1,13 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
 import { ServiceResponseBase } from '../serviceResponseBase';
-import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
+import { RequestType } from '../../../serializers/core';
 
+@RequestType({
+	responseType: ServiceResponseBase,
+	scope: 'private'
+})
 export class PrivateStuffRequest extends ServiceRequestBase<number, number> {
 	static serviceName: string = 'NocatSelf.PrivateStuff';
-	static scope: ServiceExecutionScope = 'private';
-	static responseCoreConstructor: any = Number;
 
 	validate(): any[] {
 		if (this.body === 100) {

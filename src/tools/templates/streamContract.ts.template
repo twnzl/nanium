@@ -1,11 +1,22 @@
 import { ServiceExecutionScope } from 'nocat/interfaces/serviceExecutionScope';
 import { StreamServiceRequestBase } from '${relativeToRoot}streamServiceRequestBase';
+import { RequestType } from 'nocat/serializers/core';
 
+export class ${coreClassName}RequestBody {
+}
+
+export class ${coreClassName}Response {
+}
+
+@RequestType({
+${indentString}responseType: ${coreClassName}Response,
+${indentString}genericTypes: {
+${indentString}${indentString}TRequestBody: ${coreClassName}RequestBody
+${indentString}},
+${indentString}scope: '${scope}'
+})
 export class ${coreClassName}Request extends StreamServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
 	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
 	static scope: ServiceExecutionScope = '${scope}';
 	static skipInterceptors: boolean = false;
-}
-
-export class ${coreClassName}RequestBody {
 }

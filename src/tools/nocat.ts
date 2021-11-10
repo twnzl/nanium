@@ -5,6 +5,8 @@ import * as path from 'path';
 import * as shell from 'shelljs';
 import * as findFiles from 'recursive-readdir';
 import * as util from 'util';
+import * as readline from 'readline';
+import { Interface } from 'readline';
 
 export class NocatToolConfig {
 	serviceDirectory: string;
@@ -34,6 +36,10 @@ const actions: { [actionName: string]: Function } = {
 	},
 };
 
+const rl: Interface = readline.createInterface({
+	input: process.stdin,
+	output: process.stdout
+});
 
 // arguments
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
@@ -119,7 +125,12 @@ const packageJson: any = require(path.join(root, 'package.json'));
 
 // determine and execute action
 const command: string = process.argv[2];
-actions[command](process.argv.slice(3));
+
+
+(async function (): Promise<void> {
+	await actions[command](process.argv.slice(3));
+	process.exit();
+})();
 
 // action functions
 function copyFiles(args: string[]): void {
@@ -143,17 +154,28 @@ function removeFiles(args: string[]): void {
 }
 
 
-function generateService([servicePath, scope, prefix]: [string, string, string]): void {
-	generateServiceCore('contract.ts.template', 'executor.ts.template', servicePath, scope, prefix);
+async function generateService([servicePath, scope, namespace]: [string, string, string]): Promise<void> {
+	return new Promise<void>(resolve => {
+		if (!scope) {
+			rl.question('Which scope shall the service have?\n  1: private\n  2: public\n[1]: ', (input: '1' | '2') => {
+				scope = input === '2' ? 'public' : 'private';
+				generateServiceCore('contract.ts.template', 'executor.ts.template', servicePath, scope, namespace);
+				resolve();
+			});
+		} else {
+			generateServiceCore('contract.ts.template', 'executor.ts.template', servicePath, scope, namespace);
+			resolve();
+		}
+	});
 }
 
-function generateStreamService([servicePath, scope, prefix]: [string, string, string]): void {
-	generateServiceCore('streamContract.ts.template', 'streamExecutor.ts.template', servicePath, scope, prefix);
+function generateStreamService([servicePath, scope, namespace]: [string, string, string]): void {
+	generateServiceCore('streamContract.ts.template', 'streamExecutor.ts.template', servicePath, scope, namespace);
 }
 
 function generateServiceCore(
 	contractTemplate: string, executorTemplate: string,
-	servicePath: string, scope: string, prefix: string
+	servicePath: string, scope: string, namespace: string
 ): void {
 	const cwdRelativeToServiceDirectory: string = process.cwd()
 		.replace(root, '')
@@ -174,7 +196,7 @@ function generateServiceCore(
 	const executorFileName: string = path.join(root, config.serviceDirectory, subPath, serviceLastName + '.executor.ts');
 	const contractFileName: string = path.join(root, config.serviceDirectory, subPath, serviceLastName + '.contract.ts');
 	scope = scope ?? 'private';
-	prefix = prefix ?? config.namespace;
+	namespace = namespace ?? config.namespace;
 
 	// check if service with that name already exists
 	if (fs.existsSync(executorFileName) || fs.existsSync(contractFileName)) {
@@ -187,7 +209,7 @@ function generateServiceCore(
 		subPath: subPath,
 		coreClassName: coreClassName,
 		serviceLastName,
-		prefix,
+		prefix: namespace,
 		indentString: config.indentString,
 		config,
 		scope

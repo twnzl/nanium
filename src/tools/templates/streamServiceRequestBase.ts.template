@@ -1,11 +1,16 @@
 import { Nocat } from 'nocat/core';
 import { Observable } from 'rxjs';
 import { ServiceRequestHead } from './serviceRequestHead';
+import { GenericType, Type } from 'nocat/serializers/core';
 
 export class StreamServiceRequestBase<TRequestBody, TResult> {
 
-	head: ServiceRequestHead;
+	@Type(ServiceRequestHead)
+	head?: ServiceRequestHead;
+
+	@GenericType('TRequestBody')
 	body: TRequestBody;
+
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
 		this.body = body;

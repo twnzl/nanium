@@ -3,10 +3,14 @@ import { ServiceExecutionContext } from 'nocat/interfaces/serviceExecutionContex
 import { ServiceRequest } from 'nocat/interfaces/serviceRequest';
 import { ServiceRequestQueueEntry } from 'nocat/interfaces/serviceRequestQueueEntry';
 import { ServiceRequestHead } from './serviceRequestHead';
+import { GenericType, Type } from 'nocat/serializers/core';
 
-export class ServiceRequestBase<TRequestBody, TResponse> implements ServiceRequest<TResponse> {
+export class ServiceRequestBase<TRequestBody, TResponse> {
 
-	head: ServiceRequestHead;
+	@Type(ServiceRequestHead)
+	head?: ServiceRequestHead;
+
+	@GenericType('TRequestBody')
 	body: TRequestBody;
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {

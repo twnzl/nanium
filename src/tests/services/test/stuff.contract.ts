@@ -1,33 +1,5 @@
-import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
-import { ServiceRequestHead } from '../serviceRequestHead';
-import { ServiceRequestContext } from '../serviceRequestContext';
-import { Nocat } from '../../../core';
-import { Observable } from 'rxjs';
-import { ServiceRequestQueueEntry } from '../../../interfaces/serviceRequestQueueEntry';
-import { MyServiceRequestQueueEntry } from '../serviceRequestQueueEntry';
-import { NocatPropertyInfoCore, NocatRequestInfo } from '../../../serializers/jsonToClass';
-
-export function Type(c: new () => any): Function {
-	return (target: new () => any, propertyKey: string) => {
-		target.constructor['__propertyInfo__'] = target.constructor['__propertyInfo__'] ?? {};
-		target.constructor['__propertyInfo__'][propertyKey] = new NocatPropertyInfoCore(c);
-	};
-}
-
-export function GenericType(genericTypeId: string): Function {
-	return (target: new () => any, propertyKey: string) => {
-		target.constructor['__propertyInfo__'] = target.constructor['__propertyInfo__'] ?? {};
-		target.constructor['__propertyInfo__'][propertyKey] = new NocatPropertyInfoCore(undefined, genericTypeId);
-	};
-}
-
-export function NocatRequest(info: NocatRequestInfo): Function {
-	return (target: new () => any) => {
-		target['__responseType__'] = info.responseType;
-		target['__genericTypes__'] = info.genericTypes;
-	};
-}
-
+import { GenericType, RequestType, Type } from '../../../serializers/core';
+import { ServiceRequestBase } from '../serviceRequestBase';
 
 export class GenericStuff<TStuffSubType> {
 	constructor(data?: Partial<GenericStuff<TStuffSubType>>) {
@@ -102,41 +74,16 @@ export class Stuff<TStuffSubType> {
 	}
 }
 
-@NocatRequest({
+@RequestType({
 	responseType: Stuff,
 	genericTypes: {
 		TStuffSubType: Date,
-		// TRequestBody: Stuff,
-		// TResponseBody: Stuff,
-		// TPartialResponse: Stuff
-	}
+		TRequestBody: Stuff,
+		TResponseBody: Stuff,
+		TPartialResponse: Stuff
+	},
+	scope: 'public'
 })
-export class StuffRequest { // extends ServiceRequestBase<Stuff, Stuff[]> {
+export class StuffRequest extends ServiceRequestBase<Stuff<Date>, Stuff<Date>[]> {
 	static serviceName: string = 'NocatSelf.Stuff';
-	static scope: ServiceExecutionScope = 'public';
-
-	@Type(ServiceRequestHead)
-	head: ServiceRequestHead;
-
-	@Type(Stuff)
-	body: Stuff<Date>; // TRequestBody;
-
-	constructor(body?: Partial<Stuff<Date>>, head?: ServiceRequestHead) {
-		this.body = body as Stuff<Date>;
-		this.head = head;
-	}
-
-	async execute(context: ServiceRequestContext): Promise<Stuff<Date>[]> {
-		return await Nocat.execute(this, undefined, context);
-	}
-
-	stream(): Observable<Stuff<Date>> {
-		return Nocat.stream(this);
-	}
-
-	async enqueue(mandatorId: string, options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
-		const serviceName: string = (this.constructor as any).serviceName;
-		return await Nocat.enqueue(
-			<MyServiceRequestQueueEntry>{ serviceName: serviceName, request: this, ...options, mandatorId: mandatorId });
-	}
 }

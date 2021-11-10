@@ -1,9 +1,11 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 
+// disabled to test services without this decorator
+// @RequestType({
+// 	responseType: ServiceResponseBase,
+// })
 export class AnonymousRequest extends ServiceRequestBase<void, string> {
 	static serviceName: string = 'NocatSelf.Anonymous';
-	static scope: ServiceExecutionScope = 'public';
-	static skipInterceptors: any[] = ['test'];
-	static responseCoreConstructor: any = String;
+	static scope: string = 'public';
+	static skipInterceptors: string[] = ['test'];
 }

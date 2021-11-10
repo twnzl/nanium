@@ -208,7 +208,9 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 			const interceptor: new() => ServiceRequestInterceptor<any> = this.config.requestInterceptors[interceptorName];
 			if (
 				requestType.skipInterceptors === true ||
-				(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.indexOf(interceptorName) >= 0)
+				(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.indexOf(interceptorName) >= 0) ||
+				((requestType.skipInterceptors ?? {})[context.scope] === true) ||
+				((Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && requestType.skipInterceptors[context.scope].indexOf(interceptorName) >= 0)
 			) {
 				continue;
 			}

@@ -1,5 +1,26 @@
+import { GenericType, Type } from '../../serializers/core';
+
+export class ServiceResponseMessage {
+	constructor(
+		public code?: string,
+		public text?: string
+	) {
+	}
+}
+
+export class ServiceResponseHead {
+	@Type(ServiceResponseMessage)
+	errors?: ServiceResponseMessage[];
+
+	@Type(ServiceResponseMessage)
+	exceptions?: ServiceResponseMessage[];
+}
+
 export class ServiceResponseBase<TResponseBody> {
+	@Type(ServiceResponseHead)
 	head?: ServiceResponseHead;
+
+	@GenericType('TResponseBody')
 	body?: TResponseBody;
 
 	constructor(body?: TResponseBody, head?: ServiceResponseHead) {
@@ -18,15 +39,3 @@ export class ServiceResponseBase<TResponseBody> {
 	}
 }
 
-export class ServiceResponseHead {
-	errors?: ServiceResponseMessage[];
-	exceptions?: ServiceResponseMessage[];
-}
-
-export class ServiceResponseMessage {
-	constructor(
-		public code?: string,
-		public text?: string
-	) {
-	}
-}

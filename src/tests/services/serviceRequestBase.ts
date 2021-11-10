@@ -5,18 +5,20 @@ import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEn
 import { ServiceRequestContext } from './serviceRequestContext';
 import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
 import { Observable } from 'rxjs';
+import { GenericType, Type } from '../../serializers/core';
 
-// @addTypeInfo
 export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = any> {
 
-	// @Type(() => ServiceRequestHead)
+	@Type(ServiceRequestHead)
 	head: ServiceRequestHead;
 
-	// @Type(() => Test2Dto)
+	@GenericType('TRequestBody')
 	body: TRequestBody;
 
-	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
-		this.body = body;
+	// if body is not Partial<> here, typescript will complain if you do not set the properties of
+	// functions and getters/setters
+	constructor(body?: Partial<TRequestBody>, head?: ServiceRequestHead) {
+		this.body = body as TRequestBody;
 		this.head = head;
 	}
 

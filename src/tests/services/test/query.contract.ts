@@ -1,5 +1,6 @@
-import { ServiceExecutionScope } from '../../../interfaces/serviceExecutionScope';
 import { StreamServiceRequestBase } from '../streamServiceRequestBase';
+import { RequestType } from '../../../serializers/core';
+import { ServiceResponseBase } from '../serviceResponseBase';
 
 export class TestQueryRequestBody {
 	input: number;
@@ -10,8 +11,14 @@ export class TestDto {
 	b: number;
 }
 
+@RequestType({
+	responseType: ServiceResponseBase,
+	genericTypes: {
+		TRequestBody: TestQueryRequestBody,
+		TResponseBody: TestDto
+	},
+	scope: 'public'
+})
 export class TestQueryRequest extends StreamServiceRequestBase<TestQueryRequestBody, TestDto> {
 	static serviceName: string = 'NocatSelf.TestQuery';
-	static scope: ServiceExecutionScope = 'public';
-	static responseCoreConstructor: any = TestDto;
 }
