@@ -251,7 +251,7 @@ function init(): void {
 			name: 'myServices',
 			description: 'SDK for my services',
 			author: 'unknown',
-			license: 'UNLICENCED',
+			license: 'MIT',
 			keywords: [
 				'my',
 				'contracts',
@@ -393,7 +393,10 @@ async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
 			srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
 			// check if a request is public
 			// todo: maybe using the typescript-compiler-api is a bit safer
-			if (!srcFileContent.match(/static\s+scope\s*(.*?)=\s*['"`]private['"`]/g)) {
+			if (
+				srcFileContent.match(/static\s+scope\s*(.*?)=\s*['"`]public['"`]/g) ||
+				srcFileContent.match(/@RequestType\s*\(\s*{[\s\S]*?scope\s*:\s*['"`](public)['"`][\s\S]*?}\s*\)/g)
+			) {
 				dstFile = path.join(tmpDir, 'src', path.relative(serviceSrcDir, file));
 				shell.mkdir('-p', path.dirname(dstFile));
 				fs.copyFileSync(file, dstFile);
