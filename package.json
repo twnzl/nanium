@@ -3,7 +3,7 @@
   "version": "0.10.0",
   "description": "software architecture framework for NO Communication & Assembling Trouble",
   "repository": {},
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": false,
   "main": "core.js",
   "bin": {
