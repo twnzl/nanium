@@ -61,7 +61,7 @@ export class Nocat {
 							observer.next(value);
 						},
 						complete: () => {
-							observer.complete();
+							setTimeout(() => observer.complete());
 						},
 						error: (e: any): void => {
 							observer.error(e);
