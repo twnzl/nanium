@@ -1,7 +1,7 @@
 {
   "name": "nanium",
-  "version": "0.10.0",
-  "description": "Nanium is the material that modern web applications and APIs are made of. It is a nanoservice based fullstack software\narchitecture framework that takes full advantage of typescript to solve many problems of traditional ways of building client-server applications.",
+  "version": "0.10.1",
+  "description": "nanoservice based fullstack software architecture framework",
   "repository": {},
   "license": "MIT",
   "private": false,
@@ -24,7 +24,7 @@
     "test": "jest",
     "prepare": "",
     "publishlist": "cp package.json dist && npm pack ./dist && tar -xvzf *.tgz && ts-node src/tools/nanium.ts rm package *.tgz",
-    "bundle": "npm run cleanbuild && cp package.json dist && npm publish ./dist",
+    "bundle": "npm run cleanbuild && cp package.json dist && cp README.md dist && npm publish ./dist",
     "bundle-es6": "npm run cleanbuild && tsc --build tsconfig-es6.json && ts-node src/tools/nanium.ts ccp package-es6.json dist/package.json && npm publish ./dist"
   },
   "files": [

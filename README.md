@@ -47,10 +47,10 @@ if (response.isGoodStuff()) {
         - [Concepts](#Concepts)
         - [Best practices](#Demo app)
         - [Demo app](#Demo app)
-    - [Initialization]
+    - [Initialization](#Initialization) 
         - [Init the server (nodejs)](#Init-the-server-(nodejs))
         - [Init the client (browser)](#Init-the-client-(browser))
-    - [Services]
+    - [Services](#Services)
         - [Create a service](#Create a service)
         - [Execute a service](#Execute a service)
     - [Interceptors]
