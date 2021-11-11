@@ -89,10 +89,8 @@ const config: NaniumToolConfig = (function (): NaniumToolConfig {
 			break;
 		}
 		if (path.resolve(path.join(root, '/..')) === root) {
-			if (!configFromFile) {
-				console.error('nanium.json not found');
-				process.exit(1);
-			}
+			console.error('nanium.json not found');
+			process.exit(1);
 			break;
 		}
 		root = path.resolve(path.join(root, '/..'));
