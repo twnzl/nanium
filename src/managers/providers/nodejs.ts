@@ -13,26 +13,26 @@ import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NocatRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 
-export interface NocatNodejsProviderConfig {
+export class NocatNodejsProviderConfig {
 	/**
 	 * root path where nocat should search for service executor implementations
 	 * if not given - no automatic registration of the services is done,
 	 * but it can be done manually by using ServiceProviderManager.addService().
 	 * This may be useful for unit tests to register MockImplementations for some services
 	 */
-	servicePath?: string;
+	servicePath?: string = 'services';
 
 	/**
 	 * array of transport adaptors
 	 */
-	requestChannels?: RequestChannel[];
+	requestChannels?: RequestChannel[] = [];
 
 	/**
 	 * interceptors (code that runs before each request is executed)
 	 */
 	requestInterceptors?: {
 		[name: string]: new() => ServiceRequestInterceptor<any>
-	};
+	} = {};
 
 	/**
 	 * which log output should be made?
@@ -42,12 +42,12 @@ export interface NocatNodejsProviderConfig {
 	/**
 	 * exception handling function
 	 */
-	handleError: (e: Error | any, serviceName: string, request: any, context?: ServiceExecutionContext) => Promise<void>;
+	handleError?: (e: Error | any, serviceName: string, request: any, context?: ServiceExecutionContext) => Promise<void>;
 
 	/**
 	 * returns if the Manager is responsible for the given Service
 	 */
-	isResponsible: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsible?: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
 }
 
 
