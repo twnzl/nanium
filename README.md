@@ -39,16 +39,27 @@ if (response.isGoodStuff()) {
 ## Table of contents
 
 - [Features](#Features)
+- [Philosophy](#Philosophy)
 - [Installation](#Installation)
 - [Documentation](#Documentation)
-- [Philosophy](#Philosophy)
-- [Init the server (nodejs)](#init-the-server)
-- [Init the client (browser)](#init-the-client)
-- [Create a service](#create-a-service)
-- [Execute a service](#execute-a-service)
-- [Interceptors]
-- [Queues]
-- ...
+    - [Video tutorials](#Video tutorials)
+        - [Concepts](#Concepts)
+        - [Best practices](#Demo app)
+        - [Demo app](#Demo app)
+    - [Initialization]
+        - [Init the server (nodejs)](#init-the-server)
+        - [Init the client (browser)](#init-the-client)
+    - [Services]
+        - [Create a service](#create-a-service)
+        - [Execute a service](#execute-a-service)
+    - [Interceptors]
+    - [Queues]
+    - [Tests]
+    - ...
+
+## Philosophy [⬆](#table-of-contents)
+
+todo: big picture (architecture)
 
 ## Installation [⬆](#table-of-contents)
 
@@ -58,10 +69,12 @@ $ npm install nanium
 
 ## Documentation [⬆](#table-of-contents)
 
+### Video tutorials
+
 Probably the best way to start are the video tutorials at ...
 (coming soon!)
 
-### Concepts
+#### Concepts
 
 - [Basics]
 - [Interceptors]
@@ -70,26 +83,27 @@ Probably the best way to start are the video tutorials at ...
 - [Events]
 - [SDKs]
 
-### Best practices
+#### Best practices
 
 - [Authorization]
-- [Caching]
 - [Validation]
+- [Tests]
+- [Caching]
 - [Packaging]
 - [Creating own channels, consumers, queues]
 - ...
 
-You can download a simple demo app via
+#### Demo app
+
+You can download a ready-to-take-off-demo app via
 
 ```bash
 $ git clone nanium-demo
 ```
 
-## Philosophy [⬆](#table-of-contents)
+## Initialization
 
-todo: big picture (architecture)
-
-## Init the server (nodejs) [⬆](#table-of-contents)
+### Init the server (nodejs) [⬆](#table-of-contents)
 
 ```bash
 $ npx nanium init
@@ -125,13 +139,15 @@ await Nanium.addManager(new NaniumNodejsProvider({
 }));
 ```
 
-## Init the client (browser) [⬆](#table-of-contents)
+### Init the client (browser) [⬆](#table-of-contents)
 
 ```ts
 await Nanium.addManager(new NaniumConsumerBrowserHttp({ apiUrl: '/api' }));
 ```
 
-## Create a service [⬆](#table-of-contents)
+## Services
+
+### Create a service [⬆](#table-of-contents)
 
 ```bash
 npx nanium g stuff/get public
@@ -187,7 +203,7 @@ export class StuffGetExecutor implements ServiceExecutor<StuffGetRequest, StuffG
 }
 ```
 
-## Execute a service [⬆](#table-of-contents)
+### Execute a service [⬆](#table-of-contents)
 
 No mather if you are in a node script or in the browser it is always the same, and you do not need to care about:
 
