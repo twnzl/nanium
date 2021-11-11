@@ -1,5 +1,5 @@
 import { ServiceRequestHead } from './serviceRequestHead';
-import { Nocat } from '../../core';
+import { Nanium } from '../../core';
 import { Observable } from 'rxjs';
 
 export class StreamServiceRequestBase<TRequestBody, TResult> {
@@ -30,6 +30,6 @@ export class StreamServiceRequestBase<TRequestBody, TResult> {
 	}
 
 	stream(): Observable<TResult> {
-		return Nocat.stream(this);
+		return Nanium.stream(this);
 	}
 }

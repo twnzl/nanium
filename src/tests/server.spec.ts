@@ -1,5 +1,5 @@
-import { Nocat } from '../core';
-import { NocatNodejsProvider } from '../managers/providers/nodejs';
+import { Nanium } from '../core';
+import { NaniumNodejsProvider } from '../managers/providers/nodejs';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
@@ -19,7 +19,7 @@ describe('execute TestRequest on server \n', function (): void {
 	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
-		await Nocat.addManager(new NocatNodejsProvider({
+		await Nanium.addManager(new NaniumNodejsProvider({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestInterceptors: { test: TestServerRequestInterceptor },
@@ -157,7 +157,7 @@ describe('execute TestRequest on server \n', function (): void {
 
 		beforeEach(async function (): Promise<void> {
 			try {
-				privateResponse = await Nocat.execute(privateRequest, 'NocatSelf.PrivateStuff', { scope: 'public' });
+				privateResponse = await Nanium.execute(privateRequest, 'NaniumSelf.PrivateStuff', { scope: 'public' });
 			} catch (e) {
 				err = e;
 			}
@@ -171,7 +171,7 @@ describe('execute TestRequest on server \n', function (): void {
 	describe('When the request comes serialized over HTTP ore something else, the request that ist passed to the executor must be a real instance of the request type not only a DTO \n', function (): void {
 		beforeEach(async function (): Promise<void> {
 			const r: PrivateStuffRequest = <PrivateStuffRequest>{ body: 1, head: { token: '1234' } };
-			privateResponse = await Nocat.execute(r, 'NocatSelf.PrivateStuff');
+			privateResponse = await Nanium.execute(r, 'NaniumSelf.PrivateStuff');
 		});
 
 		it('--> \n', async function (): Promise<void> {

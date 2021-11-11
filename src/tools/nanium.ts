@@ -8,7 +8,7 @@ import * as util from 'util';
 import * as readline from 'readline';
 import { Interface } from 'readline';
 
-export class NocatToolConfig {
+export class NaniumToolConfig {
 	serviceDirectory: string;
 	indentString: string;
 	namespace: string;
@@ -44,53 +44,53 @@ const rl: Interface = readline.createInterface({
 // arguments
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
 	console.log(`
-nocat init
-nocat g {directory.}*{service name} {private|public} {namespace}
+nanium init
+nanium g {directory.}*{service name} {private|public} {namespace}
 		generate files for a new service (contract + executor)
-nocat gs {directory.}*{service name} {private|public} {namespace}
+nanium gs {directory.}*{service name} {private|public} {namespace}
 		generate files for a new streamed service (contract + executor)
-nocat rename {old service name} {new service name}
-nocat pkg
-nocat rm {file or folder}
+nanium rename {old service name} {new service name}
+nanium pkg
+nanium rm {file or folder}
 		removes the file or folder
-nocat cp {srcPath} {dstPath}
+nanium cp {srcPath} {dstPath}
   	creates the destination path (recursively) if it does not exist
   	and copies files from srcPath recursively to dstPath
-nocat ccp {srcPath} {dstPath}
+nanium ccp {srcPath} {dstPath}
 	  creates the destination path (recursively) if it does not exist,
 	  removes old files in the destination path
 	  and than copies files from srcPath recursively to dstPath
-nocat namespace {namespace}
+nanium namespace {namespace}
 		set namespace for all services that don't have a namespace
-nocat rsn
+nanium rsn
 		refresh service names. Set property serviceName of all requests and executors to the default (Namespace:RelativePath)
-nocat sdk {b|p|u}
+nanium sdk {b|p|u}
 		with parameter b: bundle the contract files to a .tgz file
-		with parameter p: use npm publish and the information of nocat.json.sdkPackage to publish the contracts to npm repository
-		with parameter u: use npm publish and the information of nocat.json.sdkPackage to unpublish the contracts in npm repository
+		with parameter p: use npm publish and the information of nanium.json.sdkPackage to publish the contracts to npm repository
+		with parameter u: use npm publish and the information of nanium.json.sdkPackage to unpublish the contracts in npm repository
 `);
 	process.exit(0);
 }
 
 // read config file
 let root: string;
-const config: NocatToolConfig = (function (): NocatToolConfig {
+const config: NaniumToolConfig = (function (): NaniumToolConfig {
 	root = process.cwd();
-	let configFromFile: Partial<NocatToolConfig> = {};
+	let configFromFile: Partial<NaniumToolConfig> = {};
 	let configFile: string;
 	while (true) {
-		configFile = path.join(root, 'nocat.json');
+		configFile = path.join(root, 'nanium.json');
 		if (fs.existsSync(configFile)) {
 			configFromFile = JSON.parse(fs.readFileSync(configFile, 'utf8'));
 			if (!configFromFile.namespace) {
-				console.error('nocat.json: namespace not found');
+				console.error('nanium.json: namespace not found');
 				process.exit(1);
 			}
 			break;
 		}
 		if (path.resolve(path.join(root, '/..')) === root) {
 			if (!configFromFile) {
-				console.error('nocat.json not found');
+				console.error('nanium.json not found');
 				process.exit(1);
 			}
 			break;
@@ -101,7 +101,7 @@ const config: NocatToolConfig = (function (): NocatToolConfig {
 		...{
 			serviceDirectory: 'src/server/services',
 			indentString: '\t',
-			namespace: 'NocatTest',
+			namespace: 'NaniumTest',
 			sdkPackage: {},
 			sdkTsConfig: {
 				'compilerOptions': {
@@ -241,7 +241,7 @@ function init(): void {
 	let fileContent: string;
 	fs.mkdirSync(config.serviceDirectory, { recursive: true });
 
-	// nocat.json
+	// nanium.json
 	fileContent = JSON.stringify({
 		serviceDirectory: 'src/server/services',
 		indentString: '\t',
@@ -274,7 +274,7 @@ function init(): void {
 			}
 		}
 	}, null, 2);
-	fs.writeFileSync(path.join(process.cwd(), 'nocat.json'), fileContent);
+	fs.writeFileSync(path.join(process.cwd(), 'nanium.json'), fileContent);
 
 	// serviceRequestBase.ts
 	fileContent = fromTemplate('serviceRequestBase.ts.template');
@@ -375,7 +375,7 @@ async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
 		];
 		fs.writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify(config.sdkTsConfig, null, 2));
 
-		// nocat basics
+		// nanium basics
 		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src'));
 		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), path.join(tmpDir, 'src'));
 		shell.cp(path.join(serviceSrcDir, 'serviceRequestQueueEntry.ts'), path.join(tmpDir, 'src'));

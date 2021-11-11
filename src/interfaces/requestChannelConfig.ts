@@ -1,7 +1,7 @@
 import { ServiceExecutionContext } from './serviceExecutionContext';
-import { NocatSerializer } from './serializer';
+import { NaniumSerializer } from './serializer';
 
 export interface RequestChannelConfig {
 	executionContextConstructor?: new(data: ServiceExecutionContext) => ServiceExecutionContext;
-	serializer?: NocatSerializer;
+	serializer?: NaniumSerializer;
 }

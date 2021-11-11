@@ -1,6 +1,6 @@
-import { NocatSerializer } from '../interfaces/serializer';
+import { NaniumSerializer } from '../interfaces/serializer';
 
-export class NocatJsonSerializer implements NocatSerializer {
+export class NaniumJsonSerializer implements NaniumSerializer {
 	async deserialize(str: string): Promise<any> {
 		return JSON.parse(str);
 	}

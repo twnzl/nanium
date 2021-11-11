@@ -1,4 +1,4 @@
-import { ServiceRequestInterceptor } from 'nocat/interfaces/serviceRequestInterceptor';
+import { ServiceRequestInterceptor } from 'nanium/interfaces/serviceRequestInterceptor';
 import { ServiceRequestBase } from './serviceRequestBase';
 import { ServiceRequestContext } from './serviceRequestContext';
 

@@ -2,35 +2,35 @@ import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
 import { Server as HttpsServer } from 'https';
 import { Observable } from 'rxjs';
 
-import { Nocat } from '../../../core';
+import { Nanium } from '../../../core';
 import { RequestChannelConfig } from '../../../interfaces/requestChannelConfig';
 import { RequestChannel } from '../../../interfaces/requestChannel';
-import { NocatRepository } from '../../../interfaces/serviceRepository';
-import { NocatJsonSerializer } from '../../../serializers/json';
-import { NocatSerializerCore } from '../../../serializers/core';
+import { NaniumRepository } from '../../../interfaces/serviceRepository';
+import { NaniumJsonSerializer } from '../../../serializers/json';
+import { NaniumSerializerCore } from '../../../serializers/core';
 
-export interface NocatHttpChannelConfig extends RequestChannelConfig {
+export interface NaniumHttpChannelConfig extends RequestChannelConfig {
 	server: HttpServer | HttpsServer;
 	apiPath: string;
 }
 
-export class NocatHttpChannel implements RequestChannel {
-	private serviceRepository: NocatRepository;
-	private readonly config: NocatHttpChannelConfig;
+export class NaniumHttpChannel implements RequestChannel {
+	private serviceRepository: NaniumRepository;
+	private readonly config: NaniumHttpChannelConfig;
 
-	constructor(config: NocatHttpChannelConfig) {
+	constructor(config: NaniumHttpChannelConfig) {
 		this.config = {
 			...{
 				server: undefined,
 				apiPath: config.apiPath?.toLowerCase(),
-				serializer: new NocatJsonSerializer(),
+				serializer: new NaniumJsonSerializer(),
 				executionContextConstructor: Object
 			},
 			...(config || {})
 		};
 	}
 
-	async init(serviceRepository: NocatRepository): Promise<void> {
+	async init(serviceRepository: NaniumRepository): Promise<void> {
 		this.serviceRepository = serviceRepository;
 		this.config.server.listeners('request').forEach((listener: (...args: any[]) => void) => {
 			this.config.server.removeListener('request', listener);
@@ -41,7 +41,7 @@ export class NocatHttpChannel implements RequestChannel {
 						data.push(chunk);
 					}).on('end', async () => {
 						const body: string = Buffer.concat(data).toString();
-						const deserialized: NocatHttpChannelBody = await this.config.serializer.deserialize(body);
+						const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
 						await this.process(deserialized, res);
 					});
 				} else {
@@ -51,13 +51,13 @@ export class NocatHttpChannel implements RequestChannel {
 		});
 	}
 
-	async process(deserialized: NocatHttpChannelBody, res: ServerResponse): Promise<any> {
-		return await NocatHttpChannel.processCore(this.config, this.serviceRepository, deserialized, res);
+	async process(deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
+		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, deserialized, res);
 	}
 
-	static async processCore(config: RequestChannelConfig, serviceRepository: NocatRepository, deserialized: NocatHttpChannelBody, res: ServerResponse): Promise<any> {
+	static async processCore(config: RequestChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
 		const serviceName: string = deserialized.serviceName;
-		const request: any = NocatSerializerCore.plainToClass(deserialized.request, serviceRepository[serviceName].Request);
+		const request: any = NaniumSerializerCore.plainToClass(deserialized.request, serviceRepository[serviceName].Request);
 		if (deserialized.streamed) {
 			if (!request.stream) {
 				res.statusCode = 500;
@@ -68,7 +68,7 @@ export class NocatHttpChannel implements RequestChannel {
 			res.setHeader('Access-Control-Allow-Origin', '*');
 			res.setHeader('Connection', 'keep-alive');
 			res.flushHeaders(); // flush the headers to establish SSE with client
-			const result: Observable<any> = Nocat.stream(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
+			const result: Observable<any> = Nanium.stream(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 			res.statusCode = 200;
 			result.subscribe({
 				next: async (value: any): Promise<void> => {
@@ -88,7 +88,7 @@ export class NocatHttpChannel implements RequestChannel {
 		} else {
 			try {
 				res.setHeader('Content-Type', config.serializer.mimeType);
-				const result: any = await Nocat.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
+				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
 					res.write(await config.serializer.serialize(result));
 				}
@@ -102,7 +102,7 @@ export class NocatHttpChannel implements RequestChannel {
 	}
 }
 
-interface NocatHttpChannelBody {
+interface NaniumHttpChannelBody {
 	serviceName: string;
 	request: any;
 	streamed?: boolean;

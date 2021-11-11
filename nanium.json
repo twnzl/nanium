@@ -1,16 +1,16 @@
 {
   "serviceDirectory": "src/tests/services",
   "indentString": "\t",
-  "namespace": "NocatTest",
+  "namespace": "NaniumTest",
   "outDir": "sdk",
   "sdkPackage": {
-    "name": "nocat-test-sdk",
-    "description": "SDK for the nocat test services",
+    "name": "nanium-test-sdk",
+    "description": "SDK for the nanium test services",
     "author": "Tobias Wenzel",
     "license": "UNLICENCED",
     "private": false,
     "keywords": [
-      "nocat",
+      "nanium",
       "contracts",
       "sdk",
       "API"

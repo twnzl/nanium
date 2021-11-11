@@ -1,9 +1,9 @@
-import { Nocat } from 'nocat/core';
-import { ServiceExecutionContext } from 'nocat/interfaces/serviceExecutionContext';
-import { ServiceRequest } from 'nocat/interfaces/serviceRequest';
-import { ServiceRequestQueueEntry } from 'nocat/interfaces/serviceRequestQueueEntry';
+import { Nanium } from 'nanium/core';
+import { ServiceExecutionContext } from 'nanium/interfaces/serviceExecutionContext';
+import { ServiceRequest } from 'nanium/interfaces/serviceRequest';
+import { ServiceRequestQueueEntry } from 'nanium/interfaces/serviceRequestQueueEntry';
 import { ServiceRequestHead } from './serviceRequestHead';
-import { GenericType, Type } from 'nocat/serializers/core';
+import { GenericType, Type } from 'nanium/serializers/core';
 
 export class ServiceRequestBase<TRequestBody, TResponse> {
 
@@ -19,11 +19,11 @@ export class ServiceRequestBase<TRequestBody, TResponse> {
 	}
 
 	async execute(context: ServiceExecutionContext): Promise<TResponse> {
-		return await Nocat.execute(this, undefined, context);
+		return await Nanium.execute(this, undefined, context);
 	}
 
 	async enqueue(options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
 		const serviceName: string = (this.constructor as any).serviceName;
-		return await Nocat.enqueue({ serviceName, request: this, ...options });
+		return await Nanium.enqueue({ serviceName, request: this, ...options });
 	}
 }

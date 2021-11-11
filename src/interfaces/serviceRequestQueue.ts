@@ -12,7 +12,7 @@ export interface ServiceRequestQueue {
 	isShutdownInitiated: boolean;
 
 	/**
-	 * initialize th queue. Nocat will call this when the queue is added to the nocat queues via Nocat.addQueue
+	 * initialize th queue. Nanium will call this when the queue is added to the nanium queues via Nanium.addQueue
 	 */
 	init(): Promise<void>;
 

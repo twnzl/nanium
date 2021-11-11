@@ -1,23 +1,23 @@
 import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
-import { NocatJsonSerializer } from '../../serializers/json';
+import { NaniumJsonSerializer } from '../../serializers/json';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { genericTypesSymbol, NocatSerializerCore, responseTypeSymbol } from '../../serializers/core';
+import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 
-export interface NocatConsumerBrowserHttpConfig extends ServiceConsumerConfig {
+export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
 }
 
-export class NocatConsumerBrowserHttp implements ServiceManager {
-	config: NocatConsumerBrowserHttpConfig;
+export class NaniumConsumerBrowserHttp implements ServiceManager {
+	config: NaniumConsumerBrowserHttpConfig;
 
-	constructor(config?: NocatConsumerBrowserHttpConfig) {
+	constructor(config?: NaniumConsumerBrowserHttpConfig) {
 		this.config = {
 			...{
 				apiUrl: '/api',
 				requestInterceptors: [],
-				serializer: new NocatJsonSerializer(),
+				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {
 					alert(response);
 					return Promise.resolve();
@@ -61,7 +61,7 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 					if (xhr.status === 200) {
 						const result: any = xhr.response;
 						if (result !== null && result !== undefined && result !== '') {
-							const r: any = NocatSerializerCore.plainToClass(
+							const r: any = NaniumSerializerCore.plainToClass(
 								await this.config.serializer.deserialize(result),
 								request.constructor[responseTypeSymbol],
 								request.constructor[genericTypesSymbol]
@@ -97,7 +97,7 @@ export class NocatConsumerBrowserHttp implements ServiceManager {
 					let seenBytes: number = 0;
 					xhr.onreadystatechange = async (): Promise<void> => {
 						if (xhr.readyState === 3) {
-							const r: any = NocatSerializerCore.plainToClass(
+							const r: any = NaniumSerializerCore.plainToClass(
 								await this.config.serializer.deserialize(xhr.response.substr(seenBytes)),
 								request.constructor[responseTypeSymbol],
 								request.constructor[genericTypesSymbol]

@@ -1,5 +1,5 @@
 import { ${coreClassName}Request, ${coreClassName}Response } from './${serviceLastName}.contract';
-import { StreamServiceExecutor } from 'nocat/interfaces/streamServiceExecutor';
+import { StreamServiceExecutor } from 'nanium/interfaces/streamServiceExecutor';
 import { Observable, Observer } from 'rxjs';
 import { ServiceRequestContext } from '${relativeToRoot}serviceRequestContext';
 

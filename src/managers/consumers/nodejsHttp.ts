@@ -2,29 +2,29 @@ import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { NocatJsonSerializer } from '../../serializers/json';
+import { NaniumJsonSerializer } from '../../serializers/json';
 import * as http from 'http';
 import { ClientRequest, RequestOptions as HttpRequestOptions } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
-import { genericTypesSymbol, NocatSerializerCore, responseTypeSymbol } from '../../serializers/core';
+import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 
-export interface NocatConsumerNodejsHttpConfig extends ServiceConsumerConfig {
+export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
 	options?: HttpRequestOptions | HttpsRequestOptions;
 }
 
-export class NocatConsumerNodejsHttp implements ServiceManager {
-	config: NocatConsumerNodejsHttpConfig;
+export class NaniumConsumerNodejsHttp implements ServiceManager {
+	config: NaniumConsumerNodejsHttpConfig;
 
-	constructor(config?: NocatConsumerNodejsHttpConfig) {
+	constructor(config?: NaniumConsumerNodejsHttpConfig) {
 		this.config = {
 			...{
 				apiUrl: 'localhost:8080/api',
 				proxy: null,
 				requestInterceptors: [],
-				serializer: new NocatJsonSerializer(),
+				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {
 					console.error(response);
 					return Promise.resolve();
@@ -69,7 +69,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 					});
 					response.on('end', async () => {
 						try {
-							const r: any = NocatSerializerCore.plainToClass(
+							const r: any = NaniumSerializerCore.plainToClass(
 								await this.config.serializer.deserialize(str),
 								body.request.constructor[responseTypeSymbol],
 								body.request.constructor[genericTypesSymbol]);
@@ -110,7 +110,7 @@ export class NocatConsumerNodejsHttp implements ServiceManager {
 				let seenBytes: number = 0;
 				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						const r: any = NocatSerializerCore.plainToClass(
+						const r: any = NaniumSerializerCore.plainToClass(
 							await this.config.serializer.deserialize(xhr.response.substr(seenBytes)),
 							request.constructor[responseTypeSymbol],
 							request.constructor[genericTypesSymbol]

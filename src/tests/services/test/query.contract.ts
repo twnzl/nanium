@@ -20,5 +20,5 @@ export class TestDto {
 	scope: 'public'
 })
 export class TestQueryRequest extends StreamServiceRequestBase<TestQueryRequestBody, TestDto> {
-	static serviceName: string = 'NocatSelf.TestQuery';
+	static serviceName: string = 'NaniumSelf.TestQuery';
 }

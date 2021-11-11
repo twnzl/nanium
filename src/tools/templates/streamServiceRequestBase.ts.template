@@ -1,7 +1,7 @@
-import { Nocat } from 'nocat/core';
+import { Nanium } from 'nanium/core';
 import { Observable } from 'rxjs';
 import { ServiceRequestHead } from './serviceRequestHead';
-import { GenericType, Type } from 'nocat/serializers/core';
+import { GenericType, Type } from 'nanium/serializers/core';
 
 export class StreamServiceRequestBase<TRequestBody, TResult> {
 
@@ -35,6 +35,6 @@ export class StreamServiceRequestBase<TRequestBody, TResult> {
 	}
 
 	stream(): Observable<TResult> {
-		return Nocat.stream(this);
+		return Nanium.stream(this);
 	}
 }

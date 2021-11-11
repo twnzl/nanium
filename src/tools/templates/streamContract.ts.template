@@ -1,6 +1,6 @@
-import { ServiceExecutionScope } from 'nocat/interfaces/serviceExecutionScope';
+import { ServiceExecutionScope } from 'nanium/interfaces/serviceExecutionScope';
 import { StreamServiceRequestBase } from '${relativeToRoot}streamServiceRequestBase';
-import { RequestType } from 'nocat/serializers/core';
+import { RequestType } from 'nanium/serializers/core';
 
 export class ${coreClassName}RequestBody {
 }

@@ -33,7 +33,7 @@ describe('host services via http \n', function (): void {
 		});
 	});
 
-	describe('call an url of the http server that is not managed by nocat \n', function (): void {
+	describe('call an url of the http server that is not managed by nanium \n', function (): void {
 		let result: any;
 		beforeEach(async () => {
 			result = await new Promise<any>(resolve => {
@@ -76,7 +76,7 @@ describe('host services via https \n', function (): void {
 		});
 	});
 
-	describe('call an url of the https server that is not managed by nocat \n', function (): void {
+	describe('call an url of the https server that is not managed by nanium \n', function (): void {
 		let result: any;
 		beforeEach(async () => {
 			result = await new Promise<any>(resolve => {

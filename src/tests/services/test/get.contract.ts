@@ -25,5 +25,5 @@ export class TestGetRequestBody {
 	scope: 'public'
 })
 export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
-	static serviceName: string = 'NocatSelf.TestGet';
+	static serviceName: string = 'NaniumSelf.TestGet';
 }

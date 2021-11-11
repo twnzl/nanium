@@ -5,17 +5,17 @@ import { Observable, Observer } from 'rxjs';
 import { RequestChannel } from '../../interfaces/requestChannel';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { LogMode } from '../../interfaces/logMode';
-import { Nocat } from '../../core';
+import { Nanium } from '../../core';
 import { ServiceExecutor } from '../../interfaces/serviceExecutor';
 import { StreamServiceExecutor } from '../../interfaces/streamServiceExecutor';
 import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
-import { NocatRepository } from '../../interfaces/serviceRepository';
+import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 
-export class NocatNodejsProviderConfig {
+export class NaniumNodejsProviderConfig {
 	/**
-	 * root path where nocat should search for service executor implementations
+	 * root path where nanium should search for service executor implementations
 	 * if not given - no automatic registration of the services is done,
 	 * but it can be done manually by using ServiceProviderManager.addService().
 	 * This may be useful for unit tests to register MockImplementations for some services
@@ -51,9 +51,9 @@ export class NocatNodejsProviderConfig {
 }
 
 
-export class NocatNodejsProvider implements ServiceProviderManager {
-	repository: NocatRepository;
-	config: NocatNodejsProviderConfig = {
+export class NaniumNodejsProvider implements ServiceProviderManager {
+	repository: NaniumRepository;
+	config: NaniumNodejsProviderConfig = {
 		requestInterceptors: {},
 		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		handleError: async (err: any): Promise<any> => {
@@ -61,7 +61,7 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		}
 	};
 
-	constructor(config: NocatNodejsProviderConfig) {
+	constructor(config: NaniumNodejsProviderConfig) {
 		this.config = {
 			...this.config,
 			...config
@@ -86,17 +86,17 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 			const files: string[] = await findFiles(this.config.servicePath,
 				[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
 			for (const file of files) {
-				const request: any = NocatNodejsProvider.findClassWithServiceNameProperty(require(path.resolve(file)));
+				const request: any = NaniumNodejsProvider.findClassWithServiceNameProperty(require(path.resolve(file)));
 				if (!request) {
-					if (Nocat.logMode >= LogMode.warning) {
+					if (Nanium.logMode >= LogMode.warning) {
 						console.warn('invalid contract file (no request class found): ' + file);
 					}
 					continue;
 				}
-				const executor: any = NocatNodejsProvider.findClassWithServiceNameProperty(
+				const executor: any = NaniumNodejsProvider.findClassWithServiceNameProperty(
 					require(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
 				this.addService(request, executor);
-				if (Nocat.logMode >= LogMode.info) {
+				if (Nanium.logMode >= LogMode.info) {
 					console.log('service ready: ' + executor.serviceName);
 				}
 			}
@@ -129,7 +129,7 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		try {
 			// validation
 			if (this.repository === undefined) {
-				return await this.config.handleError(new Error('nocat server is not initialized'), serviceName, request, context);
+				return await this.config.handleError(new Error('nanium server is not initialized'), serviceName, request, context);
 			}
 			if (!this.repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, request, context);
@@ -161,7 +161,7 @@ export class NocatNodejsProvider implements ServiceProviderManager {
 		context = context || {};
 
 		if (this.repository === undefined) {
-			return this.createErrorObservable(new Error('nocat server is not initialized'));
+			return this.createErrorObservable(new Error('nanium server is not initialized'));
 		}
 		if (!this.repository.hasOwnProperty(serviceName)) {
 			return this.createErrorObservable(new Error('unknown service ' + serviceName));

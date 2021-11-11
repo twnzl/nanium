@@ -1,5 +1,5 @@
-import { NocatRepository } from './serviceRepository';
+import { NaniumRepository } from './serviceRepository';
 
 export interface RequestChannel {
-	init(serviceRepository: NocatRepository): Promise<void>;
+	init(serviceRepository: NaniumRepository): Promise<void>;
 }

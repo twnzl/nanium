@@ -16,7 +16,7 @@ export interface ServiceManager {
 
 	/**
 	 * initialize the manager.
-	 * Nocat will call this when the manager (provider or consumer) is added to the nocat service managers via Nocat.addManager
+	 * Nanium will call this when the manager (provider or consumer) is added to the nanium service managers via Nanium.addManager
 	 */
 	init(): Promise<void>;
 }

@@ -1,4 +1,4 @@
-// todo: optimize rxjs import. Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nocat as a commonJs module
+// todo: optimize rxjs import. Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nanium as a commonJs module
 import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from './interfaces/serviceManager';
 import { ServiceExecutionContext } from './interfaces/serviceExecutionContext';
@@ -8,7 +8,7 @@ import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry'
 import { DateHelper } from './helper';
 import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
 
-export class Nocat {
+export class Nanium {
 	static #isShutDownInitiated: boolean;
 
 	static managers: ServiceManager[] = [];
@@ -27,7 +27,7 @@ export class Nocat {
 	static async addQueue(queue: ServiceRequestQueue): Promise<void> {
 		this.queues.push(queue);
 		await queue.init();
-		await Nocat.startQueue(queue);
+		await Nanium.startQueue(queue);
 	}
 
 	static async removeQueue(fn: (q: ServiceRequestQueue) => boolean): Promise<void> {
@@ -78,14 +78,14 @@ export class Nocat {
 	): Promise<ServiceRequestQueueEntry> {
 		const queue: ServiceRequestQueue = await this.getResponsibleQueue(entry);
 		if (!queue) {
-			throw new Error('nocat: no queue has been initialized');
+			throw new Error('nanium: no queue has been initialized');
 		}
 		delete entry.response;
 		delete entry.id;
 		entry.state = 'ready';
 
 		const result: ServiceRequestQueueEntry = await queue.enqueue(entry, executionContext);
-		Nocat.executeTimeControlled(result, queue);
+		Nanium.executeTimeControlled(result, queue);
 		return result;
 	}
 
@@ -114,10 +114,10 @@ export class Nocat {
 	//#region queue
 	static async onReadyQueueEntry(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
 		try {
-			await Nocat.executeTimeControlled(entry, requestQueue);
+			await Nanium.executeTimeControlled(entry, requestQueue);
 		} catch (e) {
 			console.error(e.stack ? e.stack.toString() : e.toString);
-			// Nocat.emit(NocatEvents.exception, e);
+			// Nanium.emit(NaniumEvents.exception, e);
 		}
 	}
 
@@ -135,7 +135,7 @@ export class Nocat {
 			entry = await requestQueue.onBeforeStart(entry);
 			entry.startDate = entry.startDate || new Date();
 			await requestQueue.updateEntry(entry);
-			entry.response = await Nocat.execute(
+			entry.response = await Nanium.execute(
 				entry.request,
 				entry.serviceName,
 				await requestQueue.getExecutionContext(entry));
@@ -211,7 +211,7 @@ export class Nocat {
 		const readyEntries: ServiceRequestQueueEntry[] = await requestQueue
 			.getEntries({ states: ['ready'], startDateReached: true });
 		for (const entry of readyEntries) {
-			await Nocat.executeTimeControlled(entry, requestQueue);
+			await Nanium.executeTimeControlled(entry, requestQueue);
 		}
 	}
 

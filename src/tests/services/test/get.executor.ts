@@ -3,7 +3,7 @@ import { TestGetRequest, TestGetResponse } from './get.contract';
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
 
 export class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
-	static serviceName: string = 'NocatSelf.TestGet';
+	static serviceName: string = 'NaniumSelf.TestGet';
 
 	async execute(request: TestGetRequest): Promise<TestGetResponse> {
 		if (request.body.input2 === 5) {

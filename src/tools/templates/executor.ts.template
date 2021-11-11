@@ -1,4 +1,4 @@
-import { ServiceExecutor } from 'nocat/interfaces/serviceExecutor';
+import { ServiceExecutor } from 'nanium/interfaces/serviceExecutor';
 import { ${coreClassName}Request, ${coreClassName}Response } from './${serviceLastName}.contract';
 import { ServiceRequestContext } from '${relativeToRoot}serviceRequestContext';
 

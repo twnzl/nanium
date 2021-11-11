@@ -4,7 +4,7 @@ import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionCon
 import { ServiceRequestHead } from '../serviceRequestHead';
 
 export class StuffExecutor implements ServiceExecutor<StuffRequest, Stuff<Date>[]> {
-	static serviceName: string = 'NocatSelf.Stuff';
+	static serviceName: string = 'NaniumSelf.Stuff';
 
 	async execute(request: StuffRequest, context?: ServiceExecutionContext): Promise<Stuff<Date>[]> {
 		if (!(request instanceof StuffRequest)) {

@@ -1,16 +1,16 @@
 import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
 
-export const responseTypeSymbol: symbol = Symbol.for('__Nocat__ResponseType__');
-export const genericTypesSymbol: symbol = Symbol.for('__Nocat__GenericTypes__');
-export const propertyInfoSymbol: symbol = Symbol.for('__Nocat__PropertyInfo__');
+export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
+export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');
+export const propertyInfoSymbol: symbol = Symbol.for('__Nanium__PropertyInfo__');
 export const scopeProperty: string = 'scope';
 export const skipInterceptorsProperty: string = 'scope';
 
-export class NocatPropertyInfo {
-	[prop: string]: NocatPropertyInfoCore;
+export class NaniumPropertyInfo {
+	[prop: string]: NaniumPropertyInfoCore;
 }
 
-export class NocatPropertyInfoCore {
+export class NaniumPropertyInfoCore {
 	constructor(
 		public ctor: new (data?: any) => any,
 		public genericTypeId?: string
@@ -18,11 +18,11 @@ export class NocatPropertyInfoCore {
 	}
 }
 
-export class NocatGenericTypeInfo {
+export class NaniumGenericTypeInfo {
 	[prop: string]: new (data?: any) => any;
 }
 
-export class NocatRequestInfo {
+export class NaniumRequestInfo {
 	responseType: new() => any;
 	genericTypes?: {
 		[id: string]: new() => any;
@@ -34,18 +34,18 @@ export class NocatRequestInfo {
 export function Type(clazz: new () => any): Function {
 	return (target: new () => any, propertyKey: string) => {
 		target.constructor[propertyInfoSymbol] = target.constructor[propertyInfoSymbol] ?? {};
-		target.constructor[propertyInfoSymbol][propertyKey] = new NocatPropertyInfoCore(clazz);
+		target.constructor[propertyInfoSymbol][propertyKey] = new NaniumPropertyInfoCore(clazz);
 	};
 }
 
 export function GenericType(genericTypeId: string): Function {
 	return (target: new () => any, propertyKey: string) => {
 		target.constructor[propertyInfoSymbol] = target.constructor[propertyInfoSymbol] ?? {};
-		target.constructor[propertyInfoSymbol][propertyKey] = new NocatPropertyInfoCore(undefined, genericTypeId);
+		target.constructor[propertyInfoSymbol][propertyKey] = new NaniumPropertyInfoCore(undefined, genericTypeId);
 	};
 }
 
-export function RequestType(info: NocatRequestInfo): Function {
+export function RequestType(info: NaniumRequestInfo): Function {
 	return (target: new () => any) => {
 		target[responseTypeSymbol] = info.responseType;
 		target[genericTypesSymbol] = info.genericTypes;
@@ -54,9 +54,9 @@ export function RequestType(info: NocatRequestInfo): Function {
 	};
 }
 
-export class NocatSerializerCore {
+export class NaniumSerializerCore {
 
-	static plainToClass(plain: any, constructor: new () => any, genericTypes?: NocatGenericTypeInfo): any {
+	static plainToClass(plain: any, constructor: new () => any, genericTypes?: NaniumGenericTypeInfo): any {
 		// undefined or null
 		if (plain === undefined || plain === null) {
 			return plain;
@@ -82,8 +82,8 @@ export class NocatSerializerCore {
 
 		// object
 		result = new constructor();
-		const propertyInfo: NocatPropertyInfo = constructor[propertyInfoSymbol];
-		let pi: NocatPropertyInfoCore;
+		const propertyInfo: NaniumPropertyInfo = constructor[propertyInfoSymbol];
+		let pi: NaniumPropertyInfoCore;
 		let c: new () => any;
 		for (const property in plain) {
 			if (plain.hasOwnProperty(property)) {
@@ -98,7 +98,7 @@ export class NocatSerializerCore {
 				} else {
 					if (typeof plain[property] === 'object' && plain[property] !== null) {
 						if (!Array.isArray(plain[property]) || (plain[property].length && typeof plain[property][0] === 'object')) {
-							console.log(`NocatSerializerCore.plainToClass: no type given for property ${property} of class ${constructor.name}`);
+							console.log(`NaniumSerializerCore.plainToClass: no type given for property ${property} of class ${constructor.name}`);
 						}
 					}
 					result[property] = plain[property];

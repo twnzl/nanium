@@ -39,6 +39,7 @@ if (response.isGoodStuff()) {
 ## Table of contents
 
 - [Features](#Features)
+- [Short and sweet](#Short-and-sweet)
 - [Philosophy](#Philosophy)
 - [Installation](#Installation)
 - [Documentation](#Documentation)
@@ -47,27 +48,27 @@ if (response.isGoodStuff()) {
         - [Best practices](#Demo app)
         - [Demo app](#Demo app)
     - [Initialization]
-        - [Init the server (nodejs)](#init-the-server)
-        - [Init the client (browser)](#init-the-client)
+        - [Init the server (nodejs)](#Init-the-server-(nodejs))
+        - [Init the client (browser)](#Init-the-client-(browser))
     - [Services]
-        - [Create a service](#create-a-service)
-        - [Execute a service](#execute-a-service)
+        - [Create a service](#Create a service)
+        - [Execute a service](#Execute a service)
     - [Interceptors]
     - [Queues]
     - [Tests]
     - ...
 
-## Philosophy [⬆](#table-of-contents)
+## Philosophy
 
 todo: big picture (architecture)
 
-## Installation [⬆](#table-of-contents)
+## Installation
 
 ```bash
 $ npm install nanium
 ```
 
-## Documentation [⬆](#table-of-contents)
+## Documentation
 
 ### Video tutorials
 
@@ -103,7 +104,7 @@ $ git clone nanium-demo
 
 ## Initialization
 
-### Init the server (nodejs) [⬆](#table-of-contents)
+### Init the server (nodejs)
 
 ```bash
 $ npx nanium init
@@ -139,7 +140,7 @@ await Nanium.addManager(new NaniumNodejsProvider({
 }));
 ```
 
-### Init the client (browser) [⬆](#table-of-contents)
+### Init the client (browser)
 
 ```ts
 await Nanium.addManager(new NaniumConsumerBrowserHttp({ apiUrl: '/api' }));
@@ -147,7 +148,7 @@ await Nanium.addManager(new NaniumConsumerBrowserHttp({ apiUrl: '/api' }));
 
 ## Services
 
-### Create a service [⬆](#table-of-contents)
+### Create a service
 
 ```bash
 npx nanium g stuff/get public
@@ -161,7 +162,7 @@ This will generate two files:
 
 ```ts
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { RequestType } from 'nocat/serializers/core';
+import { RequestType } from 'nanium/serializers/core';
 
 export class StuffGetRequestBody {
 }
@@ -177,7 +178,7 @@ export class StuffGetResponse {
 	scope: 'public'
 })
 export class StuffGetRequest extends ServiceRequestBase<StuffGetRequestBody, StuffGetResponse> {
-	static serviceName: string = 'NocatTest:stuff/get';
+	static serviceName: string = 'NaniumTest:stuff/get';
 }
 
 ``` 
@@ -190,12 +191,12 @@ or in a separate file but with the extension __.contractpart.ts__.
   calculates the response.
 
 ```ts
-import { ServiceExecutor } from 'nocat/interfaces/serviceExecutor';
+import { ServiceExecutor } from 'nanium/interfaces/serviceExecutor';
 import { StuffGetRequest, StuffGetResponse } from './get.contract';
 import { ServiceRequestContext } from '../serviceRequestContext';
 
 export class StuffGetExecutor implements ServiceExecutor<StuffGetRequest, StuffGetResponse> {
-	static serviceName: string = 'NocatTest:stuff/get';
+	static serviceName: string = 'NaniumTest:stuff/get';
 
 	async execute(request: StuffGetRequest, executionContext: ServiceRequestContext): Promise<StuffGetResponse> {
 		// todo: Do what ist descriped through the request. Than calculate and return the response.
@@ -203,7 +204,7 @@ export class StuffGetExecutor implements ServiceExecutor<StuffGetRequest, StuffG
 }
 ```
 
-### Execute a service [⬆](#table-of-contents)
+### Execute a service
 
 No mather if you are in a node script or in the browser it is always the same, and you do not need to care about:
 

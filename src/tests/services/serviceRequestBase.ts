@@ -1,6 +1,6 @@
 import { ServiceRequestHead } from './serviceRequestHead';
 import { ServiceResponseBase } from './serviceResponseBase';
-import { Nocat } from '../../core';
+import { Nanium } from '../../core';
 import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry';
 import { ServiceRequestContext } from './serviceRequestContext';
 import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
@@ -23,16 +23,16 @@ export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = 
 	}
 
 	async execute(context: ServiceRequestContext): Promise<ServiceResponseBase<TResponseBody>> {
-		return await Nocat.execute(this, undefined, context);
+		return await Nanium.execute(this, undefined, context);
 	}
 
 	stream(): Observable<TPartialResponse> {
-		return Nocat.stream(this);
+		return Nanium.stream(this);
 	}
 
 	async enqueue(mandatorId: string, options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
 		const serviceName: string = (this.constructor as any).serviceName;
-		return await Nocat.enqueue(
+		return await Nanium.enqueue(
 			<MyServiceRequestQueueEntry>{ serviceName: serviceName, request: this, ...options, mandatorId: mandatorId });
 	}
 }

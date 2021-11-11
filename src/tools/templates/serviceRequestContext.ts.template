@@ -1,5 +1,5 @@
-import { ServiceExecutionContext } from 'nocat/interfaces/serviceExecutionContext';
-import { ServiceExecutionScope } from 'nocat/interfaces/serviceExecutionScope';
+import { ServiceExecutionContext } from 'nanium/interfaces/serviceExecutionContext';
+import { ServiceExecutionScope } from 'nanium/interfaces/serviceExecutionScope';
 
 export class ServiceRequestContext implements ServiceExecutionContext {
 	scope?: ServiceExecutionScope;

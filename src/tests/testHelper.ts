@@ -4,14 +4,14 @@ import * as https from 'https';
 import { Server as HttpsServer } from 'https';
 import * as path from 'path';
 import * as fs from 'fs';
-import { Nocat } from '../core';
-import { NocatNodejsProvider } from '../managers/providers/nodejs';
+import { Nanium } from '../core';
+import { NaniumNodejsProvider } from '../managers/providers/nodejs';
 import { LogMode } from '../interfaces/logMode';
-import { NocatHttpChannel } from '../managers/providers/channels/http';
+import { NaniumHttpChannel } from '../managers/providers/channels/http';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
-import { NocatConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
+import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
@@ -48,13 +48,13 @@ export class TestHelper {
 	static async initClientServerScenario(protocol: 'http' | 'https'): Promise<void> {
 		await this.initHttpServer(protocol);
 
-		// Nocat provider and consumer
+		// Nanium provider and consumer
 		this.hasServerBeenCalled = false;
-		await Nocat.addManager(new NocatNodejsProvider({
+		await Nanium.addManager(new NaniumNodejsProvider({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
 			requestChannels: [
-				new NocatHttpChannel({
+				new NaniumHttpChannel({
 					apiPath: '/api',
 					server: TestHelper.httpServer,
 					executionContextConstructor: ServiceRequestContext
@@ -63,7 +63,7 @@ export class TestHelper {
 			requestInterceptors: { test: TestServerRequestInterceptor },
 			isResponsible: async (): Promise<KindOfResponsibility> => {
 				if (!this.hasServerBeenCalled) {
-					// the first Nocat.Execute will chose the consumer as the responsible manager, the second call from the
+					// the first Nanium.Execute will chose the consumer as the responsible manager, the second call from the
 					// httpServer will say it is responsible. This is a workaround because server and client run in the same tread
 					this.hasServerBeenCalled = true;
 					return 'no';
@@ -77,7 +77,7 @@ export class TestHelper {
 			}
 		}));
 
-		await Nocat.addManager(new NocatConsumerNodejsHttp({
+		await Nanium.addManager(new NaniumConsumerNodejsHttp({
 			apiUrl: 'http://localhost:' + this.port + '/api',
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			handleError: async (err: any): Promise<any> => {
@@ -88,6 +88,6 @@ export class TestHelper {
 
 	static async shutdown(): Promise<void> {
 		this.httpServer.close();
-		await Nocat.shutdown();
+		await Nanium.shutdown();
 	}
 }
