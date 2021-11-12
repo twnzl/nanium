@@ -4,7 +4,7 @@ import { ServiceRequestContext } from '../serviceRequestContext';
 import { Observable, Observer } from 'rxjs';
 
 export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
-	static serviceName: string = 'NaniumSelf.TestQuery';
+	static serviceName: string = 'NaniumTest:test/query';
 
 	stream(request: TestQueryRequest, executionContext: ServiceRequestContext): Observable<TestDto> {
 		return new Observable((observer: Observer<TestDto>): void => {

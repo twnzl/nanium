@@ -85,5 +85,5 @@ export class Stuff<TStuffSubType> {
 	scope: 'public'
 })
 export class StuffRequest extends ServiceRequestBase<Stuff<Date>, Stuff<Date>[]> {
-	static serviceName: string = 'NaniumSelf.Stuff';
+	static serviceName: string = 'NaniumTest:test/stuff';
 }

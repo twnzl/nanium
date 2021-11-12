@@ -7,7 +7,7 @@ import { RequestType } from '../../../serializers/core';
 	scope: 'private'
 })
 export class PrivateStuffRequest extends ServiceRequestBase<number, number> {
-	static serviceName: string = 'NaniumSelf.PrivateStuff';
+	static serviceName: string = 'NaniumTest:test/privateStuff';
 
 	validate(): any[] {
 		if (this.body === 100) {

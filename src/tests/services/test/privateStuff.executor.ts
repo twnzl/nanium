@@ -2,7 +2,7 @@ import { PrivateStuffRequest, PrivateStuffResponse } from './privateStuff.contra
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
 
 export class PrivateStuffExecutor implements ServiceExecutor<PrivateStuffRequest, PrivateStuffResponse> {
-	static serviceName: string = 'NaniumSelf.PrivateStuff';
+	static serviceName: string = 'NaniumTest:test/privateStuff';
 
 	async execute(request: PrivateStuffRequest): Promise<PrivateStuffResponse> {
 		const errors: string[] = request.validate();

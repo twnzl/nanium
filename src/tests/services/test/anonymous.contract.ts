@@ -5,7 +5,7 @@ import { ServiceRequestBase } from '../serviceRequestBase';
 // 	responseType: ServiceResponseBase,
 // })
 export class AnonymousRequest extends ServiceRequestBase<void, string> {
-	static serviceName: string = 'NaniumSelf.Anonymous';
+	static serviceName: string = 'NaniumTest:test/anonymous';
 	static scope: string = 'public';
 	static skipInterceptors: string[] = ['test'];
 }

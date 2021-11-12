@@ -157,7 +157,7 @@ describe('execute TestRequest on server \n', function (): void {
 
 		beforeEach(async function (): Promise<void> {
 			try {
-				privateResponse = await Nanium.execute(privateRequest, 'NaniumSelf.PrivateStuff', { scope: 'public' });
+				privateResponse = await Nanium.execute(privateRequest, 'NaniumTest:test/privateStuff', { scope: 'public' });
 			} catch (e) {
 				err = e;
 			}
@@ -171,7 +171,7 @@ describe('execute TestRequest on server \n', function (): void {
 	describe('When the request comes serialized over HTTP ore something else, the request that ist passed to the executor must be a real instance of the request type not only a DTO \n', function (): void {
 		beforeEach(async function (): Promise<void> {
 			const r: PrivateStuffRequest = <PrivateStuffRequest>{ body: 1, head: { token: '1234' } };
-			privateResponse = await Nanium.execute(r, 'NaniumSelf.PrivateStuff');
+			privateResponse = await Nanium.execute(r, 'NaniumTest:test/privateStuff');
 		});
 
 		it('--> \n', async function (): Promise<void> {
