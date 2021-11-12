@@ -91,7 +91,7 @@ export class NaniumSerializerCore {
 					pi = propertyInfo[property];
 					c = pi.ctor ?? genericTypes[pi.genericTypeId];
 					// @ts-ignore
-					if ([Date, Number, String].includes(c)) {
+					if ([Date, Number, Boolean, String].includes(c)) {
 						result[property] = new c(plain[property]);
 					} else {
 						result[property] = this.plainToClass(plain[property], c, genericTypes);
