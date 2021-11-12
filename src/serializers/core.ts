@@ -84,14 +84,15 @@ export class NaniumSerializerCore {
 		result = new constructor();
 		const propertyInfo: NaniumPropertyInfo = constructor[propertyInfoSymbol];
 		let pi: NaniumPropertyInfoCore;
-		let c: new () => any;
+		let c: new (v?: any) => any;
 		for (const property in plain) {
 			if (plain.hasOwnProperty(property)) {
 				if (propertyInfo?.hasOwnProperty(property)) {
 					pi = propertyInfo[property];
 					c = pi.ctor ?? genericTypes[pi.genericTypeId];
-					if (c === Date) {
-						result[property] = new Date(plain[property]);
+					// @ts-ignore
+					if ([Date, Number, String].includes(c)) {
+						result[property] = new c(plain[property]);
 					} else {
 						result[property] = this.plainToClass(plain[property], c, genericTypes);
 					}
