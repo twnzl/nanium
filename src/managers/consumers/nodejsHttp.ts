@@ -23,7 +23,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			...{
 				apiUrl: 'localhost:8080/api',
 				proxy: null,
-				requestInterceptors: [],
+				requestInterceptors: {},
 				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {
 					console.error(response);
@@ -93,9 +93,11 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	async execute<T>(serviceName: string, request: any): Promise<any> {
 
 		// execute request interceptors
-		if (this.config.requestInterceptors.length) {
-			for (const interceptor of this.config.requestInterceptors) {
-				request = await interceptor.execute(request, {});
+		if (this.config.requestInterceptors) {
+			for (const key in this.config.requestInterceptors) {
+				if (this.config.requestInterceptors.hasOwnProperty(key)) {
+					await new this.config.requestInterceptors[key]().execute(request, {});
+				}
 			}
 		}
 
@@ -104,7 +106,16 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
+
 			const core: Function = async (): Promise<void> => {
+				// interceptors
+				for (const key in this.config.requestInterceptors) {
+					if (this.config.requestInterceptors.hasOwnProperty(key)) {
+						await new this.config.requestInterceptors[key]().execute(request, {});
+					}
+				}
+
+				// transmission
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
 				let seenBytes: number = 0;
@@ -134,16 +145,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 				xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
 			};
 
-			// execute request interceptors
-			if (this.config.requestInterceptors.length) {
-				const promises: Promise<any>[] = [];
-				for (const interceptor of this.config.requestInterceptors) {
-					promises.push(interceptor.execute(request, {}));
-				}
-				Promise.all(promises).then(() => core());
-			} else {
-				core();
-			}
+			core();
 		});
 	}
 }

@@ -150,7 +150,6 @@ function removeFiles(args: string[]): void {
 	console.log(shell.rm('-rf', args[0]).toString());
 }
 
-
 async function generateService([servicePath, scope, namespace]: [string, string, string]): Promise<void> {
 	return new Promise<void>(resolve => {
 		if (!scope) {

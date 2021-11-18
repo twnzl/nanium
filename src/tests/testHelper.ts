@@ -12,6 +12,7 @@ import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
+import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
@@ -79,6 +80,7 @@ export class TestHelper {
 
 		await Nanium.addManager(new NaniumConsumerNodejsHttp({
 			apiUrl: 'http://localhost:' + this.port + '/api',
+			requestInterceptors: { test: TestClientRequestInterceptor },
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			handleError: async (err: any): Promise<any> => {
 				throw err;

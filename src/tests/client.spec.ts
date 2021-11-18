@@ -7,7 +7,7 @@ import { URL } from 'url';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestHelper } from './testHelper';
 
-const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' }, { token: '1234' });
+const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 let response: TestGetResponse;
 

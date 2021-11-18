@@ -12,8 +12,9 @@ import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContex
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
+import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
 
-export class NaniumNodejsProviderConfig {
+export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
 	 * root path where nanium should search for service executor implementations
 	 * if not given - no automatic registration of the services is done,

@@ -11,8 +11,8 @@ import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 
 describe('execute TestRequest on server \n', function (): void {
-	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' }, { token: '1234' });
-	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1, { token: '1234' });
+	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
+	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1);
 	const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 
 	let response: TestGetResponse;
@@ -118,7 +118,10 @@ describe('execute TestRequest on server \n', function (): void {
 					next: (value: TestDto): void => {
 						dtoList.push(value);
 					},
-					complete: (): void => resolve()
+					complete: (): void => resolve(),
+					error: (err: Error) => {
+						console.log(err.message);
+					}
 				});
 			});
 		});

@@ -16,7 +16,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		this.config = {
 			...{
 				apiUrl: '/api',
-				requestInterceptors: [],
+				requestInterceptors: {},
 				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {
 					alert(response);
@@ -42,9 +42,11 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 	async execute<T>(serviceName: string, request: any): Promise<any> {
 
 		// execute request interceptors
-		if (this.config.requestInterceptors.length) {
-			for (const interceptor of this.config.requestInterceptors) {
-				request = await interceptor.execute(request, {});
+		if (this.config.requestInterceptors) {
+			for (const key in this.config.requestInterceptors) {
+				if (this.config.requestInterceptors.hasOwnProperty(key)) {
+					await new this.config.requestInterceptors[key]().execute(request, {});
+				}
 			}
 		}
 
@@ -93,51 +95,48 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
-				const core: Function = async (): Promise<void> => {
-					const xhr: XMLHttpRequest = new XMLHttpRequest();
-					let seenBytes: number = 0;
-					xhr.onreadystatechange = async (): Promise<void> => {
-						if (xhr.readyState === 3) {
-							const r: any = NaniumSerializerCore.plainToClass(
-								await this.config.serializer.deserialize(xhr.response.substr(seenBytes)),
-								request.constructor[responseTypeSymbol],
-								request.constructor[genericTypesSymbol]
-							);
-							if (Array.isArray(r)) {
-								for (const item of r) {
-									observer.next(item);
-								}
-							} else {
-								observer.next(r);
-							}
-							seenBytes = xhr.responseText.length;
-						}
-					};
-					xhr.addEventListener('error', (e: any) => {
-						this.config.handleError(e).then(
-							() => {
-							},
-							(e: any) => {
-								observer.error(e);
-							});
-					});
-					xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-					xhr.setRequestHeader('Content-Type', 'application/json');
-					xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
-				};
-
-				// execute request interceptors
-				if (this.config.requestInterceptors.length) {
-					const promises: Promise<any>[] = [];
-					for (const interceptor of this.config.requestInterceptors) {
-						promises.push(interceptor.execute(request, {}));
+			const core: Function = async (): Promise<void> => {
+				// interceptors
+				for (const key in this.config.requestInterceptors) {
+					if (this.config.requestInterceptors.hasOwnProperty(key)) {
+						await new this.config.requestInterceptors[key]().execute(request, {});
 					}
-					Promise.all(promises).then(() => core());
-				} else {
-					core();
 				}
-			}
-		);
 
+				// transmission
+				const xhr: XMLHttpRequest = new XMLHttpRequest();
+				let seenBytes: number = 0;
+				xhr.onreadystatechange = async (): Promise<void> => {
+					if (xhr.readyState === 3) {
+						const r: any = NaniumSerializerCore.plainToClass(
+							await this.config.serializer.deserialize(xhr.response.substr(seenBytes)),
+							request.constructor[responseTypeSymbol],
+							request.constructor[genericTypesSymbol]
+						);
+						if (Array.isArray(r)) {
+							for (const item of r) {
+								observer.next(item);
+							}
+						} else {
+							observer.next(r);
+						}
+						seenBytes = xhr.responseText.length;
+					}
+				};
+				xhr.addEventListener('error', (e: any) => {
+					this.config.handleError(e).then(
+						() => {
+						},
+						(e: any) => {
+							observer.error(e);
+						});
+				});
+				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
+				xhr.setRequestHeader('Content-Type', 'application/json');
+				xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
+			};
+
+			core();
+		});
 	}
 }
