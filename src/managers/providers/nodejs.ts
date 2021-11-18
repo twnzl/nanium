@@ -31,9 +31,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
 	 * interceptors (code that runs before each request is executed)
 	 */
-	requestInterceptors?: {
-		[name: string]: new() => ServiceRequestInterceptor<any>
-	} = {};
+	requestInterceptors?: (new() => ServiceRequestInterceptor<any>)[];
 
 	/**
 	 * which log output should be made?
@@ -55,7 +53,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 export class NaniumNodejsProvider implements ServiceProviderManager {
 	repository: NaniumRepository;
 	config: NaniumNodejsProviderConfig = {
-		requestInterceptors: {},
+		requestInterceptors: [],
 		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		handleError: async (err: any): Promise<any> => {
 			throw err;
@@ -204,13 +202,15 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 	 * execute request interceptors
 	 */
 	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext, requestType: any): Promise<void> {
-		for (const interceptorName of Object.keys(this.config.requestInterceptors)) {
-			const interceptor: new() => ServiceRequestInterceptor<any> = this.config.requestInterceptors[interceptorName];
+		if (!this.config.requestInterceptors?.length) {
+			return;
+		}
+		for (const interceptor of this.config.requestInterceptors) {
 			if (
 				requestType.skipInterceptors === true ||
-				(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.indexOf(interceptorName) >= 0) ||
+				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor)) ||
 				((requestType.skipInterceptors ?? {})[context.scope] === true) ||
-				((Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && requestType.skipInterceptors[context.scope].indexOf(interceptorName) >= 0)
+				((Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && !requestType.skipInterceptors[context.scope].includes(interceptor))
 			) {
 				continue;
 			}

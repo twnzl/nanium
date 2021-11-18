@@ -61,7 +61,7 @@ export class TestHelper {
 					executionContextConstructor: ServiceRequestContext
 				})
 			],
-			requestInterceptors: { test: TestServerRequestInterceptor },
+			requestInterceptors: [TestServerRequestInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => {
 				if (!this.hasServerBeenCalled) {
 					// the first Nanium.Execute will chose the consumer as the responsible manager, the second call from the
@@ -80,7 +80,7 @@ export class TestHelper {
 
 		await Nanium.addManager(new NaniumConsumerNodejsHttp({
 			apiUrl: 'http://localhost:' + this.port + '/api',
-			requestInterceptors: { test: TestClientRequestInterceptor },
+			requestInterceptors: [TestClientRequestInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			handleError: async (err: any): Promise<any> => {
 				throw err;

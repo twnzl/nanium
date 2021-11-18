@@ -20,9 +20,7 @@ export interface ServiceProviderConfig {
 	/**
 	 * interceptors (code that runs before each request is executed)
 	 */
-	requestInterceptors?: {
-		[name: string]: new() => ServiceRequestInterceptor<any>
-	};
+	requestInterceptors?: (new() => ServiceRequestInterceptor<any>)[];
 
 	/**
 	 * exception handling function

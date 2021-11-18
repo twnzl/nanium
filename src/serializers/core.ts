@@ -1,10 +1,11 @@
 import { ServiceExecutionScope } from '../interfaces/serviceExecutionScope';
+import { ServiceRequestInterceptor } from '../interfaces/serviceRequestInterceptor';
 
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
 export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');
 export const propertyInfoSymbol: symbol = Symbol.for('__Nanium__PropertyInfo__');
 export const scopeProperty: string = 'scope';
-export const skipInterceptorsProperty: string = 'scope';
+export const skipInterceptorsProperty: string = 'skipInterceptors';
 
 export class NaniumPropertyInfo {
 	[prop: string]: NaniumPropertyInfoCore;
@@ -28,7 +29,7 @@ export class NaniumRequestInfo {
 		[id: string]: new() => any;
 	};
 	scope?: ServiceExecutionScope = 'private';
-	skipInterceptors?: boolean | string[] | { [scope: string]: boolean | string[]; } = false;
+	skipInterceptors?: boolean | (new() => ServiceRequestInterceptor<any>)[] | { [scope in ServiceExecutionScope]: boolean | (new() => ServiceRequestInterceptor<any>)[]; } = false;
 }
 
 export function Type(clazz: new () => any): Function {

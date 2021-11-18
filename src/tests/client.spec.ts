@@ -6,6 +6,8 @@ import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestHelper } from './testHelper';
+import { AnonymousRequest } from './services/test/anonymous.contract';
+import { ServiceResponseBase } from './services/serviceResponseBase';
 
 const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
@@ -51,6 +53,18 @@ describe('host services via http \n', function (): void {
 
 		it('--> the original request listener of the server should have handled the request \n', async () => {
 			expect(result).toBe('*** http fallback ***');
+		});
+	});
+
+	describe('execute and skip interceptor \n', function (): void {
+		const anonymousRequest: AnonymousRequest = new AnonymousRequest(undefined, {});
+		let anonymousResponse: ServiceResponseBase<string>;
+		beforeEach(async function (): Promise<void> {
+			anonymousResponse = await anonymousRequest.execute(executionContext);
+		});
+
+		it('--> \n', async function (): Promise<void> {
+			expect(anonymousResponse.body, 'output should be correct').toBe(':-)');
 		});
 	});
 });

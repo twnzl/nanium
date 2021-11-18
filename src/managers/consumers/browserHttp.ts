@@ -16,7 +16,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		this.config = {
 			...{
 				apiUrl: '/api',
-				requestInterceptors: {},
+				requestInterceptors: [],
 				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {
 					alert(response);
@@ -42,11 +42,9 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 	async execute<T>(serviceName: string, request: any): Promise<any> {
 
 		// execute request interceptors
-		if (this.config.requestInterceptors) {
-			for (const key in this.config.requestInterceptors) {
-				if (this.config.requestInterceptors.hasOwnProperty(key)) {
-					await new this.config.requestInterceptors[key]().execute(request, {});
-				}
+		if (this.config.requestInterceptors?.length) {
+			for (const interceptorClass of this.config.requestInterceptors) {
+				await new interceptorClass().execute(request, {});
 			}
 		}
 

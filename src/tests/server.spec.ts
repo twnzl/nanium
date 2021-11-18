@@ -5,7 +5,6 @@ import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
-import { AnonymousRequest } from './services/test/anonymous.contract';
 import { LogMode } from '../interfaces/logMode';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { ServiceRequestContext } from './services/serviceRequestContext';
@@ -22,7 +21,7 @@ describe('execute TestRequest on server \n', function (): void {
 		await Nanium.addManager(new NaniumNodejsProvider({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
-			requestInterceptors: { test: TestServerRequestInterceptor },
+			requestInterceptors: [TestServerRequestInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			handleError: async (err: any): Promise<any> => {
 				if (err.hasOwnProperty('code')) {
@@ -45,18 +44,6 @@ describe('execute TestRequest on server \n', function (): void {
 		it('--> \n', async function (): Promise<void> {
 			expect(response.body.output1, 'output1 should be correct').toBe('hello world :-)');
 			expect(response.body.output2, 'output2 should be correct').toBe(2);
-		});
-	});
-
-	describe('execute skip interceptor \n', function (): void {
-		const anonymousRequest: AnonymousRequest = new AnonymousRequest();
-		let anonymousResponse: ServiceResponseBase<string>;
-		beforeEach(async function (): Promise<void> {
-			anonymousResponse = await anonymousRequest.execute(executionContext);
-		});
-
-		it('--> \n', async function (): Promise<void> {
-			expect(anonymousResponse.body, 'output should be correct').toBe(':-)');
 		});
 	});
 
