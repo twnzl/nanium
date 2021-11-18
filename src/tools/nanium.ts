@@ -89,8 +89,7 @@ const config: NaniumToolConfig = (function (): NaniumToolConfig {
 			break;
 		}
 		if (path.resolve(path.join(root, '/..')) === root) {
-			console.error('nanium.json not found');
-			process.exit(1);
+			root = process.cwd();
 			break;
 		}
 		root = path.resolve(path.join(root, '/..'));
@@ -367,16 +366,21 @@ async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
 		// tsconfig.json
 		config.sdkTsConfig.compilerOptions = config.sdkTsConfig.compilerOptions ?? {};
 		config.sdkTsConfig.compilerOptions.outDir = path.join(tmpDir, 'dst');
-		config.sdkTsConfig.include = [
-			'**/*.contract.ts',
-			'**/*.dto.ts'
-		];
+		if (!config.sdkTsConfig.include) {
+			config.sdkTsConfig.include = [
+				'**/*.contract.ts',
+				'**/*.contractpart.ts',
+				'**/*.dto.ts'
+			];
+		} else {
+			config.sdkTsConfig.include.push('**/*.contract.ts');
+			config.sdkTsConfig.include.push('**/*.dto.ts');
+		}
 		fs.writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify(config.sdkTsConfig, null, 2));
 
 		// nanium basics
 		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src'));
 		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), path.join(tmpDir, 'src'));
-		shell.cp(path.join(serviceSrcDir, 'serviceRequestQueueEntry.ts'), path.join(tmpDir, 'src'));
 
 		// copy contract ts files to src dir
 		const files: string[] = await findFiles(serviceSrcDir, [(f: string, stats: Stats): boolean =>
