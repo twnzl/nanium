@@ -82,23 +82,22 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 	async init(): Promise<void> {
 
 		// init repository
-		if (this.config.servicePath) {
-			const files: string[] = await findFiles(this.config.servicePath,
-				[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
-			for (const file of files) {
-				const request: any = NaniumNodejsProvider.findClassWithServiceNameProperty(require(path.resolve(file)));
-				if (!request) {
-					if (Nanium.logMode >= LogMode.warning) {
-						console.warn('invalid contract file (no request class found): ' + file);
-					}
-					continue;
+		this.config.servicePath = this.config.servicePath ?? 'services';
+		const files: string[] = await findFiles(this.config.servicePath,
+			[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
+		for (const file of files) {
+			const request: any = NaniumNodejsProvider.findClassWithServiceNameProperty(require(path.resolve(file)));
+			if (!request) {
+				if (Nanium.logMode >= LogMode.warning) {
+					console.warn('invalid contract file (no request class found): ' + file);
 				}
-				const executor: any = NaniumNodejsProvider.findClassWithServiceNameProperty(
-					require(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
-				this.addService(request, executor);
-				if (Nanium.logMode >= LogMode.info) {
-					console.log('service ready: ' + executor.serviceName);
-				}
+				continue;
+			}
+			const executor: any = NaniumNodejsProvider.findClassWithServiceNameProperty(
+				require(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
+			this.addService(request, executor);
+			if (Nanium.logMode >= LogMode.info) {
+				console.log('service ready: ' + executor.serviceName);
 			}
 		}
 
