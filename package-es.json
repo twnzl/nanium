@@ -1,5 +1,5 @@
 {
-  "name": "nanium-es6",
+  "name": "nanium-es",
   "version": "0.10.3",
   "description": "nanoservice based fullstack software architecture framework",
   "repository": {},
@@ -16,7 +16,7 @@
   "scripts": {
     "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "clean": "rm -r dist",
-    "build": "tsc --build tsconfig-es6.json",
+    "build": "tsc --build tsconfig-es.json",
     "cleanbuild": "npm run clean && build",
     "test": "node $NODE_DEBUG_OPTION node_modules/jasmine/bin/jasmine dist/**/*.spec.js"
   },
@@ -24,9 +24,9 @@
     "core.js",
     "core.d.ts",
     "interfaces/*.js",
-    "interfaces/*.ts",
-    "managers/browserClient.d.ts",
-    "managers/browserClient.js"
+    "interfaces/*.d.ts",
+    "managers/consumers/browserHttp.d.ts",
+    "managers/consumers/browserHttp.js"
   ],
   "dependencies": {
     "mongodb": "^4.1.2",
