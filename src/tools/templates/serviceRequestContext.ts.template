@@ -11,8 +11,8 @@ export class ServiceRequestContext implements ServiceExecutionContext {
 		Object.assign(this, data);
 	}
 
-	asPrivate(): TestExecutionContext {
-		return new TestExecutionContext({
+	asPrivate(): ServiceRequestContext {
+		return new ServiceRequestContext({
 			...this,
 			...{ scope: 'private' }
 		});

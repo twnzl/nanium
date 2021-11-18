@@ -3,11 +3,9 @@ import { ServiceRequestBase } from './serviceRequestBase';
 import { ServiceRequestContext } from './serviceRequestContext';
 
 export class RequestInterceptor implements ServiceRequestInterceptor<ServiceRequestBase<any, any>> {
-	request: ServiceRequestBase<any, any>;
-	executionContext: ServiceRequestContext;
 
 	async execute(request: ServiceRequestBase<any, any>, executionContext: ServiceRequestContext): Promise<ServiceRequestBase<any, any>> {
-		// todo: check authorization or do what ever you want to do with each incoming request before it will be executed
+		// todo: check authorization, or do what ever you want to do with each incoming request before it will be executed
 		return request;
 	}
 }

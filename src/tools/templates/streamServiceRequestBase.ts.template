@@ -13,7 +13,7 @@ export class StreamServiceRequestBase<TRequestBody, TResult> {
 
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
-		this.body = body;
+		this.body =  body ?? {} as TRequestBody;
 		this.head = head;
 	}
 
