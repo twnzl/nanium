@@ -30,7 +30,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	async init(): Promise<void> {
 		if (!this.config.apiUrl.startsWith('http')) {
-			this.config.apiUrl = window.location.protocol + '//' + window.location.host + this.config.apiUrl;
+			this.config.apiUrl = window.location.protocol + '//' + window.location.host +
+				(this.config.apiUrl.startsWith('/') ? '' : '/') + this.config.apiUrl;
 		}
 	}
 
