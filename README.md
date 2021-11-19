@@ -44,22 +44,21 @@ if (response.isGoodStuff()) {
 - [Philosophy](#Philosophy)
 - [Installation](#Installation)
 - [Documentation](#Documentation)
-    - [Video tutorials](#Video tutorials)
+    - [Video tutorials](#Video-tutorials)
         - [Concepts](#Concepts)
-        - [Best practices](#Best practices)
-        - [Demo app](#Demo app)
+        - [Best practices](#Best-practices)
+        - [Demo app](#Demo-app)
     - [Initialization](#Initialization)
         - [Init the server (nodejs)](#Init-the-server-(nodejs))
         - [Init the client (browser)](#Init-the-client-(browser))
     - [Services](#Services)
-        - [Create a service](#Create a service)
-        - [Execute a service](#Execute a service)
+        - [Create a service](#Create-a-service)
+        - [Execute a service](#Execute-a-service)
     - [Streaming](#Streaming)
     - [Interceptors](#Interceptors)
     - [Queues](#Queues)
     - [Events](#Events)
     - [Tests](#Tests)
-    - ...
 
 ## Philosophy
 
@@ -382,6 +381,66 @@ export class AnonymousRequest extends ServiceRequestBase<void, string> {
 
 ## Queues
 
+Maybe you want to execute a request at a later time or periodically, or you just want to have a log of executed requests
+and it's results, and a chance to restart any failed requests. Or things like that. Then a request queue is what you
+need.
+
+Every nanoservice within a nanium based app can be executed via queue. You just have to decide what kind of queue you
+want to use, and make it known to nanium. Use an existing queue or provide your own (use a database, the filesystem, a
+google sheet or whatever - it's up to you). E.g. using the mongodb queue, which holds requests in a mongodb collection,
+would look like this:
+
+### Install the wanted queue
+
+```bash
+npm i --save nanium-queue-mongodb
+```
+
+### Add the queue
+
+```ts
+const mongoQueue = new NaniumMongoQueue({
+	checkInterval: 10,
+	serverUrl: 'mongodb://localhost:27017',
+	databaseName: 'nanium_test',
+	collectionName: 'rq',
+});
+await Nanium.addQueue(mongoQueue);
+```
+
+### Add a request from code
+
+```ts
+await new AdminInfoMailSendRequest('hello admin').enqueue({ startDate: new Date('2099-31-01T00:00:00.000Z') });
+```
+
+This is a server-only-feature because of security reasons. To use it from a client, just crate a public service that
+wraps the enqueue and use your default authorization mechanism.
+
+### Add a request directly into the queue
+
+Of course, you can also add requests directly to the collection using a mongodb client or the shell or whatever. State
+must be 'ready';
+
+```js
+db.requestQueue.insert([
+  {
+    "serviceName": "NaniumDemo:adminInfoMail/send",
+    "groupId": "",
+    "request": {
+      "body": {
+        text: "hello admin"
+      }
+    },
+    "response": null,
+    "state": "ready",
+    "startDate": "2085-02-06T14:40:24.555Z",
+    "endDate": null,
+    "interval": 3600,
+    "endOfInterval": null
+  }])
+```
+
 ## Tests
 
 ## Events
@@ -389,5 +448,4 @@ export class AnonymousRequest extends ServiceRequestBase<void, string> {
 coming soon!
 
 ## REST
-
-##         
+           
