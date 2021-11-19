@@ -47,13 +47,14 @@ if (response.isGoodStuff()) {
     - [Video tutorials](#Video-tutorials)
         - [Concepts](#Concepts)
         - [Best practices](#Best-practices)
-        - [Demo app](#Demo-app)
+    - [Demo app](#Demo-app)
     - [Initialization](#Initialization)
         - [Init the server (nodejs)](#Init-the-server-(nodejs))
         - [Init the client (browser)](#Init-the-client-(browser))
     - [Services](#Services)
         - [Create a service](#Create-a-service)
         - [Execute a service](#Execute-a-service)
+        - [Prepare the contracts](#Prepare-the-contracts)
     - [Streaming](#Streaming)
     - [Interceptors](#Interceptors)
     - [Queues](#Queues)
@@ -96,7 +97,7 @@ Probably the best way to start are the video tutorials at ...
 - [Creating own channels, consumers, queues]
 - ...
 
-#### Demo app
+### Demo app
 
 You can download a ready-to-take-off-demo app via
 
@@ -216,10 +217,99 @@ need to care about:
 const response = new StuffRequest().execute();
 ```
 
+### Prepare the contracts
+
+Until today the typescript compiler does not support generation of type information, to use them at runtime. But this
+information is necessary to make the contract serialization and deserialization work. Therefore, nanium uses decorators
+to fill this gap.
+
+Currently, There are three essential decorators.
+
+- __@Type()__: All properties of a contract class or subclass that do not have a primitive type must be decorated with
+  @Type(). The parameter is the class/constructor of the decorated property.
+- __@GenericType()__: If a property has a generic type that uses a type valiable from the parent class, an identifier
+  for this type variable must be provided using @GenericType()
+- __@RequestType()__: Use the property 'responseType' to set the class of the response. And for each defined generic
+  type identifier specify the concrete class using the property 'genericTypes'
+
+Excample:
+
+```ts
+export class GenericStuff<TStuffSubType> {
+	aString?: string;
+	aNumber?: number;
+	aBoolean?: boolean;
+
+	@GenericType('TStuffSubType')
+	theGeneric?: TStuffSubType;
+}
+
+
+export enum StuffEnum {
+	zero = 'z',
+	one = 'o',
+	two = 't'
+}
+
+export class Stuff<TStuffSubType> {
+	aString?: string;
+	aNumber?: number;
+	aBoolean?: boolean;
+	anEnum?: StuffEnum;
+
+	@Type(Date)
+	aDate?: Date;
+
+	@Type(Stuff)
+	anObject?: Stuff<TStuffSubType>;
+
+	@Type(Stuff)
+	anObjectArray?: Stuff<TStuffSubType>[];
+
+	aStringArray?: string[];
+
+	@Type(GenericStuff)
+	aGenericObject?: GenericStuff<TStuffSubType>;
+
+	@Type(GenericStuff)
+	aGenericObjectArray?: GenericStuff<TStuffSubType>[];
+
+	get aCalculatedProperty(): string {
+		return this.aStringArray?.join(' ');
+	}
+
+	aFunction(): number {
+		return this.aStringArray?.length;
+	}
+}
+
+@RequestType({
+	responseType: Stuff,
+	genericTypes: {
+		TStuffSubType: Date,
+		TRequestBody: Stuff,
+		TResponseBody: Stuff,
+		TPartialResponse: Stuff
+	},
+	scope: 'public'
+})
+export class StuffRequest extends ServiceRequestBase<Stuff<Date>, Stuff<Date>[]> {
+	static serviceName: string = 'NaniumTest:test/stuff';
+}
+```
+
+Further decorators are planned, with which you will have more possibilities to adjust which data shall leave the server
+in which case. For example properties can be skipped depending on the executing user or rights or other properties of
+the executionContext.
+
+```ts
+const response = new StuffRequest().execute();
+```
+
 ## Streaming
 
-If you want a service executor to provide the possibility to send multiple parts of the results you can create a
-streamed service by:
+If you want a service executor to provide the possibility to return partial results, you can create a streamed service
+by:
 
 ```bash
 nanium gs stuff/query public
@@ -447,5 +537,77 @@ db.requestQueue.insert([
 
 coming soon!
 
+A provider can emit Events:
+
+```ts
+new StuffAddedEvent(stuff).emit();
+```
+
+Consumers may subscribe to events:
+
+```ts
+StuffAddedEvent.subscribe(
+	(value: Stuff) => {
+		refreshLocalCache<Stuff>(stuff);
+	},
+	(e: Error) => {
+		document.write(e.message);
+	}
+);
+```
+
+The concrete implementation of the event manager, that cares for subscriptions and transmissions is changeable.
+
+```ts
+Nanium.addEventManager(new HttpEventManager({
+	server: httpServer
+}));
+```
+
 ## REST
-           
+
+When RESTful webservices became topical, they felt really cool. Mainly because they released us from things like soap
+services which had been far more stressful. They also made us feel like we were using the HTTP protocol correctly.
+
+But let us be honest: If you had a choice, would you really use it for webservices?
+
+It is the protocol that rules the internet. Every browser speaks, many tools are based on it and nealy every device can
+deal with it out of the box. Therefore, it is the best choice. But what favor are we doing ourselves, when we force
+ourselves to decode the input for services into a URI - always struggling with the correct form and much less than only
+untyped. Why should we try to map the responses of our services to ancient HTTP-Codes that have been designed for
+something completely different? And yes, it may be a kind of sporting challenge trying to transform a service based
+thinking to a resource based thinking, but does this really help?
+
+Yes, we should use HTTP but we should not hardwire our service logic to this ancient protocol to be able to change it,
+if better things appear on the horizon. And we should not feel guilty, if we for example just always use a post to send
+data, because even if REST appears to be more correct, it is also just abuse of a protocol designed for something
+different.
+
+Nevertheless, if you don't want to do without nanium features yourself but still feel better if you can offer a REST
+service, then nanium makes it possible.
+
+```bash
+npm i nanium-channel-express-rest
+```
+
+```ts
+this.expressApp = express();
+this.expressApp.listen(3000);
+
+await Nanium.addManager(new NaniumNodejsProvider({
+	servicePath: 'dist/testservices',
+	requestChannels: [
+		new NaniumExpressRestChannel({
+			apiBasePath: '/api',
+			expressApp: this.expressApp,
+			executionContextConstructor: Object
+		})
+	]
+}));
+```
+
+This provides a REST-style API using the paths of service contract files to create the endpoint and the name of the
+contract file to choose the HTTP-method. It is not perfect, but if you want more just use it as a base do extend it. 
+
+
+
