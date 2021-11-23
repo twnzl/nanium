@@ -31,7 +31,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
 	 * interceptors (code that runs before each request is executed)
 	 */
-	requestInterceptors?: (new() => ServiceRequestInterceptor<any>)[];
+	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
 
 	/**
 	 * which log output should be made?
@@ -215,7 +215,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 			) {
 				continue;
 			}
-			await new interceptor().execute(request, context);
+			await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, context);
 		}
 	}
 

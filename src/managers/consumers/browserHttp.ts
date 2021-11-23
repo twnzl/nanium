@@ -43,8 +43,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 		// execute request interceptors
 		if (this.config.requestInterceptors?.length) {
-			for (const interceptorClass of this.config.requestInterceptors) {
-				await new interceptorClass().execute(request, {});
+			for (const interceptor of this.config.requestInterceptors) {
+				await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
 			}
 		}
 
@@ -95,10 +95,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		return new Observable<any>((observer: Observer<any>): void => {
 			const core: Function = async (): Promise<void> => {
 				// interceptors
-				for (const key in this.config.requestInterceptors) {
-					if (this.config.requestInterceptors.hasOwnProperty(key)) {
-						await new this.config.requestInterceptors[key]().execute(request, {});
-					}
+				for (const interceptor of this.config.requestInterceptors) {
+					await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
 				}
 
 				// transmission
