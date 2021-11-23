@@ -23,7 +23,7 @@ many problems of traditional ways of building client-server applications.
 nanium g stuff/get public
 ```
 
-2. execute it, no mather if you are on the server or the client
+2. execute it, no matter if you are on the server or the client
 
 ```ts
 const response: Stuff = new StuffGetRequest({ id: 1 }).execute();
@@ -63,7 +63,7 @@ if (response.isGoodStuff()) {
 
 ## Philosophy
 
-todo: big picture (architecture)
+todo: big picture (architecture) (coming soon!)
 
 ## Installation
 
@@ -99,7 +99,7 @@ Probably the best way to start are the video tutorials at ...
 
 ### Demo app
 
-You can download a ready-to-take-off-demo app via
+You can download a ready-to-take-off demo app via
 
 ```bash
 $ git clone nanium-demo
@@ -210,7 +210,7 @@ export class StuffGetExecutor implements ServiceExecutor<StuffGetRequest, StuffG
 
 ### Execute a service
 
-No mather if you are in the node script that hosts the service or in the browser - it is always the same, and you do not
+No matter if you are in the node script that hosts the service or in the browser - it is always the same, and you do not
 need to care about:
 
 ```ts
@@ -346,7 +346,7 @@ of an expensive operation but can start to use parts of it as soon as they are a
 
 ## Exception/Error handling
 
-If a service executor throws an Error, it can be caught as usual when using promises. Again no mather if within the
+If a service executor throws an Error, it can be caught as usual when using promises. Again no matter if within the
 server or on a remote client.
 
 ```ts
@@ -533,9 +533,33 @@ db.requestQueue.insert([
 
 ## Tests
 
+Due to the loosely coupled nature of nanium, it is easy to swap implementations. So in your server unit tests you should
+just let the servicePath-Property of the NaniumNodejsProvider empty, so no services will be registered. And in the
+second step, add the original service you want to test. And add mock implementations for services that are used by this
+test unit.
+
+```ts
+// init nanium
+beforeEach(async () => {
+	const provider: NaniumNodejsProvider = new NaniumNodejsProvider({/* servicePath: '' */ });
+	await Nanium.addManager(provider);
+	provider.addService(StuffCalculateRequest, SuffCalculateExecutor);
+	provider.addService(MockStuffStoreRequest, MockStuffQueryExecutor);
+	provider.addService(MockStuffQueryRequest, class {
+		async execute(_request: MockStuffQueryRequest, _executionContext: ServiceRequestContext): Promise<StuffDto[]> {
+			return [];
+		}
+	});
+});
+
+beforeEach(async () => {
+	await Nanium.shutdown();
+});
+```
+
 ## Events
 
-coming soon!
+(coming soon!)
 
 A provider can emit Events:
 
@@ -564,6 +588,49 @@ Nanium.addEventManager(new HttpEventManager({
 }));
 ```
 
+## SDKs
+
+If you want to use your services in another project, or you want to provide an easy way to consume them to other
+persons, you can easily generate a sdk.
+
+```bash
+nanium sdk b 
+```
+
+This will generate a npm bundle as a .tgz file, that contains all your public contracts.
+
+```bash
+nanium sdk p 
+```
+
+will publish it directly to the npm registry. So, after using "npm i nanium <your-sdk>" in the other project, you will
+have all you need to create and execute requests of the oder project/domain. Just use the __isResponsible__ property to
+adjust which nanium-provider or nanium-consumer is responsible for which services. Most of the time, the namespace of
+the services should be enough to distinguish that.
+
+```ts
+// foreign services
+const domain1ServiceConsumer: NocatConsumerNodejsHttp = new NocatConsumerNodejsHttp({
+	apiUrl: "http://.../api",
+	isResponsible: (_request: any, serviceName: string) => Promise.resolve(serviceName.startsWith('Domain1:') ? 'yes' : 'no')
+});
+await Nocat.addManager(domain1ServiceConsumer);
+
+// own services
+const myServiceProvider: NocatNodejsProvider = new NocatNodejsProvider({
+	servicePath: path.join(__dirname, 'services'),
+	isResponsible: (_request: any, _serviceName: string) => Promise.resolve('fallback'),
+});
+await Nocat.addManager(myServiceProvider);
+```
+
+You can use the property "sdkPackage" in the nanium.json to specify any values you want to have in the package.json of
+the sdk bundle. And if you want to have other typescript compiler settings you can put them to the property
+"sdkTsConfig" in the nanium.json.
+
+The sdk features will surely be completed one day so that, as an alternative to the SDK, also a default API
+documentation can be generated, but for typescript users the SDK is far better than just a documentation.
+
 ## REST
 
 When RESTful webservices became topical, they felt really cool. Mainly because they released us from things like soap
@@ -578,7 +645,7 @@ untyped. Why should we try to map the responses of our services to ancient HTTP-
 something completely different? And yes, it may be a kind of sporting challenge trying to transform a service based
 thinking to a resource based thinking, but does this really help?
 
-Yes, we should use HTTP but we should not hardwire our service logic to this ancient protocol to be able to change it,
+Yes, we should use HTTP, but we should not hardwire our service logic to this ancient protocol to be able to change it,
 if better things appear on the horizon. And we should not feel guilty, if we for example just always use a post to send
 data, because even if REST appears to be more correct, it is also just abuse of a protocol designed for something
 different.

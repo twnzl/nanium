@@ -2,20 +2,29 @@
   "name": "nanium",
   "version": "0.10.3",
   "description": "nanoservice based fullstack software architecture framework",
-  "repository": {},
+  "author": "twnzl",
   "license": "MIT",
-  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/twnzl/nanium.git"
+  },
+  "bugs": {
+    "url": "https://github.com/twnzl/nanium/issues"
+  },
+  "homepage": "https://github.com/twnzl/nanium.git#readme",
   "main": "core.js",
   "bin": {
     "nanium": "tools/nanium.js"
   },
   "types": "**/*.ts",
   "keywords": [
-    "nanoservices",
+    "nanium",
     "framework",
-    "typescript"
+    "typescript",
+    "API",
+    "rest",
+    "nanoservices"
   ],
-  "author": "twnzl",
   "scripts": {
     "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "clean": "ts-node src/tools/nanium.ts rm dist",
@@ -28,6 +37,7 @@
     "bundle-es": "npm run cleanbuild && tsc --build tsconfig-es.json && cp package-es.json dist/package.json && npm publish ./dist"
   },
   "files": [
+    "README.md",
     "core.js",
     "core.d.ts",
     "helper.js",
