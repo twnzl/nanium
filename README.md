@@ -41,7 +41,6 @@ if (response.isGoodStuff()) {
 
 - [Features](#Features)
 - [Short and sweet](#Short-and-sweet)
-- [Philosophy](#Philosophy)
 - [Installation](#Installation)
 - [Documentation](#Documentation)
     - [Video tutorials](#Video-tutorials)
@@ -60,10 +59,6 @@ if (response.isGoodStuff()) {
     - [Queues](#Queues)
     - [Events](#Events)
     - [Tests](#Tests)
-
-## Philosophy
-
-todo: big picture (architecture) (coming soon!)
 
 ## Installation
 
