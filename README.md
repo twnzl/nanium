@@ -59,6 +59,8 @@ if (response.isGoodStuff()) {
     - [Queues](#Queues)
     - [Events](#Events)
     - [Tests](#Tests)
+    - [REST](#REST)
+    - [Extensibility](#Extensibility)
 
 ## Installation
 
@@ -661,15 +663,17 @@ await Nanium.addManager(new NaniumNodejsProvider({
 	requestChannels: [
 		new NaniumExpressRestChannel({
 			apiBasePath: '/api',
-			expressApp: this.expressApp,
-			executionContextConstructor: Object
+			expressApp: this.expressApp
 		})
 	]
 }));
 ```
 
 This provides a REST-style API using the paths of service contract files to create the endpoint and the name of the
-contract file to choose the HTTP method. It is not perfect, but if you want more just use it as a base to extend it. 
+contract file to choose the HTTP method. It is not perfect, but if you want more just use it as a base to extend it.
 
+## Extensibility
 
-
+Nanium defines interfaces for all its basic parts and each of these building blocks is interchangeable. So you can
+create your own managers (provider or consumer), channels, interceptors, serializers and queues.   
+Just write your own component that implements the corresponding interface.
