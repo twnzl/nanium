@@ -2,7 +2,7 @@
 
 Nanium is the material that modern web applications and APIs are made of.
 
-It is a nanoservice based fullstack software architecture framework that takes full advantage of typescript to solve
+It is a nanoservice-based fullstack software architecture framework that takes full advantage of typescript to solve
 many problems of traditional ways of building client-server applications.
 
 ## Features
@@ -10,9 +10,9 @@ many problems of traditional ways of building client-server applications.
 * seamlessly type-save even across API borders
 * full-featured objects (instead of plain data transfer objects) on both sides of the API
 * maximum reusable logic for server and client
-* easily exchangeable transfer protocols (http, websockets, tcp, ...) and formats (json, xml, ...).
+* easily exchangeable transfer protocols (http, websockets, tcp, etc.) and formats (json, xml, etc.).
 * automatic generation of SDKs for the services you offer
-* decide at build time how to host your services (microservices, monolith, ...) and which services shall be included
+* decide at build time how to host your services (microservices, monolith, etc.) and which services should be included
 * faster, cleaner and more flexible way to develop software
 
 ## Short and sweet
@@ -23,7 +23,7 @@ many problems of traditional ways of building client-server applications.
 nanium g stuff/get public
 ```
 
-2. execute it, no matter if you are on the server or the client
+2. execute it whether you are on the server or the client
 
 ```ts
 const response: Stuff = new StuffGetRequest({ id: 1 }).execute();
@@ -75,8 +75,7 @@ $ npm install nanium
 
 ### Video tutorials
 
-Probably the best way to start are the video tutorials at ...
-(coming soon!)
+The best way to get started is to watch the video tutorials ... (coming soon!)
 
 #### Concepts
 
@@ -125,9 +124,9 @@ For now, leave them as they are. Later you can adapt this to meet your needs.
 
 In the 'nanium.json'
 
-Next create a node script, initiate a default Http Server and add a ServiceProvider with a http channel. Channels are
-ways to through which public services can be executed from outside the server (e.g. a webclient using http/websockets or
-another server using tcp).
+Next create a node script, initiate a default Http Server and add a ServiceProvider with an HTTP channel. Channels are
+ways to through which public services can be executed from outside the server (e.g. a web client using http/websockets
+or another server using tcp).
 
 ```ts
 const httpServer: HttpServer = http.createServer(() => {
@@ -187,9 +186,9 @@ export class StuffGetRequest extends ServiceRequestBase<StuffGetRequestBody, Stu
 
 ``` 
 
-Probably most of the time you would use instances of your domains entities instead of StuffGetRequestBody and
-StuffGetResponse. So you can delete this generated classes and define your own either within the same .contract.ts file
-or in a separate file but with the extension __.contractpart.ts__.
+Probably most of the time you would use instances of your domain's entities instead of StuffGetRequestBody and
+StuffGetResponse. So you can delete these generated classes and define your own, either within the same .contract.ts
+file or in a separate file but with the extension __.contractpart.ts__.
 
 - __services/stuff/get.executor.ts__: The implementation of the service. It uses the values of the request and
   calculates the response.
@@ -203,15 +202,15 @@ export class StuffGetExecutor implements ServiceExecutor<StuffGetRequest, StuffG
 	static serviceName: string = 'NaniumTest:stuff/get';
 
 	async execute(request: StuffGetRequest, executionContext: ServiceRequestContext): Promise<StuffGetResponse> {
-		// todo: Do what ist described through the request. Than calculate and return the response.
+		// todo: Do what is described through the request, calculate the resppnse and return it.
 	}
 }
 ```
 
 ### Execute a service
 
-No matter if you are in the node script that hosts the service or in the browser - it is always the same, and you do not
-need to care about:
+Whether you're in the node script that hosts the service or in the browser, it's the same thing, and you do not have to
+worry about.
 
 ```ts
 const response = new StuffRequest().execute();
@@ -219,20 +218,20 @@ const response = new StuffRequest().execute();
 
 ### Prepare the contracts
 
-Until today the typescript compiler does not support generation of type information, to use them at runtime. But this
-information is necessary to make the contract serialization and deserialization work. Therefore, nanium uses decorators
-to fill this gap.
+Unfortunately, the typescript compiler still does not support the generation of type information that can be used at
+runtime. But this information is necessary to make the contract serialization and deserialization work. Therefore,
+nanium uses decorators to fill this gap.
 
-Currently, There are three essential decorators.
+Currently, there are three essential decorators.
 
 - __@Type()__: All properties of a contract class or subclass that do not have a primitive type must be decorated with
   @Type(). The parameter is the class/constructor of the decorated property.
-- __@GenericType()__: If a property has a generic type that uses a type valiable from the parent class, an identifier
+- __@GenericType()__: If a property has a generic type that uses a type variable from the parent class, an identifier
   for this type variable must be provided using @GenericType()
 - __@RequestType()__: Use the property 'responseType' to set the class of the response. And for each defined generic
   type identifier specify the concrete class using the property 'genericTypes'
 
-Excample:
+Example:
 
 ```ts
 export class GenericStuff<TStuffSubType> {
@@ -298,9 +297,9 @@ export class StuffRequest extends ServiceRequestBase<Stuff<Date>, Stuff<Date>[]>
 }
 ```
 
-Further decorators are planned, with which you will have more possibilities to adjust which data shall leave the server
-in which case. For example properties can be skipped depending on the executing user or rights or other properties of
-the executionContext.
+Further decorators are planned, with which you will have more options to adjust which data will leave the server in
+which case. For example properties can be skipped depending on the executing user or rights or other properties of the
+executionContext.
 
 ```ts
 const response = new StuffRequest().execute();
@@ -340,14 +339,14 @@ export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest
 
 The overall result of this example service is a List of instances of class TestDto. But it will return only one per
 second until 10. So the client can, for example, show the result list immediately and subscribe to the Observable to add
-each new record as soon as it will arrive. It is not recommended using this to implement a sort of event mechanism.
-Events will be supported directly by nanium shortly. It is meant for that clients must not wait for the whole response
-of an expensive operation but can start to use parts of it as soon as they are available.
+each new record as soon as it arrives. It is not recommended using this to implement a sort of event mechanism. Events
+will be supported directly by nanium shortly. It is meant so that clients do not have to wait for the whole response of
+an expensive operation but can start to use parts of it as soon as they are available.
 
 ## Exception/Error handling
 
-If a service executor throws an Error, it can be caught as usual when using promises. Again no matter if within the
-server or on a remote client.
+If a service executor throws an Error, it can be caught as usual when using promises. Again, it does not matter whether
+you are on the server or on a remote client.
 
 ```ts
 try {
@@ -357,7 +356,7 @@ try {
 }
 ```
 
-Because streamed services would return Observables you would use the error handler of the Observable in that case.
+Since streamed services would return Observables you would use the error handler of the Observable in that case.
 
 ```ts
 const response = new StuffRequest().stream().subscribe({
@@ -373,17 +372,18 @@ const response = new StuffRequest().stream().subscribe({
 
 ## Interceptors
 
-An interceptor is some code that can analyze or change a request on consumer site before it is sent to a provider or on
-provider site before it will be executed. Typically, you would use this e.g. on a web client to add authentication
-information to the request before it will be sent to the server, or on the server site to check the authentication.
+An interceptor is a piece of code that can analyse or modify a request, either on the consumer side before it is sent to
+a provider, or on the provider side before it is executed. Typically, you would use this e.g. on a web client to add
+authentication information to the request before it will be sent to the server, or on the server site to check the
+authentication.
 
 ### implement a request interceptor for consumer site
 
-In this example a client-request-interceptor is implemented as an angular service. If the user has already logged into
-the application it adds the auth-token from the users' session. Additionally, it adds the preferred language and
-timezone of the current user so the server can take this into account. The head of the ServiceRequestBase class ist the
-best place for such always needed/usable information. If the user is not logged in, it loads the login page and returns
-undefined to cancel the request.
+In this example a client request interceptor is implemented as an angular service. If the user has already logged into
+the application it adds the auth-token from the users' session. Additionally, it adds the preferred language and time
+zone of the current user so the server can take this into account. The head of the ServiceRequestBase class is the best
+place for this type of always needed/usable information. If the user is not logged in, it loads the login page and
+returns undefined to cancel the request.
 
 ```ts
 @Injectable({ providedIn: 'root' })
@@ -411,10 +411,10 @@ export class ClientRequestInterceptorService implements ServiceRequestIntercepto
 
 ### implement a request interceptor for provider site
 
-ng init will create an example interceptor 'main.interceptor.ts', you can use it as a template for a serverside request
-interceptor. For an authentication interceptor e.g. check the user and password (or whatever) in the request and add the
-user entity from the database to the executionContext, so the executor or later interceptors will have access to the
-whole user information. If the credentials are not right, throw an error.
+"nanium init" will create an example interceptor 'main.interceptor.ts', which you can use as a template for a
+server-side request interceptor. For an authentication interceptor e.g. check the user and password (as the case may be)
+in the request and add the user entity from the database to the executionContext, so the executor or later interceptors
+will have access to all user information. If the credentials are not right, throw an error.
 
 ```ts
 import { ServiceRequestInterceptor } from 'nanium/interfaces/serviceRequestInterceptor';
@@ -441,8 +441,8 @@ export class RequestInterceptor implements ServiceRequestInterceptor<ServiceRequ
 ### register an interceptor
 
 Set the property 'requestInterceptors' of the provider or consumer that is passed to the Nanium.addManager() function.
-It is an array of interceptor classes (need a parameterless constructor), so you can add multiple interceptors which are
-executed sequentially according to its order in the array.
+It is an array of interceptor classes (needing a parameterless constructor) or instances, so you can add multiple
+interceptors which are executed sequentially according to its order in the array.
 
 ```ts
 await Nanium.addManager(new NaniumConsumerBrowserHttp({
@@ -453,10 +453,10 @@ await Nanium.addManager(new NaniumConsumerBrowserHttp({
 
 ### skip interceptors
 
-E.g. If you have an interceptor that checks authentication, but you want to have a service that is callable without
-authorization (anonymous), you can skip the execution of this interceptor for this special service. To do that use the
-property 'skipInterceptors' of the RequestType Decorator. If set to true, then all interceptors are skipped. If you only
-want to skip specific interceptors use an array with the interceptor classes to skip.
+For example, if you have an interceptor that checks authentication, but you want to have a service that is callable
+without authorization (anonymous), you can skip the execution of this interceptor for this special service. To do so use
+the property 'skipInterceptors' of the RequestType Decorator. If set to true, then all interceptors are skipped. If you
+only want to skip specific interceptors, use an array with the interceptor classes or instances to skip.
 
 ```ts
 @RequestType({
@@ -472,15 +472,15 @@ export class AnonymousRequest extends ServiceRequestBase<void, string> {
 ## Queues
 
 Maybe you want to execute a request at a later time or periodically, or you just want to have a log of executed requests
-and it's results, and a chance to restart any failed requests. Or things like that. Then a request queue is what you
+and their results, and a chance to restart any failed requests, or similar. In that case, a request queue is what you
 need.
 
-Every nanoservice within a nanium based app can be executed via queue. You just have to decide what kind of queue you
+Every nanoservice within a nanium-based app can be executed via queue. You just have to decide what kind of queue you
 want to use, and make it known to nanium. Use an existing queue or provide your own (use a database, the filesystem, a
-google sheet or whatever - it's up to you). E.g. using the mongodb queue, which holds requests in a mongodb collection,
-would look like this:
+Google sheet or whatever you prefer - it's up to you). For Example, using the mongodb queue, which holds requests in a
+mongodb collection, would look like this:
 
-### Install the wanted queue
+### Install the desired queue
 
 ```bash
 npm i --save nanium-queue-mongodb
@@ -504,13 +504,13 @@ await Nanium.addQueue(mongoQueue);
 await new AdminInfoMailSendRequest('hello admin').enqueue({ startDate: new Date('2099-31-01T00:00:00.000Z') });
 ```
 
-This is a server-only-feature because of security reasons. To use it from a client, just crate a public service that
+This is a server-only feature because of security reasons. To use it from a client, just crate a public service that
 wraps the enqueue and use your default authorization mechanism.
 
 ### Add a request directly into the queue
 
-Of course, you can also add requests directly to the collection using a mongodb client or the shell or whatever. State
-must be 'ready';
+Of course, you can also add requests directly to the collection using a mongodb client or the shell, etc. The state must
+be set to 'ready';
 
 ```js
 db.requestQueue.insert([
@@ -534,7 +534,7 @@ db.requestQueue.insert([
 ## Tests
 
 Due to the loosely coupled nature of nanium, it is easy to swap implementations. So in your server unit tests you should
-just let the servicePath-Property of the NaniumNodejsProvider empty, so no services will be registered. And in the
+just leave the servicePath-Property of the NaniumNodejsProvider empty, so no services will be registered. And in the
 second step, add the original service you want to test. And add mock implementations for services that are used by this
 test unit.
 
@@ -580,7 +580,7 @@ StuffAddedEvent.subscribe(
 );
 ```
 
-The concrete implementation of the event manager, that cares for subscriptions and transmissions is changeable.
+The specific implementation of the event manager, which takes care of subscriptions and transmissions is changeable.
 
 ```ts
 Nanium.addEventManager(new HttpEventManager({
@@ -590,8 +590,8 @@ Nanium.addEventManager(new HttpEventManager({
 
 ## SDKs
 
-If you want to use your services in another project, or you want to provide an easy way to consume them to other
-persons, you can easily generate a sdk.
+If you want to use your services in another project, or if you want to provide an easy way for other people to use them,
+you can easily create an SDK.
 
 ```bash
 nanium sdk b 
@@ -603,10 +603,10 @@ This will generate a npm bundle as a .tgz file, that contains all your public co
 nanium sdk p 
 ```
 
-will publish it directly to the npm registry. So, after using "npm i nanium <your-sdk>" in the other project, you will
-have all you need to create and execute requests of the oder project/domain. Just use the __isResponsible__ property to
-adjust which nanium-provider or nanium-consumer is responsible for which services. Most of the time, the namespace of
-the services should be enough to distinguish that.
+Using the option "p", will publish it directly to the npm registry. So, after using "npm i nanium <your-sdk>" in the
+other project, you will have all you need to create and execute requests of the oder project/domain. Just use the __
+isResponsible__ property to adjust which nanium-provider or nanium-consumer is responsible for which services. Most of
+the time, the namespace of the services should be enough to distinguish that.
 
 ```ts
 // foreign services
@@ -624,30 +624,30 @@ const myServiceProvider: NocatNodejsProvider = new NocatNodejsProvider({
 await Nocat.addManager(myServiceProvider);
 ```
 
-You can use the property "sdkPackage" in the nanium.json to specify any values you want to have in the package.json of
-the sdk bundle. And if you want to have other typescript compiler settings you can put them to the property
-"sdkTsConfig" in the nanium.json.
+You can use the property "sdkPackage" in the nanium.json to specify all the values you want to have in the package.json
+of the sdk bundle. And if you want to have other settings for the Typescript compiler, you can set them in the "
+sdkTsConfig" property in the nanium.json.
 
-The sdk features will surely be completed one day so that, as an alternative to the SDK, also a default API
-documentation can be generated, but for typescript users the SDK is far better than just a documentation.
+The sdk functions will surely be completed one day, so that alternatively to the SDK a standard API documentation can be
+generated as an alternative to the SDK, but for Typescript users the SDK is far better than just documentation.
 
 ## REST
 
-When RESTful webservices became topical, they felt really cool. Mainly because they released us from things like soap
-services which had been far more stressful. They also made us feel like we were using the HTTP protocol correctly.
+When RESTful webservices became current, they felt really cool. Mainly because they released us from things like soap
+services, which had been far more stressful. They also made us feel like we were using the HTTP protocol correctly.
 
-But let us be honest: If you had a choice, would you really use it for webservices?
+But let's be honest: If you had a choice, would you really use it for web services?
 
-It is the protocol that rules the internet. Every browser speaks, many tools are based on it and nealy every device can
-deal with it out of the box. Therefore, it is the best choice. But what favor are we doing ourselves, when we force
-ourselves to decode the input for services into a URI - always struggling with the correct form and much less than only
-untyped. Why should we try to map the responses of our services to ancient HTTP-Codes that have been designed for
-something completely different? And yes, it may be a kind of sporting challenge trying to transform a service based
-thinking to a resource based thinking, but does this really help?
+It is the protocol that governs the internet. Every browser speaks it, many tools are based on it and nearly every
+device can deal with it out of the box. Therefore, it is the best choice. But what favor do we do ourselves, when we
+force ourselves to decode the input for services into a URI - always struggling with the correct form. It is much less
+than only untyped. Why should we try to map the responses of our services to ancient HTTP-Codes that have been designed
+for something completely different? And yes, it may be a kind of sporting challenge trying to transform a service
+oriented thinking to a resource oriented thinking, but does this really help?
 
-Yes, we should use HTTP, but we should not hardwire our service logic to this ancient protocol to be able to change it,
-if better things appear on the horizon. And we should not feel guilty, if we for example just always use a post to send
-data, because even if REST appears to be more correct, it is also just abuse of a protocol designed for something
+Yes, we should use HTTP, but we should not hardwire our service logic to this ancient protocol, so that we can change it
+if something better appears on the horizon. And we should not feel guilty, if we for example just always use a post to
+send data, because even if REST appears to be more correct, it is also just abuse of a protocol designed for something
 different.
 
 Nevertheless, if you don't want to do without nanium features yourself but still feel better if you can offer a REST
@@ -674,7 +674,7 @@ await Nanium.addManager(new NaniumNodejsProvider({
 ```
 
 This provides a REST-style API using the paths of service contract files to create the endpoint and the name of the
-contract file to choose the HTTP-method. It is not perfect, but if you want more just use it as a base do extend it. 
+contract file to choose the HTTP method. It is not perfect, but if you want more just use it as a base to extend it. 
 
 
 
