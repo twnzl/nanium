@@ -44,9 +44,9 @@ export class NaniumHttpChannel implements RequestChannel {
 						const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
 						await this.process(deserialized, res);
 					});
-				} else {
-					listener(req, res);
 				}
+				// original listener
+				listener(req, res);
 			});
 		});
 	}
