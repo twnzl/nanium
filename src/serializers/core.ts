@@ -14,7 +14,8 @@ export class NaniumPropertyInfo {
 export class NaniumPropertyInfoCore {
 	constructor(
 		public ctor: new (data?: any) => any,
-		public genericTypeId?: string
+		public genericTypeId?: string,
+		public isArray?: boolean
 	) {
 	}
 }
@@ -39,6 +40,13 @@ export function Type(clazz: new () => any): Function {
 	};
 }
 
+export function ArrayType(clazz: new () => any): Function {
+	return (target: new () => any, propertyKey: string) => {
+		target.constructor[propertyInfoSymbol] = target.constructor[propertyInfoSymbol] ?? {};
+		target.constructor[propertyInfoSymbol][propertyKey] = new NaniumPropertyInfoCore(clazz, undefined, true);
+	};
+}
+
 export function GenericType(genericTypeId: string): Function {
 	return (target: new () => any, propertyKey: string) => {
 		target.constructor[propertyInfoSymbol] = target.constructor[propertyInfoSymbol] ?? {};
@@ -57,7 +65,7 @@ export function RequestType(info: NaniumRequestInfo): Function {
 
 export class NaniumSerializerCore {
 
-	static plainToClass(plain: any, constructor: new () => any, genericTypes?: NaniumGenericTypeInfo): any {
+	static plainToClass(plain: any, constructor: new (data?: any) => any, genericTypes?: NaniumGenericTypeInfo): any {
 		// undefined or null
 		if (plain === undefined || plain === null) {
 			return plain;
@@ -74,11 +82,19 @@ export class NaniumSerializerCore {
 
 		// array
 		if (Array.isArray(plain)) {
-			result = [];
-			for (const item of plain) {
-				result.push(this.plainToClass(item, constructor, genericTypes));
-			}
-			return result;
+			return plain.map(item => this.plainToClass(item, constructor, genericTypes));
+		}
+
+		// simple Type or Date
+		switch (constructor) {
+			case Date:
+				return new Date(plain);
+			case Number:
+				return parseFloat(plain);
+			case Boolean:
+				return plain === 'true' || plain === true;
+			case String:
+				return plain;
 		}
 
 		// object
@@ -91,9 +107,8 @@ export class NaniumSerializerCore {
 				if (propertyInfo?.hasOwnProperty(property)) {
 					pi = propertyInfo[property];
 					c = pi.ctor ?? genericTypes[pi.genericTypeId];
-					// @ts-ignore
-					if ([Date, Number, Boolean, String].includes(c)) {
-						result[property] = new c(plain[property]);
+					if (pi.isArray && !Array.isArray(plain[property])) {
+						result[property] = [this.plainToClass(plain[property], constructor, genericTypes)];
 					} else {
 						result[property] = this.plainToClass(plain[property], c, genericTypes);
 					}

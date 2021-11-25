@@ -24,9 +24,11 @@ export class TestHelper {
 		if (protocol === 'http') {
 			// http server
 			this.httpServer = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-				res.write('*** http fallback ***');
-				res.statusCode = 200;
-				res.end();
+				if (!/^\/api[\/#?]/gi.test(req.url)) {
+					res.write('*** http fallback ***');
+					res.statusCode = 200;
+					res.end();
+				}
 			});
 			this.httpServer.listen(this.port);
 		}

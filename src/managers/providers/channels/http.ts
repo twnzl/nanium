@@ -37,16 +37,26 @@ export class NaniumHttpChannel implements RequestChannel {
 			this.config.server.on('request', async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
 				if (req.method.toLowerCase() === 'post' && req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
 					const data: any[] = [];
-					req.on('data', (chunk: any) => {
-						data.push(chunk);
-					}).on('end', async () => {
-						const body: string = Buffer.concat(data).toString();
-						const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
-						await this.process(deserialized, res);
+					await new Promise<void>((resolve: Function, reject: Function) => {
+						req.on('data', (chunk: any) => {
+							data.push(chunk);
+						}).on('end', async () => {
+							try {
+								const body: string = Buffer.concat(data).toString();
+								const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
+								await this.process(deserialized, res);
+								resolve();
+							} catch (e) {
+								reject(e);
+							}
+						});
 					});
 				}
 				// original listener
 				listener(req, res);
+				if (!res.writableEnded) {
+					res.end();
+				}
 			});
 		});
 	}
@@ -97,7 +107,6 @@ export class NaniumHttpChannel implements RequestChannel {
 				res.statusCode = 500;
 				res.write(await config.serializer.serialize(e));
 			}
-			res.end();
 		}
 	}
 }

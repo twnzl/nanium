@@ -1,23 +1,104 @@
-import { GenericStuff, Stuff, StuffEnum, StuffRequest } from './services/test/stuff.contract';
+import { GenericStuff, Stuff, StuffNumberEnum2, StuffRequest, StuffStringEnum } from './services/test/stuff.contract';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestHelper } from './testHelper';
 import { ServiceResponseBase } from './services/serviceResponseBase';
+import { NaniumSerializerCore } from '../serializers/core';
 
-let request: StuffRequest;
+let request: StuffRequest = null;
 let response: ServiceResponseBase<Stuff<Date>[]>;
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 
 beforeAll(async () => {
 	await TestHelper.initClientServerScenario('http');
+});
 
-	request = new StuffRequest(
+afterAll(async () => {
+	await TestHelper.shutdown();
+});
+
+describe('JsonToClassSerializer \n', function (): void {
+
+	describe('execute with all types of properties set in the request \n', function (): void {
+		beforeEach(async () => {
+			request = getRequest();
+			response = await request.execute(executionContext);
+		});
+
+		it(
+			'--> the request and all its properties should have the right types on the server \n' +
+			' and the response and all its properties should have the right types on the client ',
+			async () => {
+				// if something is wrong with the request on the server an exception would be thrown;
+				expect(Array.isArray(response)).toBeTruthy();
+				expect(response[0] instanceof Stuff).toBeTruthy();
+				expect(response[0].aDate instanceof Date).toBeTruthy();
+				expect(response[0].aDate.toISOString()).toBe(new Date(1600000000000).toISOString());
+				expect(response[0].aBoolean).toBe(true);
+				expect(response[0].aNumber).toBe(42);
+				expect(response[0].aString).toBe('hello');
+				expect(response[0].aStringArray[0]).toBe('hello');
+				expect(response[0].aStringArray[1]).toBe('world');
+				expect(response[0].aNumberArray[0]).toBe(1);
+				expect(response[0].aNumberArray[1]).toBe(2);
+				expect(response[0].anotherNumberArray[0]).toBe(3);
+				expect(response[0].anEnum).toBe(StuffStringEnum.one);
+				expect(response[0].anObject instanceof Stuff).toBeTruthy();
+				expect(response[0].anObject.aNumber).toBe(46);
+				expect(response[0].anObjectArray[0] instanceof Stuff).toBeTruthy();
+				expect(response[0].anObjectArray[0].aNumber).toBe(43);
+				expect(response[0].aCalculatedProperty).toBe('hello world');
+				expect(response[0].aFunction()).toBe(2);
+				expect(response[0].aGenericObject instanceof GenericStuff).toBeTruthy();
+				expect((response[0].aGenericObject as GenericStuff<Date>).theGeneric instanceof Date).toBeTruthy();
+				expect((response[0].aGenericObject as GenericStuff<Date>).theGeneric.toISOString()).toBe(new Date(1600000000005).toISOString());
+				expect(response[0].aGenericObjectArray[0] instanceof GenericStuff).toBeTruthy();
+				expect(response[0].aGenericObjectArray[0].theGeneric instanceof Date).toBeTruthy();
+				expect((response[0].aGenericObjectArray[0] as GenericStuff<Date>).theGeneric.toISOString()).toBe(new Date(1600000000006).toISOString());
+			});
+	});
+});
+
+describe('plainToClass \n', function (): void {
+	describe('object not deserialized from json (e.g. from querystring)\n', function (): void {
+		beforeEach(async () => {
+			request = getRequest();
+			const strangeRequest: any = await JSON.parse(JSON.stringify(request));
+			strangeRequest.body.aBoolean = request.body.aBoolean.toString();
+			strangeRequest.body.aDate = request.body.aDate.toString();
+			strangeRequest.body.aStringEnum = request.body.aStringEnum.toString();
+			strangeRequest.body.aNumberEnum = request.body.aNumberEnum.toString();
+			strangeRequest.body.aNumber = request.body.aNumber.toString();
+			strangeRequest.body.aNumberArray = request.body.aNumberArray.map(v => v.toString());
+			strangeRequest.body.anotherNumberArray = strangeRequest.body.anotherNumberArray[0].toString();
+			request = NaniumSerializerCore.plainToClass(strangeRequest, StuffRequest);
+		});
+
+		it('-->  \n', async function (): Promise<void> {
+			expect(request.body.aNumber).toBe(request.body.aNumber);
+			expect(request.body.aBoolean).toBe(request.body.aBoolean);
+			expect(request.body.aDate).toBe(request.body.aDate);
+			expect(request.body.aStringEnum).toBe(request.body.aStringEnum);
+			expect(request.body.aNumberEnum).toBe(request.body.aNumberEnum);
+			expect(request.body.aNumberArray[0]).toBe(request.body.aNumberArray[0]);
+			expect(request.body.aNumberArray[1]).toBe(request.body.aNumberArray[1]);
+			expect(request.body.anotherNumberArray[0]).toBe(request.body.anotherNumberArray[0]);
+		});
+	});
+});
+
+//#region helper
+function getRequest(): StuffRequest {
+	return new StuffRequest(
 		{
 			aBoolean: true,
 			aDate: new Date(1600000000000),
 			aString: 'hello',
 			aStringArray: ['hello', 'world'],
+			aNumberArray: [1, 2],
+			anotherNumberArray: [3],
 			aNumber: 42,
-			anEnum: StuffEnum.one,
+			aStringEnum: StuffStringEnum.one,
+			aNumberEnum: StuffNumberEnum2.two,
 			anObjectArray: [
 				new Stuff({
 					aBoolean: true,
@@ -59,47 +140,6 @@ beforeAll(async () => {
 			]
 		},
 		{ token: '1234' });
-});
+}
 
-afterAll(async () => {
-	await TestHelper.shutdown();
-});
-
-describe('JsonToClassSerializer \n', function (): void {
-
-	describe('execute with all types of properties set in the request \n', function (): void {
-		beforeEach(async () => {
-			response = await request.execute(executionContext);
-		});
-
-		it(
-			'--> the request and all its properties should have the right types on the server \n' +
-			' and the response and all its properties should have the right types on the client ',
-			async () => {
-				// if something is wrong with the request on the server an exception would be thrown;
-				expect(Array.isArray(response)).toBeTruthy();
-				expect(response[0] instanceof Stuff).toBeTruthy();
-				expect(response[0].aDate instanceof Date).toBeTruthy();
-				expect(response[0].aDate.toISOString()).toBe(new Date(1600000000000).toISOString());
-				expect(response[0].aBoolean).toBe(true);
-				expect(response[0].aNumber).toBe(42);
-				expect(response[0].aString).toBe('hello');
-				expect(response[0].aStringArray[0]).toBe('hello');
-				expect(response[0].aStringArray[1]).toBe('world');
-				expect(response[0].anEnum).toBe(StuffEnum.one);
-				expect(response[0].anObject instanceof Stuff).toBeTruthy();
-				expect(response[0].anObject.aNumber).toBe(46);
-				expect(response[0].anObjectArray[0] instanceof Stuff).toBeTruthy();
-				expect(response[0].anObjectArray[0].aNumber).toBe(43);
-				expect(response[0].aCalculatedProperty).toBe('hello world');
-				expect(response[0].aFunction()).toBe(2);
-				expect(response[0].aGenericObject instanceof GenericStuff).toBeTruthy();
-				expect((response[0].aGenericObject as GenericStuff<Date>).theGeneric instanceof Date).toBeTruthy();
-				expect((response[0].aGenericObject as GenericStuff<Date>).theGeneric.toISOString()).toBe(new Date(1600000000005).toISOString());
-				expect(response[0].aGenericObjectArray[0] instanceof GenericStuff).toBeTruthy();
-				expect(response[0].aGenericObjectArray[0].theGeneric instanceof Date).toBeTruthy();
-				expect((response[0].aGenericObjectArray[0] as GenericStuff<Date>).theGeneric.toISOString()).toBe(new Date(1600000000006).toISOString());
-			});
-	});
-});
-
+//#endregion helper
