@@ -9,9 +9,7 @@ export class ${coreClassName}Response {
 
 @RequestType({
 ${indentString}responseType: ${coreClassName}Response,
-${indentString}genericTypes: {
-${indentString}${indentString}TRequestBody: ${coreClassName}RequestBody
-${indentString}},
+${indentString}genericTypes: { TRequestBody: ${coreClassName}RequestBody },
 ${indentString}scope: '${scope}'
 })
 export class ${coreClassName}Request extends ServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
