@@ -1,4 +1,4 @@
-import { GenericStuff, Stuff, StuffNumberEnum2, StuffRequest, StuffStringEnum } from './services/test/stuff.contract';
+import { GenericStuff, Stuff, StuffNumberEnum, StuffRequest, StuffStringEnum } from './services/test/stuff.contract';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestHelper } from './testHelper';
 import { ServiceResponseBase } from './services/serviceResponseBase';
@@ -41,7 +41,8 @@ describe('JsonToClassSerializer \n', function (): void {
 				expect(response[0].aNumberArray[0]).toBe(1);
 				expect(response[0].aNumberArray[1]).toBe(2);
 				expect(response[0].anotherNumberArray[0]).toBe(3);
-				expect(response[0].anEnum).toBe(StuffStringEnum.one);
+				expect(response[0].aStringEnum).toBe(StuffStringEnum.one);
+				expect(response[0].aNumberEnum).toBe(StuffNumberEnum.two);
 				expect(response[0].anObject instanceof Stuff).toBeTruthy();
 				expect(response[0].anObject.aNumber).toBe(46);
 				expect(response[0].anObjectArray[0] instanceof Stuff).toBeTruthy();
@@ -60,6 +61,7 @@ describe('JsonToClassSerializer \n', function (): void {
 
 describe('plainToClass \n', function (): void {
 	describe('object not deserialized from json (e.g. from querystring)\n', function (): void {
+		let request2: StuffRequest;
 		beforeEach(async () => {
 			request = getRequest();
 			const strangeRequest: any = await JSON.parse(JSON.stringify(request));
@@ -67,21 +69,25 @@ describe('plainToClass \n', function (): void {
 			strangeRequest.body.aDate = request.body.aDate.toString();
 			strangeRequest.body.aStringEnum = request.body.aStringEnum.toString();
 			strangeRequest.body.aNumberEnum = request.body.aNumberEnum.toString();
+			strangeRequest.body.aStringEnumArray = request.body.aStringEnumArray[0].toString();
+			strangeRequest.body.aNumberEnumArray = request.body.aNumberEnumArray[0].toString();
 			strangeRequest.body.aNumber = request.body.aNumber.toString();
 			strangeRequest.body.aNumberArray = request.body.aNumberArray.map(v => v.toString());
 			strangeRequest.body.anotherNumberArray = strangeRequest.body.anotherNumberArray[0].toString();
-			request = NaniumSerializerCore.plainToClass(strangeRequest, StuffRequest);
+			request2 = NaniumSerializerCore.plainToClass(strangeRequest, StuffRequest);
 		});
 
 		it('-->  \n', async function (): Promise<void> {
-			expect(request.body.aNumber).toBe(request.body.aNumber);
-			expect(request.body.aBoolean).toBe(request.body.aBoolean);
-			expect(request.body.aDate).toBe(request.body.aDate);
-			expect(request.body.aStringEnum).toBe(request.body.aStringEnum);
-			expect(request.body.aNumberEnum).toBe(request.body.aNumberEnum);
-			expect(request.body.aNumberArray[0]).toBe(request.body.aNumberArray[0]);
-			expect(request.body.aNumberArray[1]).toBe(request.body.aNumberArray[1]);
-			expect(request.body.anotherNumberArray[0]).toBe(request.body.anotherNumberArray[0]);
+			expect(request2.body.aNumber).toBe(request.body.aNumber);
+			expect(request2.body.aBoolean).toBe(request.body.aBoolean);
+			expect(request2.body.aDate.toString()).toBe(request.body.aDate.toString());
+			expect(request2.body.aStringEnum).toBe(request.body.aStringEnum);
+			expect(request2.body.aNumberEnum).toBe(request.body.aNumberEnum);
+			expect(request2.body.aStringEnumArray[0]).toBe(request.body.aStringEnumArray[0]);
+			expect(request2.body.aNumberEnumArray[0]).toBe(request.body.aNumberEnumArray[0]);
+			expect(request2.body.aNumberArray[0]).toBe(request.body.aNumberArray[0]);
+			expect(request2.body.aNumberArray[1]).toBe(request.body.aNumberArray[1]);
+			expect(request2.body.anotherNumberArray[0]).toBe(request.body.anotherNumberArray[0]);
 		});
 	});
 });
@@ -98,7 +104,9 @@ function getRequest(): StuffRequest {
 			anotherNumberArray: [3],
 			aNumber: 42,
 			aStringEnum: StuffStringEnum.one,
-			aNumberEnum: StuffNumberEnum2.two,
+			aNumberEnum: StuffNumberEnum.two,
+			aStringEnumArray: [StuffStringEnum.one],
+			aNumberEnumArray: [StuffNumberEnum.two],
 			anObjectArray: [
 				new Stuff({
 					aBoolean: true,

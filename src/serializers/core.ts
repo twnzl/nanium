@@ -108,7 +108,7 @@ export class NaniumSerializerCore {
 					pi = propertyInfo[property];
 					c = pi.ctor ?? genericTypes[pi.genericTypeId];
 					if (pi.isArray && !Array.isArray(plain[property])) {
-						result[property] = [this.plainToClass(plain[property], constructor, genericTypes)];
+						result[property] = [this.plainToClass(plain[property], c, genericTypes)];
 					} else {
 						result[property] = this.plainToClass(plain[property], c, genericTypes);
 					}
