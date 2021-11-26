@@ -26,7 +26,7 @@ export enum StuffStringEnum {
 	two = 't'
 }
 
-export enum StuffNumberEnum2 {
+export enum StuffNumberEnum {
 	zero,
 	one,
 	two
@@ -62,7 +62,10 @@ export class Stuff<TStuffSubType> {
 	aStringEnum?: StuffStringEnum;
 
 	@Type(Number)
-	aNumberEnum?: StuffNumberEnum2;
+	aNumberEnum?: StuffNumberEnum;
+
+	@ArrayType(String) aStringEnumArray?: StuffStringEnum[];
+	@ArrayType(Number) aNumberEnumArray?: StuffNumberEnum[];
 
 	@Type(Date)
 	aDate?: Date;

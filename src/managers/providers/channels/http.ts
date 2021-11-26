@@ -35,6 +35,9 @@ export class NaniumHttpChannel implements RequestChannel {
 		this.config.server.listeners('request').forEach((listener: (...args: any[]) => void) => {
 			this.config.server.removeListener('request', listener);
 			this.config.server.on('request', async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+				// original listener
+				listener(req, res);
+				// handle nanium api requests
 				if (req.method.toLowerCase() === 'post' && req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
 					const data: any[] = [];
 					await new Promise<void>((resolve: Function, reject: Function) => {
@@ -45,17 +48,13 @@ export class NaniumHttpChannel implements RequestChannel {
 								const body: string = Buffer.concat(data).toString();
 								const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
 								await this.process(deserialized, res);
+								res.end();
 								resolve();
 							} catch (e) {
 								reject(e);
 							}
 						});
 					});
-				}
-				// original listener
-				listener(req, res);
-				if (!res.writableEnded) {
-					res.end();
 				}
 			});
 		});
