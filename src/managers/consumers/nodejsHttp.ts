@@ -9,6 +9,8 @@ import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
 import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
+import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
+import { EventHandler } from '../../interfaces/eventHandler';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -30,6 +32,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					return Promise.resolve();
 				},
 				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+				isResponsibleForEvent: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			},
 			...(config || {})
 		};
@@ -143,5 +146,17 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 
 			core();
 		});
+	}
+
+	emit(eventName: string, event: any, context: ServiceExecutionContext): any {
+		throw new Error('not yet implemented');
+	}
+
+	async isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility> {
+		return await this.config.isResponsibleForEvent(eventName);
+	}
+
+	subscribe(eventName: string, handler: EventHandler): any {
+		throw new Error('not yet implemented');
 	}
 }

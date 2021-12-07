@@ -1,6 +1,6 @@
 import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
 import { KindOfResponsibility } from './kindOfResponsibility';
-import { RequestChannel } from './requestChannel';
+import { Channel } from './channel';
 import { ServiceExecutionContext } from './serviceExecutionContext';
 
 export interface ServiceProviderConfig {
@@ -15,7 +15,7 @@ export interface ServiceProviderConfig {
 	/**
 	 * array of channels through which request can be transmitted to the provider
 	 */
-	requestChannels?: RequestChannel[];
+	channels?: Channel[];
 
 	/**
 	 * interceptors (code that runs before each request is executed)

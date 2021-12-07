@@ -2,7 +2,7 @@ import { Stats } from 'fs';
 import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
 import { Observable, Observer } from 'rxjs';
-import { RequestChannel } from '../../interfaces/requestChannel';
+import { Channel } from '../../interfaces/channel';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { LogMode } from '../../interfaces/logMode';
 import { Nanium } from '../../core';
@@ -13,6 +13,7 @@ import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
+import { EventHandler } from '../../interfaces/eventHandler';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -26,7 +27,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
 	 * array of transport adaptors
 	 */
-	requestChannels?: RequestChannel[] = [];
+	channels?: Channel[] = [];
 
 	/**
 	 * interceptors (code that runs before each request is executed)
@@ -47,6 +48,12 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	 * returns if the Manager is responsible for the given Service
 	 */
 	isResponsible?: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
+
+	/**
+	 * returns if the Manager is responsible for the given eventName
+	 * @param eventName
+	 */
+	isResponsibleForEvent?: (eventName: string) => Promise<KindOfResponsibility>;
 }
 
 
@@ -55,6 +62,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 	config: NaniumNodejsProviderConfig = {
 		requestInterceptors: [],
 		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+		isResponsibleForEvent: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}
@@ -102,8 +110,8 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		}
 
 		// init channels over which requests can come from public scope
-		if (this.config.requestChannels && this.config.requestChannels.length) {
-			for (const channel of this.config.requestChannels) {
+		if (this.config.channels && this.config.channels.length) {
+			for (const channel of this.config.channels) {
 				await channel.init(this.repository);
 			}
 		}
@@ -217,6 +225,19 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 			}
 			await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, context);
 		}
+	}
+
+	async emit(eventName: string, event: any, context: ServiceExecutionContext): Promise<void> {
+		for (const channel of this.config.channels) {
+			await channel.emitEvent(event, context);
+		}
+	}
+
+	async isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility> {
+		return await this.config.isResponsibleForEvent(eventName);
+	}
+
+	subscribe(eventName: string, handler: EventHandler): any {
 	}
 
 	// todo: add property requestSource

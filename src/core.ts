@@ -44,7 +44,6 @@ export class Nanium {
 		if (!manager) {
 			throw new Error('no responsible manager for Service "' + serviceName + '" found');
 		}
-		// todo: determine which manager is responsible for this request
 		return await manager.execute(serviceName, request, context);
 	}
 
@@ -89,9 +88,42 @@ export class Nanium {
 		return result;
 	}
 
+	static emit(event: any, eventName?: string, context?: ServiceExecutionContext): void {
+		eventName = eventName ?? (event.constructor as any).eventName;
+		this.getResponsibleManagerForEvent(eventName).then((manager: ServiceManager) => {
+			if (!manager) {
+				throw new Error('no responsible manager for event "' + eventName + '" found');
+			}
+			manager.emit(eventName, event, context).then();
+		});
+	}
+
+	static subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): void {
+		this.getResponsibleManagerForEvent(eventConstructor.eventName).then((manager: ServiceManager) => {
+			if (!manager) {
+				throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
+			}
+			manager.subscribe(eventConstructor, handler).then();
+		});
+	}
+
 	static async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {
 		const irResults: KindOfResponsibility[] = await Promise.all(
 			this.managers.map((manager: ServiceManager) => manager.isResponsible(request, serviceName)));
+		let idx: number = irResults.indexOf('yes');
+		if (idx >= 0) {
+			return this.managers[idx];
+		}
+		idx = irResults.indexOf('fallback');
+		if (idx >= 0) {
+			return this.managers[idx];
+		}
+		return undefined;
+	}
+
+	static async getResponsibleManagerForEvent(eventName: string): Promise<ServiceManager> {
+		const irResults: KindOfResponsibility[] = await Promise.all(
+			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName)));
 		let idx: number = irResults.indexOf('yes');
 		if (idx >= 0) {
 			return this.managers[idx];

@@ -6,5 +6,6 @@ export interface ServiceConsumerConfig {
 	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
 	handleError?: (e: any) => Promise<void>;
 	isResponsible?: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsibleForEvent?: (eventName: string) => Promise<KindOfResponsibility>;
 	serializer?: NaniumSerializer;
 }

@@ -26,7 +26,7 @@ export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = 
 		return await Nanium.execute(this, undefined, context);
 	}
 
-	stream(): Observable<TPartialResponse> {
+	stream<TResult>(): Observable<TPartialResponse> {
 		return Nanium.stream(this);
 	}
 

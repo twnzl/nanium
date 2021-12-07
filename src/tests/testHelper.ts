@@ -56,7 +56,7 @@ export class TestHelper {
 		await Nanium.addManager(new NaniumNodejsProvider({
 			logMode: LogMode.error,
 			servicePath: 'dist/tests/services',
-			requestChannels: [
+			channels: [
 				new NaniumHttpChannel({
 					apiPath: '/api',
 					server: TestHelper.httpServer,
@@ -64,6 +64,7 @@ export class TestHelper {
 				})
 			],
 			requestInterceptors: [TestServerRequestInterceptor],
+			// todo: events: eventInterceptors: [TestServerEventInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => {
 				if (!this.hasServerBeenCalled) {
 					// the first Nanium.Execute will chose the consumer as the responsible manager, the second call from the
