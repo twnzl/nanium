@@ -9,8 +9,9 @@ import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
 import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
-import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
+import { EventSubscription } from '../../interfaces/eventSubscriptionInterceptor';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -148,7 +149,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		});
 	}
 
-	emit(eventName: string, event: any, context: ServiceExecutionContext): any {
+	emit(eventName: string, event: any, context: ExecutionContext): any {
 		throw new Error('not yet implemented');
 	}
 
@@ -158,5 +159,9 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 
 	subscribe(eventName: string, handler: EventHandler): any {
 		throw new Error('not yet implemented');
+	}
+
+	receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+		throw new Error('not implemented.');
 	}
 }

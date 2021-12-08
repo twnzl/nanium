@@ -4,8 +4,9 @@ import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NaniumJsonSerializer } from '../../serializers/json';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
-import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
+import { EventSubscription, EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -15,7 +16,7 @@ export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 export class NaniumConsumerBrowserHttp implements ServiceManager {
 	config: NaniumConsumerBrowserHttpConfig;
 	private id: string;
-	private eventSubscriptions: { [eventName: string]: EventSubscription } = {};
+	private eventSubscriptions: { [eventName: string]: ConsumerEventSubscription } = {};
 
 	constructor(config?: NaniumConsumerBrowserHttpConfig) {
 		this.config = {
@@ -149,7 +150,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	}
 
-	emit(eventName: string, event: any, context: ServiceExecutionContext): any {
+	emit(eventName: string, event: any, context: ExecutionContext): any {
 		throw new Error('not yet implemented');
 	}
 
@@ -170,6 +171,20 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				}, 100);
 			});
 		}
+
+		const subscription: EventSubscription<any> = {
+			clientId: this.id,
+			eventName: eventConstructor.eventName,
+			additionalData: {}
+		};
+
+		// execute interceptors
+		for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
+			const interceptor: EventSubscriptionSendInterceptor<any, any>
+				= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
+			await interceptor.execute(eventConstructor, subscription);
+		}
+
 		// add basics to eventSubscriptions for this eventName and inform the server
 		if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
 			this.eventSubscriptions[eventConstructor.eventName] = {
@@ -177,7 +192,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				eventConstructor: eventConstructor,
 				eventHandlers: [handler]
 			};
-			await this.httpRequest<string>('POST', this.config.apiEventUrl, this.id + '\0' + eventConstructor.eventName);
+			const requestBody: string = await this.config.serializer.serialize(subscription);
+			await this.httpRequest<string>('POST', this.config.apiEventUrl, requestBody);
 		}
 		// if server has already been informed, just add the new handler locally
 		else {
@@ -189,18 +205,22 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		return new Promise<T>((resolve: Function, reject: Function) => {
 			try {
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
-				xhr.onabort = (e) => reject(e);
-				xhr.onerror = (e) => reject(e);
+				xhr.onabort = (e) => {
+					reject(e);
+				};
+				xhr.onerror = (e) => {
+					reject(e);
+				};
 				xhr.onload = async (): Promise<void> => {
 					if (xhr.status === 200) {
 						if (xhr.response !== undefined && xhr.response !== '') {
-							resolve(this.config.serializer.deserialize(xhr.response));
+							resolve(await this.config.serializer.deserialize(xhr.response));
 						} else {
 							resolve();
 						}
 					} else {
 						if (xhr.response !== undefined && xhr.response !== '') {
-							reject(this.config.serializer.deserialize(xhr.response));
+							reject(await this.config.serializer.deserialize(xhr.response));
 						} else {
 							reject();
 						}
@@ -225,10 +245,26 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 	}
 
 	private async startLongPolling(): Promise<void> {
+		//todo: events: do this only if a subscription exists - best way: call startLongPolling() not in init but in subscribe if it ist the first subscription
 		let eventResponse: NaniumEventResponse;
 		try {
-			eventResponse = await this.httpRequest<NaniumEventResponse>('POST', this.config.apiEventUrl, this.id);
+			const subscription: EventSubscription = { clientId: this.id };
+			for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
+				const interceptor: EventSubscriptionSendInterceptor<any, any>
+					= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
+				await interceptor.execute(undefined, subscription);
+			}
+			eventResponse = await this.httpRequest<NaniumEventResponse>('POST', this.config.apiEventUrl,
+				await this.config.serializer.serialize(subscription));
 		} catch (e) {
+			if (typeof e === 'string') {
+				throw new Error(e);
+			} else {
+				// the server is not reachable or something like this so retry at some later time
+				//todo: events: at this point send all existing subscriptions with this long-polling request
+				setTimeout(() => this.startLongPolling(), 5000);
+				return;
+			}
 		}
 		// start next long-polling request no matter if the last one run into timeout or sent an event
 		// (the timeout is necessary to prevent growing call stack with each event)
@@ -259,6 +295,10 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			});
 		}
 	}
+
+	receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+		throw new Error('not implemented');
+	}
 }
 
 
@@ -267,7 +307,7 @@ interface NaniumEventResponse {
 	event: any;
 }
 
-interface EventSubscription {
+interface ConsumerEventSubscription {
 	eventName: string;
 	eventConstructor: new (data?: any) => any;
 	eventHandlers: Array<EventHandler>;

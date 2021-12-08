@@ -1,12 +1,13 @@
 // todo: optimize rxjs import. Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nanium as a commonJs module
 import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from './interfaces/serviceManager';
-import { ServiceExecutionContext } from './interfaces/serviceExecutionContext';
+import { ExecutionContext } from './interfaces/executionContext';
 import { LogMode } from './interfaces/logMode';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { DateHelper } from './helper';
 import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
+import { EventSubscription } from './interfaces/eventSubscriptionInterceptor';
 
 export class Nanium {
 	static #isShutDownInitiated: boolean;
@@ -38,7 +39,7 @@ export class Nanium {
 		this.queues = this.queues.filter((q: ServiceRequestQueue) => !fn(q));
 	}
 
-	static async execute(request: any, serviceName?: string, context?: ServiceExecutionContext): Promise<any> {
+	static async execute(request: any, serviceName?: string, context?: ExecutionContext): Promise<any> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
 		const manager: ServiceManager = await this.getResponsibleManager(request, serviceName);
 		if (!manager) {
@@ -47,7 +48,7 @@ export class Nanium {
 		return await manager.execute(serviceName, request, context);
 	}
 
-	static stream(request: any, serviceName?: string, context?: ServiceExecutionContext): Observable<any> {
+	static stream(request: any, serviceName?: string, context?: ExecutionContext): Observable<any> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
 		const managerPromise: Promise<ServiceManager> = this.getResponsibleManager(request, serviceName);
 		return new Observable((observer: Observer<any>): void => {
@@ -73,7 +74,7 @@ export class Nanium {
 
 	static async enqueue<TRequest>(
 		entry: ServiceRequestQueueEntry,
-		executionContext?: ServiceExecutionContext
+		executionContext?: ExecutionContext
 	): Promise<ServiceRequestQueueEntry> {
 		const queue: ServiceRequestQueue = await this.getResponsibleQueue(entry);
 		if (!queue) {
@@ -88,7 +89,7 @@ export class Nanium {
 		return result;
 	}
 
-	static emit(event: any, eventName?: string, context?: ServiceExecutionContext): void {
+	static emit(event: any, eventName?: string, context?: ExecutionContext): void {
 		eventName = eventName ?? (event.constructor as any).eventName;
 		this.getResponsibleManagerForEvent(eventName).then((manager: ServiceManager) => {
 			if (!manager) {
@@ -105,6 +106,14 @@ export class Nanium {
 			}
 			manager.subscribe(eventConstructor, handler).then();
 		});
+	}
+
+	static async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+		const manager: ServiceManager = await this.getResponsibleManagerForEvent(subscriptionData.eventName);
+		if (!manager) {
+			throw new Error('no responsible manager for event "' + subscriptionData.eventName + '" found');
+		}
+		return await manager.receiveSubscription(subscriptionData);
 	}
 
 	static async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {
@@ -135,6 +144,8 @@ export class Nanium {
 		return undefined;
 	}
 
+
+	//#region queue
 	static async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
 		const result: ServiceRequestQueue = this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'yes');
 		if (result) {
@@ -143,7 +154,6 @@ export class Nanium {
 		return this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'fallback');
 	}
 
-	//#region queue
 	static async onReadyQueueEntry(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
 		try {
 			await Nanium.executeTimeControlled(entry, requestQueue);
@@ -248,4 +258,5 @@ export class Nanium {
 	}
 
 	//#endregion queue
+
 }

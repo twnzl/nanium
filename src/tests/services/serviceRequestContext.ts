@@ -1,8 +1,8 @@
-import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
-import { ServiceExecutionScope } from '../../interfaces/serviceExecutionScope';
+import { ExecutionContext } from '../../interfaces/executionContext';
+import { ExecutionScope } from '../../interfaces/executionScope';
 
-export class ServiceRequestContext implements ServiceExecutionContext {
-	scope?: ServiceExecutionScope;
+export class ServiceRequestContext implements ExecutionContext {
+	scope?: ExecutionScope;
 	user: any;
 
 	constructor(data: Partial<ServiceRequestContext>) {

@@ -8,12 +8,17 @@ import { LogMode } from '../../interfaces/logMode';
 import { Nanium } from '../../core';
 import { ServiceExecutor } from '../../interfaces/serviceExecutor';
 import { StreamServiceExecutor } from '../../interfaces/streamServiceExecutor';
-import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
 import { EventHandler } from '../../interfaces/eventHandler';
+import {
+	EventEmissionSendInterceptor,
+	EventSubscription,
+	EventSubscriptionReceiveInterceptor
+} from '../../interfaces/eventSubscriptionInterceptor';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -42,7 +47,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
 	 * exception handling function
 	 */
-	handleError?: (e: Error | any, serviceName: string, request: any, context?: ServiceExecutionContext) => Promise<void>;
+	handleError?: (e: Error | any, serviceName: string, request: any, context?: ExecutionContext) => Promise<void>;
 
 	/**
 	 * returns if the Manager is responsible for the given Service
@@ -54,6 +59,19 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	 * @param eventName
 	 */
 	isResponsibleForEvent?: (eventName: string) => Promise<KindOfResponsibility>;
+
+	/**
+	 * event subscription interceptors
+	 * code that runs if a subscription request has been received, to check acceptance
+	 * and add data to the subscription context
+	 */
+	eventSubscriptionReceiveInterceptors?: (EventSubscriptionReceiveInterceptor<any> | (new() => EventSubscriptionReceiveInterceptor<any>))[];
+
+	/**
+	 * event emission interceptors
+	 * code that runs if an event occurs, to check to which subscriber this event must be emitted
+	 */
+	eventEmissionSendInterceptors?: (EventEmissionSendInterceptor<any> | (new() => EventEmissionSendInterceptor<any>))[];
 }
 
 
@@ -67,6 +85,8 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 			throw err;
 		}
 	};
+
+	// private eventSubscriptions: { [clientId: string]: ProviderEventSubscriptionInfo } = {};
 
 	constructor(config: NaniumNodejsProviderConfig) {
 		this.config = {
@@ -129,7 +149,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	async execute(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any> {
+	async execute(serviceName: string, request: any, context?: ExecutionContext): Promise<any> {
 		context = context || {};
 		let realRequest: any;
 
@@ -164,7 +184,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		}
 	}
 
-	stream(serviceName: string, request: any, context?: ServiceExecutionContext): Observable<any> {// validation
+	stream(serviceName: string, request: any, context?: ExecutionContext): Observable<any> {// validation
 		context = context || {};
 
 		if (this.repository === undefined) {
@@ -210,7 +230,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 	/**
 	 * execute request interceptors
 	 */
-	private async executeRequestInterceptors(request: any, context: ServiceExecutionContext, requestType: any): Promise<void> {
+	private async executeRequestInterceptors(request: any, context: ExecutionContext, requestType: any): Promise<void> {
 		if (!this.config.requestInterceptors?.length) {
 			return;
 		}
@@ -227,9 +247,24 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		}
 	}
 
-	async emit(eventName: string, event: any, context: ServiceExecutionContext): Promise<void> {
-		for (const channel of this.config.channels) {
-			await channel.emitEvent(event, context);
+	async emit(eventName: string, event: any, context: ExecutionContext): Promise<void> {
+		let emissionOk: boolean;
+		const interceptors: EventEmissionSendInterceptor<any>[] = this.config.eventEmissionSendInterceptors?.map(
+			(instanceOrClass) => typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass
+		) ?? [];
+		for (const channel of this.config.channels) { // channels
+			for (const subscription of channel.eventSubscriptions[eventName] ?? []) { // subscriptions
+				emissionOk = true;
+				for (const interceptor of interceptors) { // interceptors
+					emissionOk = await interceptor.execute(event, context, subscription);
+					if (!emissionOk) {
+						break;
+					}
+				}
+				if (emissionOk) {
+					await channel.emitEvent(event, subscription);
+				}
+			}
 		}
 	}
 
@@ -238,7 +273,20 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 	}
 
 	subscribe(eventName: string, handler: EventHandler): any {
+		throw new Error('not implemented');
 	}
 
-	// todo: add property requestSource
+	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+		if (this.config.eventSubscriptionReceiveInterceptors?.length) {
+			let interceptor: EventSubscriptionReceiveInterceptor<any>;
+			for (const instanceOrClass of this.config.eventSubscriptionReceiveInterceptors) {
+				interceptor = typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass;
+				try {
+					await interceptor.execute(subscriptionData);
+				} catch (e) {
+					throw e;
+				}
+			}
+		}
+	}
 }

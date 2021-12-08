@@ -1,6 +1,6 @@
 import { KindOfResponsibility } from './kindOfResponsibility';
 import { ServiceRequestQueueEntry, ServiceRequestQueueEntryQueryConditions } from './serviceRequestQueueEntry';
-import { ServiceExecutionContext } from './serviceExecutionContext';
+import { ExecutionContext } from './executionContext';
 
 /**
  * a request queue that can be used by bocl has to implement these members
@@ -27,7 +27,7 @@ export interface ServiceRequestQueue {
 	 * @param entry
 	 * @param executionContext the context for the execution of the request
 	 */
-	enqueue(entry: ServiceRequestQueueEntry, executionContext?: ServiceExecutionContext): Promise<ServiceRequestQueueEntry>;
+	enqueue(entry: ServiceRequestQueueEntry, executionContext?: ExecutionContext): Promise<ServiceRequestQueueEntry>;
 
 	/**
 	 * Will run, after an entry is set to running but before it ist started.
@@ -48,7 +48,7 @@ export interface ServiceRequestQueue {
 	 * create an execution context for a specific entry. It will be used for the execution of the request
 	 * @param entry
 	 */
-	getExecutionContext(entry: ServiceRequestQueueEntry): Promise<ServiceExecutionContext>;
+	getExecutionContext(entry: ServiceRequestQueueEntry): Promise<ExecutionContext>;
 
 	/**
 	 * update an entry

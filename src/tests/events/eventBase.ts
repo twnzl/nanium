@@ -1,10 +1,10 @@
-import { ServiceExecutionContext } from '../../interfaces/serviceExecutionContext';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { Nanium } from '../../core';
 import { EventHandler } from '../../interfaces/eventHandler';
 
 export class EventBase {
 
-	emit(context?: ServiceExecutionContext): void {
+	emit(context?: ExecutionContext): void {
 		Nanium.emit(this, undefined, context);
 	}
 

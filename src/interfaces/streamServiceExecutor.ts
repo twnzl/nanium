@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
-import { ServiceExecutionContext } from './serviceExecutionContext';
+import { ExecutionContext } from './executionContext';
 
 export interface StreamServiceExecutor<TRequest, TResponse> {
-	stream(request: TRequest, context?: ServiceExecutionContext): Observable<TResponse>;
+	stream(request: TRequest, context?: ExecutionContext): Observable<TResponse>;
 }

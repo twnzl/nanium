@@ -10,6 +10,9 @@
     "json",
     "node"
   ],
+  "modulePathIgnorePatterns": [
+    "dist"
+  ],
   "forceExit": true,
   "detectOpenHandles": true,
   "setupFilesAfterEnv": [

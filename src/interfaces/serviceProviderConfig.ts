@@ -1,7 +1,8 @@
 import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
 import { KindOfResponsibility } from './kindOfResponsibility';
 import { Channel } from './channel';
-import { ServiceExecutionContext } from './serviceExecutionContext';
+import { ExecutionContext } from './executionContext';
+import { EventEmissionSendInterceptor, EventSubscriptionReceiveInterceptor } from './eventSubscriptionInterceptor';
 
 export interface ServiceProviderConfig {
 	/**
@@ -18,17 +19,32 @@ export interface ServiceProviderConfig {
 	channels?: Channel[];
 
 	/**
-	 * interceptors (code that runs before each request is executed)
+	 * request receive interceptors
+	 * code that runs if a request has been received, and before it is executed.
+	 * can execute (finish) the request just before the special request executor will run
 	 */
 	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
 
 	/**
 	 * exception handling function
 	 */
-	handleError?: (e: Error | any, serviceName: string, request: any, context?: ServiceExecutionContext) => Promise<void>;
+	handleError?: (e: Error | any, serviceName: string, request: any, context?: ExecutionContext) => Promise<void>;
 
 	/**
 	 * returns if the Manager is responsible for the given Service
 	 */
 	isResponsible?: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
+
+	/**
+	 * event subscription interceptors
+	 * code that runs if a subscription request has been received, to check acceptance
+	 * and add data to the subscription context
+	 */
+	eventSubscriptionReceiveInterceptors?: (EventSubscriptionReceiveInterceptor<any> | (new() => EventSubscriptionReceiveInterceptor<any>))[];
+
+	/**
+	 * event emission interceptors
+	 * code that runs if an event occurs, to check to which subscriber this event must be emitted
+	 */
+	eventEmissionSendInterceptors?: (EventEmissionSendInterceptor<any> | (new() => EventEmissionSendInterceptor<any>))[];
 }

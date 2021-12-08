@@ -9,7 +9,7 @@ import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { NaniumSerializerCore } from '../../../serializers/core';
 import { randomUUID } from 'crypto';
-import { ServiceExecutionContext } from '../../../interfaces/serviceExecutionContext';
+import { EventSubscription } from '../../../interfaces/eventSubscriptionInterceptor';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer;
@@ -21,7 +21,9 @@ export interface NaniumHttpChannelConfig extends ChannelConfig {
 export class NaniumHttpChannel implements Channel {
 	private serviceRepository: NaniumRepository;
 	private readonly config: NaniumHttpChannelConfig;
-	private eventSubscriptions: { [clientId: string]: NaniumEventSubscription } = {};
+	private longPollingResponses: { [clientId: string]: ServerResponse } = {};
+
+	public eventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
 
 	constructor(config: NaniumHttpChannelConfig) {
 		this.config = {
@@ -46,75 +48,34 @@ export class NaniumHttpChannel implements Channel {
 				// original listener
 				listener(req, res);
 
-				// event registrations
+				// event subscriptions
 				if (req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath) {
-					// request a unique clientId
-					if (req.method.toLowerCase() === 'get') {
-						res.write(await this.config.serializer.serialize(randomUUID()));
-						res.end();
-					}
-					// subscription
-					else if (req.method.toLowerCase() === 'post') {
-						await new Promise<void>((resolve: Function, reject: Function) => {
-							const data: any[] = [];
-							req.on('data', (chunk: any) => {
-								data.push(chunk);
-							}).on('end', async () => {
-								try {
-									// todo: events: authorization - only accept subscriptions from authorized clients
-									const [clientId, eventName]: [string, string] = Buffer.concat(data).toString().split('\0') as [string, string];
-									// use keep request open for the long polling mechanism
-									if (!eventName) {
-										res.setTimeout(this.config.longPollingRequestTimeoutInSeconds * 1000, () => {
-											res.end();
-										});
-										this.eventSubscriptions[clientId] = this.eventSubscriptions[clientId] ?? {
-											context: undefined,
-											httpResponse: undefined,
-											subscribedEvents: []
-										};
-										this.eventSubscriptions[clientId].httpResponse = res;
-									}
-
-									// register event
-									else {
-										this.eventSubscriptions[clientId] = this.eventSubscriptions[clientId] ?? {
-											context: {}, // todo: events: remember to use it later for the execution of event interceptors (get it from header)
-											httpResponse: res,
-											subscribedEvents: []
-										};
-										if (!this.eventSubscriptions[clientId].subscribedEvents.includes(eventName)) {
-											this.eventSubscriptions[clientId].subscribedEvents.push(eventName);
-										}
-										res.end();
-										resolve();
-									}
-								} catch (e) {
-									reject(e);
-								}
-							});
-						});
-					}
+					await this.handleIncomingEventSubscription(req, res);
 				}
 
 				// service requests
 				if (req.method.toLowerCase() === 'post' && req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
-					const data: any[] = [];
-					await new Promise<void>((resolve: Function, reject: Function) => {
-						req.on('data', (chunk: any) => {
-							data.push(chunk);
-						}).on('end', async () => {
-							try {
-								const body: string = Buffer.concat(data).toString();
-								const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
-								await this.process(deserialized, res);
-								res.end();
-								resolve();
-							} catch (e) {
-								reject(e);
-							}
-						});
-					});
+					await this.handleIncomingServiceRequest(req, res);
+				}
+			});
+		});
+	}
+
+	//#region service request handling
+	private async handleIncomingServiceRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		const data: any[] = [];
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			req.on('data', (chunk: any) => {
+				data.push(chunk);
+			}).on('end', async () => {
+				try {
+					const body: string = Buffer.concat(data).toString();
+					const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
+					await this.process(deserialized, res);
+					res.end();
+					resolve();
+				} catch (e) {
+					reject(e);
 				}
 			});
 		});
@@ -169,55 +130,109 @@ export class NaniumHttpChannel implements Channel {
 		}
 	}
 
-	async emitEvent(event: any, context: ServiceExecutionContext, clientId?: string): Promise<void> {
+	//#endregion service request handling
+
+	//#region event handling
+	private async handleIncomingEventSubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		// request a unique clientId
+		if (req.method.toLowerCase() === 'get') {
+			res.statusCode = 200;
+			res.write(await this.config.serializer.serialize(randomUUID()));
+			res.end();
+		}
+		// subscription
+		else if (req.method.toLowerCase() === 'post') {
+			await new Promise<void>((resolve: Function, reject: Function) => {
+				const data: any[] = [];
+				req.on('data', (chunk: any) => {
+					data.push(chunk);
+				}).on('end', async () => {
+					try {
+						// deserialize subscription info
+						const subscriptionData: EventSubscription = await this.config.serializer.deserialize(Buffer.concat(data).toString());
+						// todo: events: subscriptionData = NaniumSerializerCore.plainToClass(subscriptionData, this.config.subscriptionDataConstructor);
+
+						// ask the manager to execute interceptors and to decide if the subscription is accepted or not
+						try {
+							await Nanium.receiveSubscription(subscriptionData);
+						} catch (e) {
+							res.statusCode = 400;
+							const responseBody: string = await this.config.serializer.serialize(e.message);
+							res.write(responseBody);
+							res.end();
+							resolve();
+							return;
+						}
+
+						// store subscription information
+						if (subscriptionData.eventName) {
+							this.eventSubscriptions[subscriptionData.eventName] = this.eventSubscriptions[subscriptionData.eventName] ?? [];
+							this.eventSubscriptions[subscriptionData.eventName].push(subscriptionData);
+							res.end();
+							resolve();
+						}
+
+						// use keep request open for the long polling mechanism
+						else {
+							res.setTimeout(this.config.longPollingRequestTimeoutInSeconds * 1000, () => {
+								res.end();
+							});
+							this.longPollingResponses[subscriptionData.clientId] = res;
+						}
+					} catch (e) {
+						reject(e);
+					}
+				});
+			});
+		}
+	}
+
+	async emitEvent(event: any, subscription?: EventSubscription): Promise<void> {
 		const promises: Promise<void>[] = [];
-		if (clientId) {
-			promises.push(this.emitEventCore(event, context, clientId));
-		} else {
-			for (const cid in this.eventSubscriptions) {
-				if (this.eventSubscriptions.hasOwnProperty(cid)) {
-					promises.push(this.emitEventCore(event, context, cid));
-				}
-			}
-		}
+		promises.push(this.emitEventCore(event, subscription));
 		await Promise.all(promises);
-		return;
 	}
 
-	async emitEventCore(event: any, context: ServiceExecutionContext, clientId: string): Promise<void> {
-		if (!this.eventSubscriptions.hasOwnProperty(clientId)) {
-			return;
-		}
-		if (this.eventSubscriptions[clientId].subscribedEvents.includes(event.constructor.eventName)) {
-			// todo: events: for each event interceptor event = interceptor.execute(event, context, client)
-			// try later if there is no open long-polling response (e.g. because of a recent event transmission)
-			if (!this.eventSubscriptions[clientId].httpResponse || this.eventSubscriptions[clientId].httpResponse.writableFinished) {
-				setTimeout(() => this.emitEvent(event, context, clientId), 100);
-			} else {
-				try {
-					this.eventSubscriptions[clientId].httpResponse.setHeader('Content-Type', 'application/json; charset=utf-8');
-					this.eventSubscriptions[clientId].httpResponse.statusCode = 200;
-					this.eventSubscriptions[clientId].httpResponse.write(await this.config.serializer.serialize({
-						event,
-						eventName: event.constructor.eventName
-					}));
-					this.eventSubscriptions[clientId].httpResponse.end();
-				} catch (e) {
+	async emitEventCore(event: any, subscription?: EventSubscription, tryCount: number = 0): Promise<void> {
+		// try later if there is no open long-polling response (e.g. because of a recent event transmission)
+		if (!this.longPollingResponses[subscription.clientId] || this.longPollingResponses[subscription.clientId].writableFinished) {
+			if (tryCount > 10) {
+				// client seams to be gone, so remove subscription from this client
+				for (const eventName in this.eventSubscriptions) {
+					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
+						this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter((s) => s.clientId !== subscription.clientId);
+					}
 				}
+				delete this.longPollingResponses[subscription.clientId];
+			}
+			return new Promise<void>((resolve: Function, _reject: Function) => {
+				setTimeout(async () => {
+					resolve(await this.emitEventCore(event, subscription, ++tryCount));
+				}, 100);
+			});
+		}
+
+		// else, transmit the data and end the long-polling request
+		else {
+			try {
+				const responseBody: string = await this.config.serializer.serialize({
+					eventName: event.constructor.eventName,
+					event
+				});
+				this.longPollingResponses[subscription.clientId].setHeader('Content-Type', 'application/json; charset=utf-8');
+				this.longPollingResponses[subscription.clientId].statusCode = 200;
+				this.longPollingResponses[subscription.clientId].write(responseBody);
+				this.longPollingResponses[subscription.clientId].end();
+			} catch (e) {
 			}
 		}
 	}
 
+	//#endregion event handling
 }
 
 interface NaniumHttpChannelBody {
 	serviceName: string;
 	request: any;
 	streamed?: boolean;
-}
-
-interface NaniumEventSubscription {
-	context: ServiceExecutionContext;
-	httpResponse: ServerResponse;
-	subscribedEvents: string[];
 }

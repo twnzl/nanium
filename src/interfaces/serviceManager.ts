@@ -1,7 +1,8 @@
 import { Observable } from 'rxjs';
-import { ServiceExecutionContext } from './serviceExecutionContext';
+import { ExecutionContext } from './executionContext';
 import { KindOfResponsibility } from './kindOfResponsibility';
 import { EventHandler } from './eventHandler';
+import { EventSubscription } from './eventSubscriptionInterceptor';
 
 export interface ServiceManager {
 
@@ -17,7 +18,7 @@ export interface ServiceManager {
 	 * @param request
 	 * @param context
 	 */
-	execute?(serviceName: string, request: any, context?: ServiceExecutionContext): Promise<any>;
+	execute?(serviceName: string, request: any, context?: ExecutionContext): Promise<any>;
 
 	/**
 	 * execute a request and expect multiple replies with partial results
@@ -25,7 +26,7 @@ export interface ServiceManager {
 	 * @param request
 	 * @param context
 	 */
-	stream?(serviceName: string, request: any, context?: ServiceExecutionContext): Observable<any>;
+	stream?(serviceName: string, request: any, context?: ExecutionContext): Observable<any>;
 
 	/**
 	 * must return 'yes' if this manager is responsible for the given request or all requests with the given name
@@ -48,7 +49,7 @@ export interface ServiceManager {
 	 * @param event
 	 * @param context
 	 */
-	emit(eventName: string, event: any, context: ServiceExecutionContext): any;
+	emit(eventName: string, event: any, context: ExecutionContext): any;
 
 	/**
 	 * subscribe to a specific eventType
@@ -56,4 +57,12 @@ export interface ServiceManager {
 	 * @param handler
 	 */
 	subscribe(eventName: string, handler: EventHandler): any;
+
+	/**
+	 * receive a subscription: decide to accept or to reject the subscription
+	 * if accepted do what is needed
+	 * if not accepted throw an error
+	 * @param subscriptionData
+	 */
+	receiveSubscription(subscriptionData: EventSubscription): Promise<void>;
 }
