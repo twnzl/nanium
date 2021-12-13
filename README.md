@@ -556,32 +556,45 @@ beforeEach(async () => {
 
 ## Events
 
-(coming soon!)
+**(experimental)** Currently, the NaniumHttpChannel has basic support for this feature, but it is still experimental.
 
 A provider can emit Events:
 
 ```ts
-new StuffAddedEvent(stuff).emit();
+new StuffAddedEvent(stuff).emit(executionContext);
 ```
 
 Consumers may subscribe to events:
 
 ```ts
-StuffAddedEvent.subscribe(
-	(value: Stuff) => {
-		refreshLocalCache<Stuff>(stuff);
-	},
-	(e: Error) => {
-		document.write(e.message);
-	}
-);
+await StuffAddedEvent.subscribe((value: Stuff) => {
+	refreshLocalCache<Stuff>(stuff);
+});
 ```
 
-The specific implementation of the event manager, which takes care of subscriptions and transmissions is changeable.
+Via Nanium.addManager you can configure which channel should be used for the transmission of events, and you can add
+event interceptors.
+
+**server:**
+
+```ts	
+await Nanium.addManager(new NaniumNodejsProvider({
+	servicePath: 'services',
+	channels: [
+	    new NaniumHttpChannel({ apiPath: '/api', eventPath: '/events', server: server })
+	],
+	eventSubscriptionReceiveInterceptors: [DemoEventSubscriptionReceiveInterceptor],
+	eventEmissionSendInterceptors: [DemoEventEmissionSendInterceptor]
+}));
+```
+
+**browser:**
 
 ```ts
-Nanium.addEventManager(new HttpEventManager({
-	server: httpServer
+await Nanium.addManager(new NaniumConsumerBrowserHttp({
+	apiUrl: 'http://localhost:3000/api',
+	apiEventUrl: 'http://localhost:3000/events',
+	eventSubscriptionSendInterceptors: [DemoEventSubscriptionSendInterceptor]
 }));
 ```
 
