@@ -1,8 +1,8 @@
-import { ServiceExecutionContext } from 'nanium/interfaces/serviceExecutionContext';
-import { ServiceExecutionScope } from 'nanium/interfaces/serviceExecutionScope';
+import { ExecutionContext } from 'nanium/interfaces/executionContext';
+import { ExecutionScope } from 'nanium/interfaces/executionScope';
 
-export class ServiceRequestContext implements ServiceExecutionContext {
-	scope?: ServiceExecutionScope;
+export class ServiceRequestContext implements ExecutionContext {
+	scope?: ExecutionScope;
 	// todo: add what ever information you need in every request executor.
 	// (for example information about the executing client and user)
 	// and add logic to an interceptor that sets this information

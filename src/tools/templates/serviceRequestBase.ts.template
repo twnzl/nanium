@@ -1,8 +1,8 @@
 import { Nanium } from 'nanium/core';
-import { ServiceExecutionContext } from 'nanium/interfaces/serviceExecutionContext';
 import { ServiceRequestQueueEntry } from 'nanium/interfaces/serviceRequestQueueEntry';
 import { ServiceRequestHead } from './serviceRequestHead';
 import { GenericType, Type } from 'nanium/serializers/core';
+import { ExecutionContext } from 'nanium/interfaces/executionContext';
 
 export class ServiceRequestBase<TRequestBody, TResponse> {
 
@@ -17,7 +17,7 @@ export class ServiceRequestBase<TRequestBody, TResponse> {
 		this.head = head;
 	}
 
-	async execute(context?: ServiceExecutionContext): Promise<TResponse> {
+	async execute(context?: ExecutionContext): Promise<TResponse> {
 		return await Nanium.execute(this, undefined, context);
 	}
 
