@@ -58,6 +58,7 @@ if (response.isGoodStuff()) {
     - [Interceptors](#Interceptors)
     - [Queues](#Queues)
     - [Events](#Events)
+    - [SDKs](#SDKs)
     - [Tests](#Tests)
     - [REST](#REST)
     - [Extensibility](#Extensibility)
