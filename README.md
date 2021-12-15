@@ -200,10 +200,10 @@ Unfortunately, the typescript compiler still does not support the generation of 
 runtime. But this information is necessary to make the contract serialization and deserialization work. Therefore,
 nanium uses decorators to fill this gap.
 
-Currently, there are three essential decorators.
+Currently, there are four essential decorators.
 
-- __@Type()__: All properties of a contract class or subclass that do not have a primitive type must be decorated with
-  @Type(). The parameter is the class/constructor of the decorated property.
+- __@Type()__: The parameter is the class/constructor of the decorated property.
+- __@ArrayType()__: Array-Properties must use this decorator. The parameter is the class/constructor of the items.
 - __@GenericType()__: If a property has a generic type that uses a type variable from the parent class, an identifier
   for this type variable must be provided using @GenericType()
 - __@RequestType()__: Use the property 'responseType' to set the class of the response. And for each defined generic
@@ -213,14 +213,11 @@ Example:
 
 ```ts
 export class GenericStuff<TStuffSubType> {
-	aString?: string;
-	aNumber?: number;
-	aBoolean?: boolean;
-
-	@GenericType('TStuffSubType')
-	theGeneric?: TStuffSubType;
+	@Type(String) aString?: string;
+	@Type(Number) aNumber?: number;
+	@Type(Boolean) aBoolean?: boolean;
+	@GenericType('TStuffSubType') theGeneric?: TStuffSubType;
 }
-
 
 export enum StuffEnum {
 	zero = 'z',
@@ -229,27 +226,16 @@ export enum StuffEnum {
 }
 
 export class Stuff<TStuffSubType> {
-	aString?: string;
-	aNumber?: number;
-	aBoolean?: boolean;
-	anEnum?: StuffEnum;
-
-	@Type(Date)
-	aDate?: Date;
-
-	@Type(Stuff)
-	anObject?: Stuff<TStuffSubType>;
-
-	@Type(Stuff)
-	anObjectArray?: Stuff<TStuffSubType>[];
-
-	aStringArray?: string[];
-
-	@Type(GenericStuff)
-	aGenericObject?: GenericStuff<TStuffSubType>;
-
-	@Type(GenericStuff)
-	aGenericObjectArray?: GenericStuff<TStuffSubType>[];
+	@Type(String) aString?: string;
+	@Type(Number) aNumber?: number;
+	@Type(Boolean) aBoolean?: boolean;
+	@Type(String) anEnum?: StuffEnum;
+	@Type(Date) aDate?: Date;
+	@Type(Stuff) anObject?: Stuff<TStuffSubType>;
+	@ArrayType(Stuff) anObjectArray?: Stuff<TStuffSubType>[];
+	@ArrayType(String) aStringArray?: string[];
+	@Type(GenericStuff) aGenericObject?: GenericStuff<TStuffSubType>;
+	@ArrayType(GenericStuff) aGenericObjectArray?: GenericStuff<TStuffSubType>[];
 
 	get aCalculatedProperty(): string {
 		return this.aStringArray?.join(' ');
