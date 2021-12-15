@@ -44,8 +44,6 @@ if (response.isGoodStuff()) {
 - [Installation](#Installation)
 - [Documentation](#Documentation)
     - [Video tutorials](#Video-tutorials)
-        - [Concepts](#Concepts)
-        - [Best practices](#Best-practices)
     - [Demo app](#Demo-app)
     - [Initialization](#Initialization)
         - [Init the server (nodejs)](#Init-the-server-(nodejs))
@@ -73,33 +71,15 @@ $ npm install nanium
 
 ### Video tutorials
 
-The best way to get started is to watch the video tutorials ... (coming soon!)
-
-#### Concepts
-
-- [Basics]
-- [Interceptors]
-- [Streaming]
-- [Queuing]
-- [Events]
-- [SDKs]
-
-#### Best practices
-
-- [Authorization]
-- [Validation]
-- [Tests]
-- [Caching]
-- [Packaging]
-- [Creating own channels, consumers, queues]
-- ...
+The best way to get started is to watch the video tutorials at
+https://www.youtube.com/channel/UCV0pLzUzkdGazPXKJoGDjow (coming soon!)
 
 ### Demo app
 
 You can download a ready-to-take-off demo app via
 
 ```bash
-$ git clone nanium-demo
+$ git clone https://github.com/twnzl/nanium-demo.git
 ```
 
 ## Initialization
@@ -120,7 +100,7 @@ This will create the config file 'nanium.json' and the directory 'services' cont
 
 For now, leave them as they are. Later you can adapt this to meet your needs.
 
-In the 'nanium.json'
+In the 'nanium.json' enter a namespace.
 
 Next create a node script, initiate a default Http Server and add a ServiceProvider with an HTTP channel. Channels are
 ways to through which public services can be executed from outside the server (e.g. a web client using http/websockets
