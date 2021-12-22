@@ -1,9 +1,23 @@
-node_modules
+# ide
 /.idea
 /.vscode/
+
+# npm
+node_modules
 package-lock.json
+
+# build output
 /dist
-/sdk
+/interfaces
+/managers
+/serializers
+/tests
+/tools
+/core.*
+/helper.*
+
+# temporarry folders for development
+/_tmp/sdk
 /package/
 /todos.txt
 /coverage/

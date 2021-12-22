@@ -2,7 +2,7 @@
   "serviceDirectory": "src/tests/services",
   "indentString": "\t",
   "namespace": "NaniumTest",
-  "outDir": "sdk",
+  "outDir": "_tmp/sdk",
   "sdkPackage": {
     "name": "nanium-test-sdk",
     "description": "SDK for the nanium test services",

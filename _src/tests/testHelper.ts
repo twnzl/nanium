@@ -55,7 +55,7 @@ export class TestHelper {
 		this.hasServerBeenCalled = false;
 		await Nanium.addManager(new NaniumNodejsProvider({
 			logMode: LogMode.error,
-			servicePath: 'dist/tests/services',
+			servicePath: 'tests/services',
 			channels: [
 				new NaniumHttpChannel({
 					apiPath: '/api',

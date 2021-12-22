@@ -262,7 +262,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 					}
 				}
 				if (emissionOk) {
-					await channel.emitEvent(event, subscription);
+					channel.emitEvent(event, subscription).then();
 				}
 			}
 		}

@@ -15,7 +15,7 @@ export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer;
 	apiPath?: string;
 	eventPath?: string;
-	longPollingRequestTimeoutInSeconds?: number; // seconds
+	longPollingRequestTimeoutInSeconds?: number;
 }
 
 export class NaniumHttpChannel implements Channel {
@@ -176,6 +176,7 @@ export class NaniumHttpChannel implements Channel {
 						else {
 							res.setTimeout(this.config.longPollingRequestTimeoutInSeconds * 1000, () => {
 								res.end();
+								// todo: self cleaning: delete this.longPollingResponses[subscriptionData.clientId];
 							});
 							this.longPollingResponses[subscriptionData.clientId] = res;
 						}
@@ -196,7 +197,7 @@ export class NaniumHttpChannel implements Channel {
 	async emitEventCore(event: any, subscription?: EventSubscription, tryCount: number = 0): Promise<void> {
 		// try later if there is no open long-polling response (e.g. because of a recent event transmission)
 		if (!this.longPollingResponses[subscription.clientId] || this.longPollingResponses[subscription.clientId].writableFinished) {
-			if (tryCount > 10) {
+			if (tryCount > 5) {
 				// client seams to be gone, so remove subscription from this client
 				for (const eventName in this.eventSubscriptions) {
 					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
@@ -204,11 +205,12 @@ export class NaniumHttpChannel implements Channel {
 					}
 				}
 				delete this.longPollingResponses[subscription.clientId];
+				return;
 			}
 			return new Promise<void>((resolve: Function, _reject: Function) => {
 				setTimeout(async () => {
 					resolve(await this.emitEventCore(event, subscription, ++tryCount));
-				}, 100);
+				}, 500);
 			});
 		}
 

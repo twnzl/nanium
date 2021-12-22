@@ -48,7 +48,7 @@ export class Nanium {
 		return await manager.execute(serviceName, request, context);
 	}
 
-	static stream(request: any, serviceName?: string, context?: ExecutionContext): Observable<any> {
+	static stream<TResult = any>(request: any, serviceName?: string, context?: ExecutionContext): Observable<TResult> {
 		serviceName = serviceName || (request.constructor as any).serviceName;
 		const managerPromise: Promise<ServiceManager> = this.getResponsibleManager(request, serviceName);
 		return new Observable((observer: Observer<any>): void => {

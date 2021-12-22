@@ -11,7 +11,6 @@
     "node"
   ],
   "modulePathIgnorePatterns": [
-    "dist"
   ],
   "forceExit": true,
   "detectOpenHandles": true,
@@ -19,9 +18,9 @@
     "@alex_neo/jest-expect-message"
   ],
   "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(ts)$",
-  "coverageDirectory": "coverage",
+  "coverageDirectory": "_tmp/coverage",
   "collectCoverageFrom": [
-    "src/**/*.{ts,js}",
-    "!src/**/*.d.ts"
+    "_src/**/*.{ts,js}",
+    "!_src/**/*.d.ts"
   ]
 }

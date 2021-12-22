@@ -20,7 +20,7 @@ describe('execute TestRequest on server \n', function (): void {
 	beforeEach(async function (): Promise<void> {
 		await Nanium.addManager(new NaniumNodejsProvider({
 			logMode: LogMode.error,
-			servicePath: 'dist/tests/services',
+			servicePath: 'tests/services',
 			requestInterceptors: [TestServerRequestInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 			handleError: async (err: any): Promise<any> => {

@@ -27,15 +27,11 @@
     "nanoservices"
   ],
   "scripts": {
-    "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
-    "clean": "ts-node src/tools/nanium.ts rm dist",
-    "build": "tsc && ts-node src/tools/nanium.ts cp src/tools/templates dist/tools/templates",
-    "cleanbuild": "npm run clean && npm run build",
+    "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
+    "build": "tsc",
     "test": "jest",
     "prepare": "",
-    "publishlist": "cp package.json dist && npm pack ./dist && tar -xvzf *.tgz && ts-node src/tools/nanium.ts rm package *.tgz",
-    "bundle": "npm run cleanbuild && cp package.json dist && cp README.md dist && npm publish ./dist",
-    "bundle-es": "npm run cleanbuild && tsc --build tsconfig-es.json && cp package-es.json dist/package.json && npm publish ./dist"
+    "publishlist": "npm pack && tar -xvzf *.tgz && ts-node _src/tools/nanium.ts rm nanium-*.tgz"
   },
   "files": [
     "README.md",

@@ -34,7 +34,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			},
 			...(config || {})
 		};
-		this.httpCore = new HttpCore(config, this.httpRequest);
+		this.httpCore = new HttpCore(this.config, this.httpRequest);
 	}
 
 	async init(): Promise<void> {
@@ -179,13 +179,13 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				xhr.onload = async (): Promise<void> => {
 					if (xhr.status === 200) {
 						if (xhr.response !== undefined && xhr.response !== '') {
-							resolve(await this.config.serializer.deserialize(xhr.response));
+							resolve(xhr.response);
 						} else {
 							resolve();
 						}
 					} else {
 						if (xhr.response !== undefined && xhr.response !== '') {
-							reject(await this.config.serializer.deserialize(xhr.response));
+							reject(xhr.response);
 						} else {
 							reject();
 						}

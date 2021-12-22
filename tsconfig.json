@@ -5,7 +5,7 @@
     "sourceMap": true,
     "inlineSourceMap": false,
     "declaration": true,
-    "outDir": "dist",
+    "outDir": ".",
     "watch": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -19,9 +19,17 @@
       "node_modules/@types"
     ]
   },
+  "include": [
+    "_src"
+  ],
   "exclude": [
     "node_modules",
     "dist",
-    "sdk"
+    "_tmp/sdk",
+    "interfaces",
+    "managers",
+    "serializers",
+    "tests",
+    "tools"
   ]
 }
