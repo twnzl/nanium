@@ -53,10 +53,10 @@ export interface ServiceManager {
 
 	/**
 	 * subscribe to a specific eventType
-	 * @param eventName
+	 * @param eventConstructor
 	 * @param handler
 	 */
-	subscribe(eventName: string, handler: EventHandler): any;
+	subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<any>;
 
 	/**
 	 * receive a subscription: decide to accept or to reject the subscription

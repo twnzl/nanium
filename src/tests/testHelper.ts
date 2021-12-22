@@ -83,6 +83,7 @@ export class TestHelper {
 
 		await Nanium.addManager(new NaniumConsumerNodejsHttp({
 			apiUrl: 'http://localhost:' + this.port + '/api',
+			apiEventUrl: 'http://localhost:' + this.port + '/api',
 			requestInterceptors: [TestClientRequestInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			handleError: async (err: any): Promise<any> => {

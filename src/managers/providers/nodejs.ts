@@ -272,7 +272,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		return await this.config.isResponsibleForEvent(eventName);
 	}
 
-	subscribe(eventName: string, handler: EventHandler): any {
+	subscribe(eventConstructor: new() => any, handler: EventHandler): any {
 		throw new Error('not implemented');
 	}
 

@@ -7,24 +7,27 @@ import * as http from 'http';
 import { ClientRequest, RequestOptions as HttpRequestOptions } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
-import { URL } from 'url';
 import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscriptionInterceptor';
+import { HttpCore } from './http.core';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
+	apiEventUrl: string;
 	options?: HttpRequestOptions | HttpsRequestOptions;
 }
 
 export class NaniumConsumerNodejsHttp implements ServiceManager {
 	config: NaniumConsumerNodejsHttpConfig;
+	private httpCore: HttpCore;
 
 	constructor(config?: NaniumConsumerNodejsHttpConfig) {
 		this.config = {
 			...{
 				apiUrl: 'localhost:8080/api',
+				apiEventUrl: 'localhost:8080/events',
 				proxy: null,
 				requestInterceptors: [],
 				serializer: new NaniumJsonSerializer(),
@@ -37,6 +40,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			},
 			...(config || {})
 		};
+		this.httpCore = new HttpCore(this.config, this.httpRequest);
 	}
 
 	async init(): Promise<void> {
@@ -46,16 +50,17 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	private async httpRequest(serviceName: string, body: any): Promise<any> {
+	private async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<string> {
+		const uri: URL = new URL(url);
 		return new Promise<any>((resolve, reject) => {
-			const uri: URL = new URL(this.config.apiUrl);
 			const options: HttpRequestOptions | HttpsRequestOptions = {
 				...{
 					host: uri.hostname,
-					path: uri.pathname + '#' + serviceName,
+					path: uri.pathname + uri.hash,
 					port: uri.port,
-					method: 'POST',
+					method: method,
 					protocol: uri.protocol,
+					headers: headers
 				},
 				...this.config.options
 			};
@@ -72,18 +77,10 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 						str += chunk;
 					});
 					response.on('end', async () => {
-						try {
-							const r: any = NaniumSerializerCore.plainToClass(
-								await this.config.serializer.deserialize(str),
-								body.request.constructor[responseTypeSymbol],
-								body.request.constructor[genericTypesSymbol]);
-							resolve(r);
-						} catch (e) {
-							reject(e);
-						}
+						resolve(str);
 					});
 				});
-				req.write(JSON.stringify(body));
+				req.write(body);
 				req.end();
 			} catch (e) {
 				if (e.statusCode === 500) {
@@ -103,7 +100,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			}
 		}
 
-		return await this.httpRequest(serviceName, { serviceName, request });
+		return await this.httpCore.sendRequest(serviceName, request);
 	}
 
 	stream(serviceName: string, request: any): Observable<any> {
@@ -157,8 +154,8 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsibleForEvent(eventName);
 	}
 
-	subscribe(eventName: string, handler: EventHandler): any {
-		throw new Error('not yet implemented');
+	async subscribe(eventConstructor: any, handler: EventHandler, retries: number = 0): Promise<void> {
+		await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
 	receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
