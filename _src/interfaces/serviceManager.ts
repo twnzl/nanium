@@ -49,7 +49,7 @@ export interface ServiceManager {
 	 * @param event
 	 * @param context
 	 */
-	emit(eventName: string, event: any, context: ExecutionContext): any;
+	emit(eventName: string, event: any, context: ExecutionContext): void;
 
 	/**
 	 * subscribe to a specific eventType

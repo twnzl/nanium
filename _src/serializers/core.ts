@@ -26,9 +26,13 @@ export class NaniumGenericTypeInfo {
 
 export class NaniumRequestInfo {
 	responseType: new() => any;
-	genericTypes?: {
-		[id: string]: new() => any;
-	};
+	genericTypes?: { [id: string]: new() => any; };
+	scope?: ExecutionScope = 'private';
+	skipInterceptors?: boolean | (new() => ServiceRequestInterceptor<any>)[] | { [scope in ExecutionScope]: boolean | (new() => ServiceRequestInterceptor<any>)[]; } = false;
+}
+
+export class NaniumEventInfo {
+	genericTypes?: { [id: string]: new() => any; };
 	scope?: ExecutionScope = 'private';
 	skipInterceptors?: boolean | (new() => ServiceRequestInterceptor<any>)[] | { [scope in ExecutionScope]: boolean | (new() => ServiceRequestInterceptor<any>)[]; } = false;
 }
@@ -63,6 +67,14 @@ export function RequestType(info: NaniumRequestInfo): Function {
 	};
 }
 
+export function EventType(info: NaniumEventInfo): Function {
+	return (target: new () => any) => {
+		target[genericTypesSymbol] = info.genericTypes;
+		target[scopeProperty] = target[scopeProperty] ?? info.scope;
+		target[skipInterceptorsProperty] = target[skipInterceptorsProperty] ?? info.skipInterceptors;
+	};
+}
+
 export class NaniumSerializerCore {
 
 	static plainToClass(plain: any, constructor: new (data?: any) => any, genericTypes?: NaniumGenericTypeInfo): any {
@@ -72,8 +84,8 @@ export class NaniumSerializerCore {
 		}
 		let result: any;
 
-		// return plain object, if Request does not have the RequestType decorator set
-		if (!constructor || (!genericTypes && !constructor[responseTypeSymbol])) {
+		// return plain object, if constructor is unknown
+		if (!constructor) {
 			return plain;
 		}
 
@@ -106,7 +118,10 @@ export class NaniumSerializerCore {
 			if (plain.hasOwnProperty(property)) {
 				if (propertyInfo?.hasOwnProperty(property)) {
 					pi = propertyInfo[property];
-					c = pi.ctor ?? genericTypes[pi.genericTypeId];
+					c = pi.ctor ?? (genericTypes ? genericTypes[pi.genericTypeId] : undefined);
+					if (c === undefined) {
+						return plain;
+					}
 					if (pi.isArray && !Array.isArray(plain[property])) {
 						result[property] = [this.plainToClass(plain[property], c, genericTypes)];
 					} else {

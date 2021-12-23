@@ -12,6 +12,7 @@ import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscriptionInterceptor';
 import { HttpCore } from './http.core';
+import { URL } from 'url';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -44,6 +45,9 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	}
 
 	async init(): Promise<void> {
+		// every consumer instance gets its own unique id from the server and will use it for every subscription.
+		// we get this from the server to prevent browser incompatibilities
+		this.httpCore.id = await this.httpRequest('GET', this.config.apiEventUrl);
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
@@ -53,24 +57,20 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	private async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<string> {
 		const uri: URL = new URL(url);
 		return new Promise<any>((resolve, reject) => {
-			const options: HttpRequestOptions | HttpsRequestOptions = {
-				...{
-					host: uri.hostname,
-					path: uri.pathname + uri.hash,
-					port: uri.port,
-					method: method,
-					protocol: uri.protocol,
-					headers: headers
-				},
-				...this.config.options
-			};
-			let requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest;
-			if (uri.protocol.startsWith('https')) {
-				requestFn = https.request;
-			} else {
-				requestFn = http.request;
-			}
 			try {
+				const options: HttpRequestOptions | HttpsRequestOptions = {
+					...{
+						host: uri.hostname,
+						path: uri.pathname + uri.hash,
+						port: uri.port,
+						method: method,
+						protocol: uri.protocol,
+						headers: headers
+					},
+					...this.config.options
+				};
+				const requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest
+					= uri.protocol.startsWith('https') ? https.request : http.request;
 				const req: ClientRequest = requestFn(options, (response) => {
 					let str: string = '';
 					response.on('data', (chunk: string) => {
@@ -80,7 +80,9 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 						resolve(str);
 					});
 				});
-				req.write(body);
+				if (body) {
+					req.write(body);
+				}
 				req.end();
 			} catch (e) {
 				if (e.statusCode === 500) {
@@ -146,8 +148,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		});
 	}
 
-	emit(eventName: string, event: any, context: ExecutionContext): any {
-		throw new Error('not yet implemented');
+	emit(eventName: string, event: any, context: ExecutionContext): void {
 	}
 
 	async isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility> {
@@ -158,7 +159,6 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
-	receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
-		throw new Error('not implemented.');
+	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 	}
 }

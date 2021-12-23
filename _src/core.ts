@@ -5,7 +5,7 @@ import { ExecutionContext } from './interfaces/executionContext';
 import { LogMode } from './interfaces/logMode';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
-import { DateHelper } from './helper';
+import { AsyncHelper, DateHelper } from './helper';
 import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
 import { EventSubscription } from './interfaces/eventSubscriptionInterceptor';
 
@@ -91,29 +91,21 @@ export class Nanium {
 
 	static emit(event: any, eventName?: string, context?: ExecutionContext): void {
 		eventName = eventName ?? (event.constructor as any).eventName;
-		this.getResponsibleManagerForEvent(eventName).then((manager: ServiceManager) => {
-			if (!manager) {
-				throw new Error('no responsible manager for event "' + eventName + '" found');
-			}
-			manager.emit(eventName, event, context).then();
-		});
+		this.managers.forEach((manager: ServiceManager) => manager.emit(eventName, event, context));
 	}
 
-	static subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): void {
-		this.getResponsibleManagerForEvent(eventConstructor.eventName).then((manager: ServiceManager) => {
-			if (!manager) {
-				throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
-			}
-			manager.subscribe(eventConstructor, handler).then();
-		});
+	static async subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<void> {
+		const manager: ServiceManager = await this.getResponsibleManagerForEvent(eventConstructor.eventName);
+		if (!manager) {
+			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
+		}
+		await manager.subscribe(eventConstructor, handler);
 	}
 
 	static async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
-		const manager: ServiceManager = await this.getResponsibleManagerForEvent(subscriptionData.eventName);
-		if (!manager) {
-			throw new Error('no responsible manager for event "' + subscriptionData.eventName + '" found');
-		}
-		return await manager.receiveSubscription(subscriptionData);
+		await AsyncHelper.parallel(this.managers, async (manager: ServiceManager) => {
+			await manager.receiveSubscription(subscriptionData);
+		});
 	}
 
 	static async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {

@@ -47,7 +47,7 @@ export class HttpCore {
 			this.startLongPolling().then();
 		}
 
-// try later if the client does not yet have an id
+		// try later if the client does not yet have an id
 		if (!this.id) {
 			return await new Promise<void>((resolve: Function, reject: Function) => {
 				if (retries > 10) {
@@ -106,7 +106,7 @@ export class HttpCore {
 				throw new Error(e);
 			} else {
 				// the server is not reachable or something like this so retry at some later time
-				//todo: events: at this point send all existing subscriptions with this long-polling request
+				//todo: events: at this point, send all existing subscriptions with this long-polling request
 				setTimeout(() => this.startLongPolling(), 5000);
 				return;
 			}

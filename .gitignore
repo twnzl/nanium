@@ -17,7 +17,7 @@ package-lock.json
 /helper.*
 
 # temporarry folders for development
-/_tmp/sdk
-/package/
+/_tmp
+/package
 /todos.txt
-/coverage/
+/coverage

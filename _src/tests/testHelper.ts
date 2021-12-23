@@ -18,13 +18,15 @@ export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
 	static port: number;
 	static hasServerBeenCalled: boolean;
+	static provider: NaniumNodejsProvider;
+	static consumer: NaniumConsumerNodejsHttp;
 
 	private static async initHttpServer(protocol: 'http' | 'https'): Promise<void> {
 		this.port = protocol === 'http' ? 8888 : 9999;
 		if (protocol === 'http') {
 			// http server
 			this.httpServer = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-				if (!/^\/api[\/#?]/gi.test(req.url)) {
+				if (!/^\/(api[\/#?]|events$)/gi.test(req.url)) {
 					res.write('*** http fallback ***');
 					res.statusCode = 200;
 					res.end();
@@ -40,25 +42,28 @@ export class TestHelper {
 					cert: fs.readFileSync(path.join(__dirname, 'cert/dummy.crt'))
 				},
 				(req: IncomingMessage, res: ServerResponse) => {
-					res.write('*** https fallback ***');
-					res.statusCode = 200;
-					res.end();
+					if (!/^\/(api[\/#?]|events$)/gi.test(req.url)) {
+						res.write('*** https fallback ***');
+						res.statusCode = 200;
+						res.end();
+					}
 				});
 			this.httpServer.listen(this.port);
 		}
 	}
 
-	static async initClientServerScenario(protocol: 'http' | 'https'): Promise<void> {
+	static async initClientServerScenario(protocol: 'http' | 'https', providerIsSubscriber: boolean = false): Promise<void> {
 		await this.initHttpServer(protocol);
-
-		// Nanium provider and consumer
 		this.hasServerBeenCalled = false;
-		await Nanium.addManager(new NaniumNodejsProvider({
+
+		// Nanium provider
+		this.provider = new NaniumNodejsProvider({
 			logMode: LogMode.error,
 			servicePath: 'tests/services',
 			channels: [
 				new NaniumHttpChannel({
 					apiPath: '/api',
+					eventPath: '/events',
 					server: TestHelper.httpServer,
 					executionContextConstructor: ServiceRequestContext
 				})
@@ -67,7 +72,7 @@ export class TestHelper {
 			// todo: events: eventInterceptors: [TestServerEventInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => {
 				if (!this.hasServerBeenCalled) {
-					// the first Nanium.Execute will chose the consumer as the responsible manager, the second call from the
+					// the first Nanium.Execute will choose the consumer as the responsible manager, the second call from the
 					// httpServer will say it is responsible. This is a workaround because server and client run in the same tread
 					this.hasServerBeenCalled = true;
 					return 'no';
@@ -76,24 +81,34 @@ export class TestHelper {
 					return 'yes';
 				}
 			},
+			isResponsibleForEvent: async (): Promise<KindOfResponsibility> => {
+				return providerIsSubscriber ? 'yes' : 'no';
+			},
 			handleError: async (err: any): Promise<any> => {
 				throw err;
 			}
-		}));
+		});
+		await Nanium.addManager(this.provider);
 
-		await Nanium.addManager(new NaniumConsumerNodejsHttp({
-			apiUrl: 'http://localhost:' + this.port + '/api',
-			apiEventUrl: 'http://localhost:' + this.port + '/api',
+		// Nanium consumer
+		this.consumer = new NaniumConsumerNodejsHttp({
+			apiUrl: protocol + '://localhost:' + this.port + '/api',
+			apiEventUrl: protocol + '://localhost:' + this.port + '/events',
 			requestInterceptors: [TestClientRequestInterceptor],
+			options: protocol === 'https' ? { rejectUnauthorized: false } : {},
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
+			isResponsibleForEvent: async (): Promise<KindOfResponsibility> => {
+				return providerIsSubscriber ? 'no' : 'yes';
+			},
 			handleError: async (err: any): Promise<any> => {
 				throw err;
 			}
-		}));
+		});
+		await Nanium.addManager(this.consumer);
 	}
 
 	static async shutdown(): Promise<void> {
-		this.httpServer.close();
+		this.httpServer?.close();
 		await Nanium.shutdown();
 	}
 }

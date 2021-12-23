@@ -77,6 +77,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 
 export class NaniumNodejsProvider implements ServiceProviderManager {
 	repository: NaniumRepository;
+	internalEventSubscriptions: { [eventName: string]: ((event: any) => void)[] } = {};
 	config: NaniumNodejsProviderConfig = {
 		requestInterceptors: [],
 		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
@@ -247,7 +248,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		}
 	}
 
-	async emit(eventName: string, event: any, context: ExecutionContext): Promise<void> {
+	async emit(eventName: string, event: any, executionContext: ExecutionContext): Promise<void> {
 		let emissionOk: boolean;
 		const interceptors: EventEmissionSendInterceptor<any>[] = this.config.eventEmissionSendInterceptors?.map(
 			(instanceOrClass) => typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass
@@ -256,7 +257,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 			for (const subscription of channel.eventSubscriptions[eventName] ?? []) { // subscriptions
 				emissionOk = true;
 				for (const interceptor of interceptors) { // interceptors
-					emissionOk = await interceptor.execute(event, context, subscription);
+					emissionOk = await interceptor.execute(event, executionContext, subscription);
 					if (!emissionOk) {
 						break;
 					}
@@ -266,14 +267,33 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 				}
 			}
 		}
+		// internal
+		if (this.internalEventSubscriptions[eventName]?.length) {
+			const subscription: EventSubscription = { clientId: '', eventName: eventName };
+			emissionOk = true;
+			for (const interceptor of interceptors) { // interceptors
+				emissionOk = await interceptor.execute(event, executionContext, subscription);
+				if (!emissionOk) {
+					break;
+				}
+			}
+			if (emissionOk) {
+				for (const handler of this.internalEventSubscriptions[eventName]) {
+					handler(event);
+				}
+			}
+		}
 	}
 
 	async isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility> {
 		return await this.config.isResponsibleForEvent(eventName);
 	}
 
-	subscribe(eventConstructor: new() => any, handler: EventHandler): any {
-		throw new Error('not implemented');
+	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<any> {
+		const eventName: string = (eventConstructor as any).eventName;
+		this.internalEventSubscriptions[eventName] =
+			this.internalEventSubscriptions[eventName] ?? [];
+		this.internalEventSubscriptions[eventName].push(handler);
 	}
 
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {

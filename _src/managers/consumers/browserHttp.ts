@@ -62,46 +62,6 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 		// execute the request
 		return await this.httpCore.sendRequest(serviceName, request);
-		// return await new Promise<any>(async (resolve: Function, reject: Function): Promise<void> => {
-		// 	try {
-		// 		const xhr: XMLHttpRequest = new XMLHttpRequest();
-		// 		xhr.onabort = (e: any): void => {
-		// 			reject(e);
-		// 		};
-		// 		xhr.onerror = (e: any): void => {
-		// 			reject(e);
-		// 		};
-		// 		xhr.onload = async (): Promise<void> => {
-		// 			if (xhr.status === 200) {
-		// 				const result: any = xhr.response;
-		// 				if (result !== null && result !== undefined && result !== '') {
-		// 					const r: any = NaniumSerializerCore.plainToClass(
-		// 						await this.config.serializer.deserialize(result),
-		// 						request.constructor[responseTypeSymbol],
-		// 						request.constructor[genericTypesSymbol]
-		// 					);
-		// 					resolve(r);
-		// 				} else {
-		// 					resolve();
-		// 				}
-		// 			} else {
-		// 				try {
-		// 					this.config.handleError(await this.config.serializer.deserialize(xhr.response)).then(() => {
-		// 					}, (e: any) => {
-		// 						reject(e);
-		// 					});
-		// 				} catch (e) {
-		// 					reject(e);
-		// 				}
-		// 			}
-		// 		};
-		// 		xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-		// 		xhr.setRequestHeader('Content-Type', this.config.serializer.mimeType);
-		// 		xhr.send(await this.config.serializer.serialize({ serviceName, request }));
-		// 	} catch (e) {
-		// 		reject(e);
-		// 	}
-		// });
 	}
 
 	stream(serviceName: string, request: any): Observable<any> {

@@ -24,7 +24,7 @@ describe('host services via http \n', function (): void {
 	});
 
 	describe('execute request via the consumer\n', function (): void {
-		beforeEach(async () => {
+		beforeAll(async () => {
 			request.body.input2 = null;
 			response = await request.execute(executionContext);
 		});

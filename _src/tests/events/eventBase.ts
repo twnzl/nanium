@@ -8,7 +8,7 @@ export class EventBase {
 		Nanium.emit(this, undefined, context);
 	}
 
-	static subscribe(handler: EventHandler): void {
-		Nanium.subscribe(this, handler);
+	static async subscribe(handler: EventHandler): Promise<void> {
+		await Nanium.subscribe(this, handler);
 	}
 }

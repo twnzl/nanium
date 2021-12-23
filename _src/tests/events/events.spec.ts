@@ -1,32 +1,53 @@
 // const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
-// todo: what about authorization - not everybody can subscribe to every event and emitting an event must use executionContext, so that only clients with authorization and right mandator get the event
+// todo: events: what about authorization - not everybody can subscribe to every event and emitting an event must use executionContext, so that only clients with authorization and right mandator get the event
 import { ServiceRequestContext } from '../services/serviceRequestContext';
 import { TestHelper } from '../testHelper';
 import { StuffCreatedEvent } from './test/stuffCreated.event';
+import { AsyncHelper } from '../../helper';
 
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 
-xdescribe('events \n', function (): void {
+describe('events \n', function (): void {
 
-	beforeAll(async () => {
-		await TestHelper.initClientServerScenario('http');
-	});
-
-	afterAll(async () => {
+	afterEach(async () => {
 		await TestHelper.shutdown();
 	});
 
-	describe('emit event via the consumer\n', () => {
-		let event: StuffCreatedEvent;
+	describe('same provider subscribes and emits the event \n', () => {
+		const sendEvent: StuffCreatedEvent = new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6));
+		let receivedEvent: StuffCreatedEvent;
 		beforeEach(async () => {
-			StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
-				event = e;
+			await TestHelper.initClientServerScenario('http', true);
+			await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
+				receivedEvent = e;
 			});
-			new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6)).emit(executionContext);
+			await sendEvent.emit(executionContext);
 		});
 
-		it('-->  \n', async () => {
-			// expect(event.aNumber).toBe(42);
+		it('--> subscribed handler should habe been executed and the event must be received as real event instance with correct property values and value types \n', async () => {
+			expect(receivedEvent.aNumber).toBe(sendEvent.aNumber);
+			expect(receivedEvent.aString).toBe(sendEvent.aString);
+			expect(receivedEvent.aDate).toBe(sendEvent.aDate);
 		});
 	});
+
+	describe('consumer (http) subscribes and provider emits the event \n', () => {
+		const sendEvent: StuffCreatedEvent = new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6));
+		let receivedEvent: StuffCreatedEvent;
+		beforeEach(async () => {
+			await TestHelper.initClientServerScenario('http', false);
+			await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
+				receivedEvent = e;
+			});
+			await sendEvent.emit(executionContext);
+			await AsyncHelper.waitUntil(() => receivedEvent !== undefined);
+		});
+
+		it('--> subscribed handler should habe been executed and the event must be received as real event instance with correct property values and value types \n', async () => {
+			expect(receivedEvent.aNumber).toBe(sendEvent.aNumber);
+			expect(receivedEvent.aString).toBe(sendEvent.aString);
+			expect(receivedEvent.aDate.toISOString()).toBe(sendEvent.aDate.toISOString()); // plainToClass not yet implemented für events
+		});
+	});
+
 });
