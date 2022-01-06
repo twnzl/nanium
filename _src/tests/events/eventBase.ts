@@ -11,4 +11,8 @@ export class EventBase {
 	static async subscribe(handler: EventHandler): Promise<void> {
 		await Nanium.subscribe(this, handler);
 	}
+
+	static async unsubscribe(handler?: EventHandler): Promise<void> {
+		await Nanium.unsubscribe(this, handler);
+	}
 }

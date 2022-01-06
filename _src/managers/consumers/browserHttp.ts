@@ -114,6 +114,10 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
+	async unsubscribe(eventConstructor: new () => any, handler?: EventHandler): Promise<any> {
+		await this.httpCore.unsubscribe(eventConstructor, handler);
+	}
+
 	emit(eventName: string, event: any, context: ExecutionContext): any {
 		throw new Error('not yet implemented');
 	}

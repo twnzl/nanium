@@ -13,6 +13,7 @@ import { TestServerRequestInterceptor } from './interceptors/server/test.request
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
+import { TestEventSubscriptionSendInterceptor } from './events/test.interceptor';
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
@@ -26,7 +27,7 @@ export class TestHelper {
 		if (protocol === 'http') {
 			// http server
 			this.httpServer = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-				if (!/^\/(api[\/#?]|events$)/gi.test(req.url)) {
+				if (!/^\/(api[\/#?]|events$|events\/delete$)/gi.test(req.url)) {
 					res.write('*** http fallback ***');
 					res.statusCode = 200;
 					res.end();
@@ -96,6 +97,7 @@ export class TestHelper {
 			apiEventUrl: protocol + '://localhost:' + this.port + '/events',
 			requestInterceptors: [TestClientRequestInterceptor],
 			options: protocol === 'https' ? { rejectUnauthorized: false } : {},
+			eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
 			isResponsibleForEvent: async (): Promise<KindOfResponsibility> => {
 				return providerIsSubscriber ? 'no' : 'yes';

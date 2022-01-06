@@ -53,8 +53,13 @@ export class NaniumHttpChannel implements Channel {
 					await this.handleIncomingEventSubscription(req, res);
 				}
 
+				// event unsubscriptions
+				else if (req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath + '/delete') {
+					await this.handleIncomingEventUnsubscription(req, res);
+				}
+
 				// service requests
-				if (req.method.toLowerCase() === 'post' && req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
+				else if (req.method.toLowerCase() === 'post' && req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
 					await this.handleIncomingServiceRequest(req, res);
 				}
 			});
@@ -152,20 +157,19 @@ export class NaniumHttpChannel implements Channel {
 						const subscriptionData: EventSubscription = await this.config.serializer.deserialize(Buffer.concat(data).toString());
 						// todo: events: subscriptionData = NaniumSerializerCore.plainToClass(subscriptionData, this.config.subscriptionDataConstructor);
 
-						// ask the manager to execute interceptors and to decide if the subscription is accepted or not
-						try {
-							await Nanium.receiveSubscription(subscriptionData);
-						} catch (e) {
-							res.statusCode = 400;
-							const responseBody: string = await this.config.serializer.serialize(e.message);
-							res.write(responseBody);
-							res.end();
-							resolve();
-							return;
-						}
-
 						// store subscription information
 						if (subscriptionData.eventName) {
+							// ask the manager to execute interceptors and to decide if the subscription is accepted or not
+							try {
+								await Nanium.receiveSubscription(subscriptionData);
+							} catch (e) {
+								res.statusCode = 400;
+								const responseBody: string = await this.config.serializer.serialize(e.message);
+								res.write(responseBody);
+								res.end();
+								resolve();
+								return;
+							}
 							this.eventSubscriptions[subscriptionData.eventName] = this.eventSubscriptions[subscriptionData.eventName] ?? [];
 							this.eventSubscriptions[subscriptionData.eventName].push(subscriptionData);
 							res.end();
@@ -186,6 +190,37 @@ export class NaniumHttpChannel implements Channel {
 				});
 			});
 		}
+	}
+
+	private async handleIncomingEventUnsubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		if (!this.eventSubscriptions) {
+			return;
+		}
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			const data: any[] = [];
+			req.on('data', (chunk: any) => {
+				data.push(chunk);
+			}).on('end', async () => {
+				try {
+					// deserialize subscription info
+					const subscriptionData: EventSubscription = await this.config.serializer.deserialize(Buffer.concat(data).toString());
+					// todo: events: subscriptionData = NaniumSerializerCore.plainToClass(subscriptionData, this.config.subscriptionDataConstructor);
+
+					if (!this.eventSubscriptions[subscriptionData.eventName]) {
+						resolve();
+					}
+					const idx: number = this.eventSubscriptions[subscriptionData.eventName].findIndex(s => s.clientId === subscriptionData.clientId);
+					if (idx >= 0) {
+						this.eventSubscriptions[subscriptionData.eventName].splice(idx, 1);
+					}
+					resolve();
+				} catch (e) {
+					reject(e);
+				}
+			});
+		});
+		res.statusCode = 200;
+		res.end();
 	}
 
 	async emitEvent(event: any, subscription?: EventSubscription): Promise<void> {

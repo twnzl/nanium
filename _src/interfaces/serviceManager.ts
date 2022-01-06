@@ -56,11 +56,18 @@ export interface ServiceManager {
 	 * @param eventConstructor
 	 * @param handler
 	 */
-	subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<any>;
+	subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<void>;
+
+	/**
+	 * unsubscribe from a specific eventType
+	 * @param eventConstructor
+	 * @param handler
+	 */
+	unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void>;
 
 	/**
 	 * receive a subscription: decide to accept or to reject the subscription
-	 * if accepted do what is needed
+	 * if accepted just return
 	 * if not accepted throw an error
 	 * @param subscriptionData
 	 */

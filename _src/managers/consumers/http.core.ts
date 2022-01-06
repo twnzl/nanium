@@ -5,7 +5,8 @@ import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 
 interface NaniumEventResponse {
 	eventName: string;
-	event: any;
+	event?: any;
+	error?: string;
 }
 
 interface ConsumerEventSubscription {
@@ -46,7 +47,6 @@ export class HttpCore {
 			this.eventSubscriptions = {};
 			this.startLongPolling().then();
 		}
-
 		// try later if the client does not yet have an id
 		if (!this.id) {
 			return await new Promise<void>((resolve: Function, reject: Function) => {
@@ -59,7 +59,6 @@ export class HttpCore {
 				}, 100);
 			});
 		}
-
 		const subscription: EventSubscription<any> = {
 			clientId: this.id,
 			eventName: eventConstructor.eventName,
@@ -75,17 +74,46 @@ export class HttpCore {
 
 		// add basics to eventSubscriptions for this eventName and inform the server
 		if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
+
 			this.eventSubscriptions[eventConstructor.eventName] = {
 				eventName: eventConstructor.eventName,
 				eventConstructor: eventConstructor,
 				eventHandlers: [handler]
 			};
 			const requestBody: string = await this.config.serializer.serialize(subscription);
-			await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
+			const error: string = await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
+			if (error) {
+				throw new Error(await this.config.serializer.deserialize(error));
+			}
 		}
-// if server has already been informed, just add the new handler locally
+
+		// if server has already been informed, just add the new handler locally
 		else {
 			this.eventSubscriptions[eventConstructor.eventName].eventHandlers.push(handler);
+		}
+	}
+
+
+	async unsubscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<void> {
+		const subscription: EventSubscription = {
+			clientId: this.id,
+			eventName: eventConstructor.eventName,
+			additionalData: {}
+		};
+		const requestBody: string = await this.config.serializer.serialize(subscription);
+		const error: string = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
+		if (error) {
+			console.log(await this.config.serializer.deserialize(error));
+			return;
+		}
+		if (!this.eventSubscriptions) {
+			return;
+		}
+		const eventName: string = eventConstructor.eventName;
+		if (handler) {
+			this.eventSubscriptions[eventName].eventHandlers = this.eventSubscriptions[eventName].eventHandlers.filter(h => h !== handler);
+		} else {
+			delete this.eventSubscriptions[eventName];
 		}
 	}
 
@@ -106,19 +134,20 @@ export class HttpCore {
 				throw new Error(e);
 			} else {
 				// the server is not reachable or something like this so retry at some later time
-				//todo: events: at this point, send all existing subscriptions with this long-polling request
+				// todo: events: at this point, send all existing subscriptions with this long-polling request
 				setTimeout(() => this.startLongPolling(), 5000);
 				return;
 			}
 		}
-// start next long-polling request no matter if the last one run into timeout or sent an event
-// (the timeout is necessary to prevent growing call stack with each event)
+
+		// start next long-polling request no matter if the last one run into timeout or sent an event
+		// (the timeout is necessary to prevent growing call stack with each event)
 		setTimeout(async () => {
 			this.startLongPolling().then();
 		});
 
-// if an event has arrived handle it
-// (the timeout is to get the restart of the long-polling run before the event handling - so the gap with no open is request small)
+		// if an event has arrived handle it
+		// (the timeout is to get the restart of the long-polling run before the event handling - so the gap with no open is request small)
 		if (eventResponse) {
 			setTimeout(async () => {
 				const eventConstructor: any = this.eventSubscriptions[eventResponse.eventName].eventConstructor;

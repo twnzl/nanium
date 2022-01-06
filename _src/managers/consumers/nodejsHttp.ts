@@ -159,6 +159,10 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
+	async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
+		await this.httpCore.unsubscribe(eventConstructor, handler);
+	}
+
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 	}
 }

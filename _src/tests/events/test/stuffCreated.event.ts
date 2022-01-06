@@ -1,7 +1,6 @@
 import { EventBase } from '../eventBase';
 import { EventType, Type } from '../../../serializers/core';
 
-// todo: events: Decorator EventType + plainToClass Deserialization
 @EventType({
 	scope: 'public'
 })

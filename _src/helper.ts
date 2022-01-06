@@ -28,7 +28,7 @@ export class AsyncHelper {
 					if (isReady()) {
 						resolve();
 					} else {
-						if (start + timeout > Date.now()) {
+						if (start + timeout < Date.now()) {
 							reject(new Error('timeout'));
 						} else {
 							setTimeout(checkFn, checkInterval);

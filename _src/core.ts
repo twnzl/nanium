@@ -102,6 +102,14 @@ export class Nanium {
 		await manager.subscribe(eventConstructor, handler);
 	}
 
+	static async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
+		const manager: ServiceManager = await this.getResponsibleManagerForEvent(eventConstructor.eventName);
+		if (!manager) {
+			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
+		}
+		await manager.unsubscribe(eventConstructor, handler);
+	}
+
 	static async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 		await AsyncHelper.parallel(this.managers, async (manager: ServiceManager) => {
 			await manager.receiveSubscription(subscriptionData);
@@ -236,8 +244,8 @@ export class Nanium {
 				})
 			);
 			this.queues = [];
-			this.managers = [];
 		}
+		this.managers = [];
 	}
 
 	private static async startQueue(requestQueue: ServiceRequestQueue): Promise<void> {
@@ -250,5 +258,4 @@ export class Nanium {
 	}
 
 	//#endregion queue
-
 }
