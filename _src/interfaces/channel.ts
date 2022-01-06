@@ -1,5 +1,5 @@
 import { NaniumRepository } from './serviceRepository';
-import { EventSubscription } from './eventSubscriptionInterceptor';
+import { EventSubscription } from './eventSubscription';
 
 export interface Channel {
 	eventSubscriptions: { [eventName: string]: EventSubscription[] };

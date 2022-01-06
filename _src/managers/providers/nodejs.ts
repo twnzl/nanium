@@ -16,9 +16,9 @@ import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
 import { EventHandler } from '../../interfaces/eventHandler';
 import {
 	EventEmissionSendInterceptor,
-	EventSubscription,
 	EventSubscriptionReceiveInterceptor
 } from '../../interfaces/eventSubscriptionInterceptor';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -269,7 +269,7 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		}
 		// internal
 		if (this.internalEventSubscriptions[eventName]?.length) {
-			const subscription: EventSubscription = { clientId: '', eventName: eventName };
+			const subscription: EventSubscription = new EventSubscription('', eventName);
 			emissionOk = true;
 			for (const interceptor of interceptors) { // interceptors
 				emissionOk = await interceptor.execute(event, executionContext, subscription);
@@ -289,11 +289,12 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 		return await this.config.isResponsibleForEvent(eventName);
 	}
 
-	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<void> {
+	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<EventSubscription> {
 		const eventName: string = (eventConstructor as any).eventName;
 		this.internalEventSubscriptions[eventName] =
 			this.internalEventSubscriptions[eventName] ?? [];
 		this.internalEventSubscriptions[eventName].push(handler);
+		return new EventSubscription('', eventName, handler);
 	}
 
 	async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {

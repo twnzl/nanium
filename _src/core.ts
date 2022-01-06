@@ -7,7 +7,7 @@ import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { AsyncHelper, DateHelper } from './helper';
 import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
-import { EventSubscription } from './interfaces/eventSubscriptionInterceptor';
+import { EventSubscription } from './interfaces/eventSubscription';
 
 export class Nanium {
 	static #isShutDownInitiated: boolean;
@@ -94,20 +94,20 @@ export class Nanium {
 		this.managers.forEach((manager: ServiceManager) => manager.emit(eventName, event, context));
 	}
 
-	static async subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<void> {
+	static async subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<EventSubscription> {
 		const manager: ServiceManager = await this.getResponsibleManagerForEvent(eventConstructor.eventName);
 		if (!manager) {
 			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
 		}
-		await manager.subscribe(eventConstructor, handler);
+		return await manager.subscribe(eventConstructor, handler);
 	}
 
-	static async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
-		const manager: ServiceManager = await this.getResponsibleManagerForEvent(eventConstructor.eventName);
+	static async unsubscribe(subscription?: EventSubscription): Promise<void> {
+		const manager: ServiceManager = await this.getResponsibleManagerForEvent(subscription.eventName);
 		if (!manager) {
-			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
+			throw new Error('no responsible manager for event "' + subscription.eventName + '" found');
 		}
-		await manager.unsubscribe(eventConstructor, handler);
+		await manager.unsubscribe(subscription);
 	}
 
 	static async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {

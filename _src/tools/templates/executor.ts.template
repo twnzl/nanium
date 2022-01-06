@@ -3,9 +3,9 @@ import { ${coreClassName}Request, ${coreClassName}Response } from './${serviceLa
 import { ServiceRequestContext } from '${relativeToRoot}serviceRequestContext';
 
 export class ${coreClassName}Executor implements ServiceExecutor<${coreClassName}Request, ${coreClassName}Response> {
-${indentString}static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
+	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
 
-${indentString}async execute(request: ${coreClassName}Request, executionContext: ServiceRequestContext): Promise<${coreClassName}Response> {
-${indentString}${indentString}return new ${coreClassName}Response({});
-${indentString}}
+	async execute(request: ${coreClassName}Request, executionContext: ServiceRequestContext): Promise<${coreClassName}Response> {
+		return new ${coreClassName}Response({});
+	}
 }

@@ -1,10 +1,5 @@
 import { ExecutionContext } from './executionContext';
-
-export interface EventSubscription<TData = any> {
-	clientId: string;
-	eventName?: string;
-	additionalData?: TData;
-}
+import { EventSubscription } from './eventSubscription';
 
 export interface EventSubscriptionSendInterceptor<TEvent, TSubscriptionData> {
 	execute(
@@ -23,9 +18,3 @@ export interface EventEmissionSendInterceptor<TEvent> {
 		subscription: EventSubscription
 	): Promise<boolean>;
 }
-
-// export interface EventEmissionReceiveInterceptor<TEvent> {
-// 	execute(
-// 		eventClass: new(data?: any) => TEvent, data: EventSubscriptionInfo, context: ExecutionContext
-// 	): Promise<void>;
-// }

@@ -3,14 +3,15 @@ import { TestHelper } from '../testHelper';
 import { StuffCreatedEvent } from './test/stuffCreated.event';
 import { AsyncHelper } from '../../helper';
 import { TestEventSubscriptionReceiveInterceptor, TestEventSubscriptionSendInterceptor } from './test.interceptor';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 
 
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
+let stuffCreatedEventSubscription: EventSubscription = null;
 
 describe('events \n', function (): void {
 
 	afterEach(async () => {
-		await StuffCreatedEvent.unsubscribe();
 		await TestHelper.shutdown();
 	});
 
@@ -19,10 +20,14 @@ describe('events \n', function (): void {
 		let receivedEvent: StuffCreatedEvent;
 		beforeEach(async () => {
 			await TestHelper.initClientServerScenario('http', true);
-			await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
+			stuffCreatedEventSubscription = await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
 				receivedEvent = e;
 			});
 			sendEvent.emit(executionContext);
+		});
+
+		afterEach(async () => {
+			await stuffCreatedEventSubscription?.unsubscribe();
 		});
 
 		it('--> subscribed handler should have been executed and the event must be received as real event instance with correct property values and value types \n', async () => {
@@ -39,6 +44,10 @@ describe('events \n', function (): void {
 		beforeEach(async () => {
 			await TestHelper.initClientServerScenario('http', false);
 			receivedEvent = undefined;
+		});
+
+		afterEach(async () => {
+			await StuffCreatedEvent.unsubscribe(stuffCreatedEventSubscription);
 		});
 
 		describe('with no interceptor \n', () => {

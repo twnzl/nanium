@@ -1,7 +1,8 @@
 import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription, EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
+import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
 import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 
 interface NaniumEventResponse {
 	eventName: string;
@@ -34,6 +35,11 @@ export class HttpCore {
 		const uri: string = new URL(this.config.apiUrl).toString() + '#' + serviceName;
 		const bodyString: string = await this.config.serializer.serialize({ serviceName, request });
 		const str: string = await this.httpRequest('POST', uri, bodyString);
+		if (str === undefined || str === null) {
+			return str;
+		} else if (str === '') {
+			return request.constructor[responseTypeSymbol] !== String ? undefined : str;
+		}
 		const r: any = NaniumSerializerCore.plainToClass(
 			await this.config.serializer.deserialize(str),
 			request.constructor[responseTypeSymbol],
@@ -41,7 +47,7 @@ export class HttpCore {
 		return r;
 	}
 
-	async subscribe(eventConstructor: any, handler: EventHandler, retries: number = 0): Promise<void> {
+	async subscribe(eventConstructor: any, handler: EventHandler, retries: number = 0): Promise<EventSubscription> {
 		// if not yet done, open long-polling request to receive events, do not use await because it is a long-polling request ;-)
 		if (!this.eventSubscriptions) {
 			this.eventSubscriptions = {};
@@ -49,21 +55,16 @@ export class HttpCore {
 		}
 		// try later if the client does not yet have an id
 		if (!this.id) {
-			return await new Promise<void>((resolve: Function, reject: Function) => {
+			return await new Promise<EventSubscription>((resolve: Function, reject: Function) => {
 				if (retries > 10) {
 					reject(new Error('subscription not possible: client has no ID'));
 				}
 				setTimeout(async () => {
-					await this.subscribe(eventConstructor, handler, ++retries);
-					resolve();
+					resolve(await this.subscribe(eventConstructor, handler, ++retries));
 				}, 100);
 			});
 		}
-		const subscription: EventSubscription<any> = {
-			clientId: this.id,
-			eventName: eventConstructor.eventName,
-			additionalData: {}
-		};
+		const subscription: EventSubscription<any> = new EventSubscription(this.id, eventConstructor.eventName, handler);
 
 		// execute interceptors
 		for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
@@ -74,7 +75,6 @@ export class HttpCore {
 
 		// add basics to eventSubscriptions for this eventName and inform the server
 		if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
-
 			this.eventSubscriptions[eventConstructor.eventName] = {
 				eventName: eventConstructor.eventName,
 				eventConstructor: eventConstructor,
@@ -91,43 +91,35 @@ export class HttpCore {
 		else {
 			this.eventSubscriptions[eventConstructor.eventName].eventHandlers.push(handler);
 		}
+
+		return subscription;
 	}
 
-
-	async unsubscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<void> {
-		const subscription: EventSubscription = {
-			clientId: this.id,
-			eventName: eventConstructor.eventName,
-			additionalData: {}
-		};
-		const requestBody: string = await this.config.serializer.serialize(subscription);
-		const error: string = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
-		if (error) {
-			console.log(await this.config.serializer.deserialize(error));
-			return;
+	async unsubscribe(subscription?: EventSubscription): Promise<void> {
+		const eventName: string = subscription.eventName;
+		if (subscription) {
+			this.eventSubscriptions[eventName].eventHandlers = this.eventSubscriptions[eventName].eventHandlers.filter(h => h !== subscription.handler);
 		}
-		if (!this.eventSubscriptions) {
-			return;
-		}
-		const eventName: string = eventConstructor.eventName;
-		if (handler) {
-			this.eventSubscriptions[eventName].eventHandlers = this.eventSubscriptions[eventName].eventHandlers.filter(h => h !== handler);
-		} else {
+		if (!subscription || this.eventSubscriptions[eventName].eventHandlers.length === 0) {
+			const requestBody: string = await this.config.serializer.serialize({
+				clientId: this.id,
+				eventName: subscription.eventName,
+				additionalData: {}
+			});
 			delete this.eventSubscriptions[eventName];
+			const error: string = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
+			if (error) {
+				console.log(await this.config.serializer.deserialize(error));
+				return;
+			}
 		}
 	}
 
 	private async startLongPolling(): Promise<void> {
 		let eventResponse: NaniumEventResponse;
 		try {
-			const subscription: EventSubscription = { clientId: this.id };
-			for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
-				const interceptor: EventSubscriptionSendInterceptor<any, any>
-					= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
-				await interceptor.execute(undefined, subscription);
-			}
 			const eventResponseString: string = await this.httpRequest('POST', this.config.apiEventUrl,
-				await this.config.serializer.serialize(subscription));
+				await this.config.serializer.serialize({ clientId: this.id }));
 			eventResponse = await this.config.serializer.deserialize(eventResponseString);
 		} catch (e) {
 			if (typeof e === 'string') {
@@ -152,7 +144,7 @@ export class HttpCore {
 			setTimeout(async () => {
 				const eventConstructor: any = this.eventSubscriptions[eventResponse.eventName].eventConstructor;
 				// type-save deserialization
-				let event: any = NaniumSerializerCore.plainToClass(
+				const event: any = NaniumSerializerCore.plainToClass(
 					eventResponse.event,
 					eventConstructor,
 					eventConstructor[genericTypesSymbol]
@@ -160,10 +152,7 @@ export class HttpCore {
 				// call registered handlers
 				if (event) {
 					for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers) {
-						event = await handler(event);
-						if (event === undefined) {
-							break;
-						}
+						await handler(event);
 					}
 				}
 			});

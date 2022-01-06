@@ -2,10 +2,10 @@ import { EventBase } from './eventBase';
 import { ServiceRequestContext } from '../services/serviceRequestContext';
 import {
 	EventEmissionSendInterceptor,
-	EventSubscription,
 	EventSubscriptionReceiveInterceptor,
 	EventSubscriptionSendInterceptor
 } from '../../interfaces/eventSubscriptionInterceptor';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 
 export class TestEventSubscriptionReceiveInterceptor implements EventSubscriptionReceiveInterceptor<EventBase> {
 	async execute(data: EventSubscription<TestSubscriptionData>): Promise<void> {

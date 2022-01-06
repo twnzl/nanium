@@ -6,8 +6,8 @@ import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscriptionInterceptor';
 import { HttpCore } from './http.core';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -44,7 +44,9 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		}
 		// every consumer instance gets its own unique id from the server and will use it for every subscription.
 		// we get this from the server to prevent browser incompatibilities
-		this.httpCore.id = await this.httpRequest('GET', this.config.apiEventUrl);
+		this.httpCore.id = await this.config.serializer.deserialize(
+			await this.httpRequest('GET', this.config.apiEventUrl)
+		);
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
@@ -110,12 +112,12 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	}
 
-	async subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<any> {
-		await this.httpCore.subscribe(eventConstructor, handler);
+	async subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription> {
+		return await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
-	async unsubscribe(eventConstructor: new () => any, handler?: EventHandler): Promise<any> {
-		await this.httpCore.unsubscribe(eventConstructor, handler);
+	async unsubscribe(subscription?: EventSubscription): Promise<void> {
+		await this.httpCore.unsubscribe(subscription);
 	}
 
 	emit(eventName: string, event: any, context: ExecutionContext): any {

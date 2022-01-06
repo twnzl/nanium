@@ -8,10 +8,10 @@ export class ${coreClassName}Response {
 }
 
 @RequestType({
-${indentString}responseType: ${coreClassName}Response,
-${indentString}genericTypes: { TRequestBody: ${coreClassName}RequestBody },
-${indentString}scope: '${scope}'
+	responseType: ${coreClassName}Response,
+	genericTypes: { TRequestBody: ${coreClassName}RequestBody },
+	scope: '${scope}'
 })
 export class ${coreClassName}Request extends ServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
-${indentString}static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
+	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
 }

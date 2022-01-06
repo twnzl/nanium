@@ -10,9 +10,9 @@ import { RequestOptions as HttpsRequestOptions } from 'https';
 import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscriptionInterceptor';
 import { HttpCore } from './http.core';
 import { URL } from 'url';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -155,12 +155,12 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsibleForEvent(eventName);
 	}
 
-	async subscribe(eventConstructor: any, handler: EventHandler, retries: number = 0): Promise<void> {
-		await this.httpCore.subscribe(eventConstructor, handler);
+	async subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription> {
+		return await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
-	async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
-		await this.httpCore.unsubscribe(eventConstructor, handler);
+	async unsubscribe(subscription?: EventSubscription): Promise<void> {
+		await this.httpCore.unsubscribe(subscription);
 	}
 
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {

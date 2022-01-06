@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 import { ExecutionContext } from './executionContext';
 import { KindOfResponsibility } from './kindOfResponsibility';
 import { EventHandler } from './eventHandler';
-import { EventSubscription } from './eventSubscriptionInterceptor';
+import { EventSubscription } from './eventSubscription';
 
 export interface ServiceManager {
 
@@ -56,14 +56,13 @@ export interface ServiceManager {
 	 * @param eventConstructor
 	 * @param handler
 	 */
-	subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<void>;
+	subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription>;
 
 	/**
 	 * unsubscribe from a specific eventType
-	 * @param eventConstructor
-	 * @param handler
+	 * @param subscription
 	 */
-	unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void>;
+	unsubscribe(subscription?: EventSubscription): Promise<void>;
 
 	/**
 	 * receive a subscription: decide to accept or to reject the subscription

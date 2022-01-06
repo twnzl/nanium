@@ -9,6 +9,7 @@ import * as readline from 'readline';
 import { Interface } from 'readline';
 
 export class NaniumToolConfig {
+	eventsDirectory: string;
 	serviceDirectory: string;
 	indentString: string;
 	namespace: string;
@@ -22,18 +23,13 @@ const actions: { [actionName: string]: Function } = {
 	init: init,
 	g: generateService,
 	gs: generateStreamService,
+	ge: generateEvent,
 	namespace: setNamespace,
 	rsn: refreshServiceNames,
-	rename: function (): void {
-		console.log('renaming of services - not yet implemented');
-	},
 	cp: copyFiles,
 	ccp: cleanAndCopyFiles,
 	rm: removeFiles,
-	sdk: sdk,
-	pkg: function (): void {
-		console.log('creating a binary for the app - not yet implemented');
-	},
+	sdk: sdk
 };
 
 const rl: Interface = readline.createInterface({
@@ -45,12 +41,13 @@ const rl: Interface = readline.createInterface({
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
 	console.log(`
 nanium init
-nanium g {directory.}*{service name} {private|public} {namespace}
+		generate nanium.json service+event directory and the nanium base classes
+nanium g {directory/}*{service name} {private|public} {namespace}
 		generate files for a new service (contract + executor)
-nanium gs {directory.}*{service name} {private|public} {namespace}
+nanium gs {directory/}*{service name} {private|public} {namespace}
 		generate files for a new streamed service (contract + executor)
-nanium rename {old service name} {new service name}
-nanium pkg
+nanium ge {directory/}*{event name} {private|public} {namespace}
+		generate file for a new event
 nanium rm {file or folder}
 		removes the file or folder
 nanium cp {srcPath} {dstPath}
@@ -97,6 +94,7 @@ const config: NaniumToolConfig = (function (): NaniumToolConfig {
 	return {
 		...{
 			serviceDirectory: 'src/server/services',
+			eventsDirectory: 'src/server/events',
 			indentString: '\t',
 			namespace: 'NaniumTest',
 			sdkPackage: {},
@@ -224,6 +222,51 @@ function generateServiceCore(
 	console.log('created: ' + contractFileName);
 }
 
+function generateEvent([eventsPath, scope, namespace]: [string, string, string]): void {
+	const cwdRelativeToEventsDirectory: string = process.cwd()
+		.replace(root, '')
+		.replace(config.eventsDirectory, '')
+		.replace(/^[\\/]/, '')
+		.replace(/^[\\/]/, '');
+	let parts: string[] = eventsPath.split(eventsPath.indexOf('/') >= 0 ? '/' : '.');
+	if (cwdRelativeToEventsDirectory) {
+		parts = [
+			...cwdRelativeToEventsDirectory.split(eventsPath.indexOf('/') >= 0 ? '/' : '.'),
+			...parts
+		];
+	}
+	const relativeToRoot: string = '../'.repeat(parts.length - 1) || './';
+	const subPath: string = parts.slice(0, parts.length - 1).join('/');
+	const coreClassName: string = parts.map((n: string) => n[0].toUpperCase() + n.substring(1)).join('');
+	const lastName: string = parts.slice(-1).join('');
+	const eventFileName: string = path.join(root, config.eventsDirectory, subPath, lastName + '.executor.ts');
+	scope = scope ?? 'private';
+	namespace = namespace ?? config.namespace;
+
+	// check if an event with that name already exists
+	if (fs.existsSync(eventFileName)) {
+		console.error('Nothing changed because the event already exists!');
+		process.exit(1);
+	}
+
+	const templateData: object = {
+		relativeToRoot,
+		subPath: subPath,
+		coreClassName: coreClassName,
+		serviceLastName: lastName,
+		prefix: namespace,
+		indentString: config.indentString,
+		config,
+		scope
+	};
+
+	// create executor file
+	const fileContent: string = fromTemplate('event.ts.template', templateData);
+	fs.mkdirSync(path.dirname(eventFileName), { recursive: true });
+	fs.writeFileSync(eventFileName, fileContent);
+	console.log('created: ' + eventFileName);
+}
+
 // function renameService (args: string[]) {
 // 	let parts: string[];
 // 	if (args[0].indexOf('/') >= 0) {
@@ -291,6 +334,10 @@ function init(): void {
 	// request.interceptor.ts
 	fileContent = fromTemplate('interceptor.ts.template');
 	fs.writeFileSync(path.join(config.serviceDirectory, 'main.interceptor.ts'), fileContent);
+
+	// eventBase.ts
+	fileContent = fromTemplate('eventBase.ts.template');
+	fs.writeFileSync(path.join(config.eventsDirectory, 'eventBase.ts'), fileContent);
 }
 
 async function setNamespace([namespace]: [string]): Promise<void> {

@@ -28,10 +28,11 @@
   ],
   "scripts": {
     "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
-    "build": "tsc",
+    "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates",
     "test": "jest",
     "prepare": "",
-    "publishlist": "npm pack && tar -xvzf *.tgz && ts-node _src/tools/nanium.ts rm nanium-*.tgz"
+    "publishlist": "npm pack && tar -xvzf *.tgz && ts-node _src/tools/nanium.ts rm nanium-*.tgz",
+    "bundle": "npm run build && npm publish"
   },
   "files": [
     "README.md",

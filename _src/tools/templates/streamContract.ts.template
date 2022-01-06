@@ -9,11 +9,11 @@ export class ${coreClassName}Response {
 }
 
 @RequestType({
-${indentString}responseType: ${coreClassName}Response,
-${indentString}genericTypes: {
-${indentString}${indentString}TRequestBody: ${coreClassName}RequestBody
-${indentString}},
-${indentString}scope: '${scope}'
+	responseType: ${coreClassName}Response,
+	genericTypes: {
+		TRequestBody: ${coreClassName}RequestBody
+	},
+	scope: '${scope}'
 })
 export class ${coreClassName}Request extends StreamServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
 	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';

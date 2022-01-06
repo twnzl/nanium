@@ -9,7 +9,7 @@ import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { NaniumSerializerCore } from '../../../serializers/core';
 import { randomUUID } from 'crypto';
-import { EventSubscription } from '../../../interfaces/eventSubscriptionInterceptor';
+import { EventSubscription } from '../../../interfaces/eventSubscription';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer;
@@ -193,9 +193,10 @@ export class NaniumHttpChannel implements Channel {
 	}
 
 	private async handleIncomingEventUnsubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
-		if (!this.eventSubscriptions) {
+		if (!this.eventSubscriptions || req.method.toLowerCase() !== 'post') {
 			return;
 		}
+
 		await new Promise<void>((resolve: Function, reject: Function) => {
 			const data: any[] = [];
 			req.on('data', (chunk: any) => {
