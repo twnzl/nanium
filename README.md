@@ -531,12 +531,24 @@ A provider can emit Events:
 new StuffAddedEvent(stuff).emit(executionContext);
 ```
 
-Consumers may subscribe to events:
+Consumers may subscribe to events ...
 
 ```ts
 await StuffAddedEvent.subscribe((value: Stuff) => {
-	refreshLocalCache<Stuff>(stuff);
+	// e.g. update app state or cache
 });
+```
+
+... and unsubscribe:
+
+```ts
+const subscription = await StuffAddedEvent.subscribe((value: Stuff) => {
+	// ...
+});
+// to deregister a specific handler, use the returned subscription
+subscription.unsubscribe();
+// or, to deregister all registered handler functions for an event type, use:
+StuffAddedEvent.unsubscribe();
 ```
 
 Via Nanium.addManager you can configure which channel should be used for the transmission of events, and you can add
@@ -544,11 +556,11 @@ event interceptors.
 
 **server:**
 
-```ts	
+```ts
 await Nanium.addManager(new NaniumNodejsProvider({
 	servicePath: 'services',
 	channels: [
-	    new NaniumHttpChannel({ apiPath: '/api', eventPath: '/events', server: server })
+		new NaniumHttpChannel({ apiPath: '/api', eventPath: '/events', server: server })
 	],
 	eventSubscriptionReceiveInterceptors: [DemoEventSubscriptionReceiveInterceptor],
 	eventEmissionSendInterceptors: [DemoEventEmissionSendInterceptor]
