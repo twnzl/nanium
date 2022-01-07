@@ -11,7 +11,8 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
-	apiEventUrl: string;
+	apiEventUrl?: string;
+	onServerConnectionRestored?: () => void;
 }
 
 export class NaniumConsumerBrowserHttp implements ServiceManager {
@@ -23,6 +24,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			...{
 				apiUrl: '/api',
 				apiEventUrl: '/events',
+				onServerConnectionRestored: () => {
+				},
 				requestInterceptors: [],
 				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {

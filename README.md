@@ -72,7 +72,7 @@ $ npm install nanium
 ### Video tutorials
 
 The best way to get started is to watch the video tutorials at
-https://www.youtube.com/channel/UCV0pLzUzkdGazPXKJoGDjow (coming soon!)
+https://www.youtube.com/channel/UCV0pLzUzkdGazPXKJoGDjow
 
 ### Demo app
 

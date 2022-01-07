@@ -16,7 +16,8 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
-	apiEventUrl: string;
+	apiEventUrl?: string;
+	onServerConnectionRestored?: () => void;
 	options?: HttpRequestOptions | HttpsRequestOptions;
 }
 
@@ -29,6 +30,8 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			...{
 				apiUrl: 'localhost:8080/api',
 				apiEventUrl: 'localhost:8080/events',
+				onServerConnectionRestored: () => {
+				},
 				proxy: null,
 				requestInterceptors: [],
 				serializer: new NaniumJsonSerializer(),

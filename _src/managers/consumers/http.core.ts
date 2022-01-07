@@ -18,7 +18,8 @@ interface ConsumerEventSubscription {
 
 interface NaniumHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
-	apiEventUrl: string;
+	apiEventUrl?: string;
+	onServerConnectionRestored?: () => void;
 }
 
 export class HttpCore {
@@ -64,14 +65,9 @@ export class HttpCore {
 				}, 100);
 			});
 		}
-		const subscription: EventSubscription<any> = new EventSubscription(this.id, eventConstructor.eventName, handler);
+		const subscription: EventSubscription<any> = new EventSubscription(this.id, eventConstructor.eventName);
 
 		// execute interceptors
-		for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
-			const interceptor: EventSubscriptionSendInterceptor<any, any>
-				= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
-			await interceptor.execute(eventConstructor, subscription);
-		}
 
 		// add basics to eventSubscriptions for this eventName and inform the server
 		if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
@@ -80,11 +76,7 @@ export class HttpCore {
 				eventConstructor: eventConstructor,
 				eventHandlers: [handler]
 			};
-			const requestBody: string = await this.config.serializer.serialize(subscription);
-			const error: string = await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
-			if (error) {
-				throw new Error(await this.config.serializer.deserialize(error));
-			}
+			await this.sendEventSubscription(eventConstructor, subscription);
 		}
 
 		// if server has already been informed, just add the new handler locally
@@ -93,6 +85,16 @@ export class HttpCore {
 		}
 
 		return subscription;
+	}
+
+	private async sendEventSubscription(eventConstructor: any, subscription: EventSubscription<any>): Promise<void> {
+		for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
+			const interceptor: EventSubscriptionSendInterceptor<any, any>
+				= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
+			await interceptor.execute(eventConstructor, subscription);
+		}
+		const requestBody: string = await this.config.serializer.serialize(subscription);
+		await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
 	}
 
 	async unsubscribe(subscription?: EventSubscription): Promise<void> {
@@ -115,19 +117,30 @@ export class HttpCore {
 		}
 	}
 
-	private async startLongPolling(): Promise<void> {
+	private async startLongPolling(resendSubscriptions: boolean = false): Promise<void> {
 		let eventResponse: NaniumEventResponse;
 		try {
+			if (resendSubscriptions) {
+				let subscription: EventSubscription;
+				for (const eventName in this.eventSubscriptions) {
+					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
+						subscription = new EventSubscription(this.id, eventName);
+						await this.sendEventSubscription(this.eventSubscriptions[eventName].eventConstructor, subscription);
+					}
+				}
+				await this.config.onServerConnectionRestored();
+			}
 			const eventResponseString: string = await this.httpRequest('POST', this.config.apiEventUrl,
 				await this.config.serializer.serialize({ clientId: this.id }));
-			eventResponse = await this.config.serializer.deserialize(eventResponseString);
+			if (eventResponseString) {
+				eventResponse = await this.config.serializer.deserialize(eventResponseString);
+			}
 		} catch (e) {
 			if (typeof e === 'string') {
 				throw new Error(e);
 			} else {
-				// the server is not reachable or something like this so retry at some later time
-				// todo: events: at this point, send all existing subscriptions with this long-polling request
-				setTimeout(() => this.startLongPolling(), 5000);
+				// the server is not reachable or something like this so retry at some later time and resend subscriptions (true)
+				setTimeout(() => this.startLongPolling(true), 5000);
 				return;
 			}
 		}
