@@ -254,6 +254,9 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 			(instanceOrClass) => typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass
 		) ?? [];
 		for (const channel of this.config.channels) { // channels
+			if (!channel.eventSubscriptions) {
+				continue;
+			}
 			for (const subscription of channel.eventSubscriptions[eventName] ?? []) { // subscriptions
 				emissionOk = true;
 				for (const interceptor of interceptors) { // interceptors
