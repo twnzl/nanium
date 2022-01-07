@@ -75,7 +75,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 }
 
 
-export class NaniumNodejsProvider implements ServiceProviderManager {
+export class NaniumProviderNodejs implements ServiceProviderManager {
 	repository: NaniumRepository;
 	internalEventSubscriptions: { [eventName: string]: ((event: any) => void)[] } = {};
 	config: NaniumNodejsProviderConfig = {
@@ -114,14 +114,14 @@ export class NaniumNodejsProvider implements ServiceProviderManager {
 			const files: string[] = await findFiles(this.config.servicePath,
 				[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
 			for (const file of files) {
-				const request: any = NaniumNodejsProvider.findClassWithServiceNameProperty(require(path.resolve(file)));
+				const request: any = NaniumProviderNodejs.findClassWithServiceNameProperty(require(path.resolve(file)));
 				if (!request) {
 					if (Nanium.logMode >= LogMode.warning) {
 						console.warn('invalid contract file (no request class found): ' + file);
 					}
 					continue;
 				}
-				const executor: any = NaniumNodejsProvider.findClassWithServiceNameProperty(
+				const executor: any = NaniumProviderNodejs.findClassWithServiceNameProperty(
 					require(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
 				this.addService(request, executor);
 				if (Nanium.logMode >= LogMode.info) {

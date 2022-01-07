@@ -1,5 +1,5 @@
 import { Nanium } from '../core';
-import { NaniumNodejsProvider } from '../managers/providers/nodejs';
+import { NaniumProviderNodejs } from '../managers/providers/nodejs';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
@@ -18,7 +18,7 @@ describe('execute TestRequest on server \n', function (): void {
 	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
-		await Nanium.addManager(new NaniumNodejsProvider({
+		await Nanium.addManager(new NaniumProviderNodejs({
 			logMode: LogMode.error,
 			servicePath: 'tests/services',
 			requestInterceptors: [TestServerRequestInterceptor],

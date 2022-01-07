@@ -5,7 +5,7 @@ import { Server as HttpsServer } from 'https';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Nanium } from '../core';
-import { NaniumNodejsProvider } from '../managers/providers/nodejs';
+import { NaniumProviderNodejs } from '../managers/providers/nodejs';
 import { LogMode } from '../interfaces/logMode';
 import { NaniumHttpChannel } from '../managers/providers/channels/http';
 import { ServiceRequestContext } from './services/serviceRequestContext';
@@ -19,7 +19,7 @@ export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
 	static port: number;
 	static hasServerBeenCalled: boolean;
-	static provider: NaniumNodejsProvider;
+	static provider: NaniumProviderNodejs;
 	static consumer: NaniumConsumerNodejsHttp;
 
 	private static async initHttpServer(protocol: 'http' | 'https'): Promise<void> {
@@ -58,7 +58,7 @@ export class TestHelper {
 		this.hasServerBeenCalled = false;
 
 		// Nanium provider
-		this.provider = new NaniumNodejsProvider({
+		this.provider = new NaniumProviderNodejs({
 			logMode: LogMode.error,
 			servicePath: 'tests/services',
 			channels: [
