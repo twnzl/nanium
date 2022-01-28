@@ -13,7 +13,7 @@ interface NaniumEventResponse {
 interface ConsumerEventSubscription {
 	eventName: string;
 	eventConstructor: new (data?: any) => any;
-	eventHandlers: Array<EventHandler>;
+	eventHandlers: Map<number, EventHandler>;
 }
 
 interface NaniumHttpConfig extends ServiceConsumerConfig {
@@ -74,14 +74,15 @@ export class HttpCore {
 			this.eventSubscriptions[eventConstructor.eventName] = {
 				eventName: eventConstructor.eventName,
 				eventConstructor: eventConstructor,
-				eventHandlers: [handler]
+				eventHandlers: new Map<number, EventHandler>()
 			};
+			this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
 			await this.sendEventSubscription(eventConstructor, subscription);
 		}
 
 		// if server has already been informed, just add the new handler locally
 		else {
-			this.eventSubscriptions[eventConstructor.eventName].eventHandlers.push(handler);
+			this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
 		}
 
 		return subscription;
@@ -100,9 +101,9 @@ export class HttpCore {
 	async unsubscribe(subscription?: EventSubscription): Promise<void> {
 		const eventName: string = subscription.eventName;
 		if (subscription) {
-			this.eventSubscriptions[eventName].eventHandlers = this.eventSubscriptions[eventName].eventHandlers.filter(h => h !== subscription.handler);
+			this.eventSubscriptions[eventName].eventHandlers.delete(subscription.id);
 		}
-		if (!subscription || this.eventSubscriptions[eventName].eventHandlers.length === 0) {
+		if (!subscription || this.eventSubscriptions[eventName].eventHandlers.size === 0) {
 			const requestBody: string = await this.config.serializer.serialize({
 				clientId: this.id,
 				eventName: subscription.eventName,
@@ -164,7 +165,7 @@ export class HttpCore {
 				);
 				// call registered handlers
 				if (event) {
-					for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers) {
+					for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers.values()) {
 						await handler(event);
 					}
 				}
