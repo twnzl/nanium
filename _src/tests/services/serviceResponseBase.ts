@@ -1,4 +1,4 @@
-import { GenericType, Type } from '../../serializers/core';
+import { Type } from '../../serializers/core';
 
 export class ServiceResponseMessage {
 	constructor(
@@ -20,7 +20,7 @@ export class ServiceResponseBase<TResponseBody> {
 	@Type(ServiceResponseHead)
 	head?: ServiceResponseHead;
 
-	@GenericType('TResponseBody')
+	@Type('TResponseBody')
 	body?: TResponseBody;
 
 	constructor(body?: TResponseBody, head?: ServiceResponseHead) {

@@ -5,14 +5,14 @@ import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEn
 import { ServiceRequestContext } from './serviceRequestContext';
 import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
 import { Observable } from 'rxjs';
-import { GenericType, Type } from '../../serializers/core';
+import { Type } from '../../serializers/core';
 
 export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = any> {
 
 	@Type(ServiceRequestHead)
 	head: ServiceRequestHead;
 
-	@GenericType('TRequestBody')
+	@Type('TRequestBody')
 	body: TRequestBody;
 
 	// if body is not Partial<> here, typescript will complain if you do not set the properties of

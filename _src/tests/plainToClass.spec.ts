@@ -55,6 +55,7 @@ describe('JsonToClassSerializer \n', function (): void {
 				expect(response[0].aGenericObjectArray[0] instanceof GenericStuff).toBeTruthy();
 				expect(response[0].aGenericObjectArray[0].theGeneric instanceof Date).toBeTruthy();
 				expect((response[0].aGenericObjectArray[0] as GenericStuff<Date>).theGeneric.toISOString()).toBe(new Date(1600000000006).toISOString());
+				expect((response[0].anObjectWithFixedGeneric as GenericStuff<Boolean>).theGeneric).toBe(true);
 			});
 	});
 });
@@ -145,7 +146,8 @@ function getRequest(): StuffRequest {
 				new GenericStuff<Date>({
 					theGeneric: new Date(1600000000006)
 				})
-			]
+			],
+			anObjectWithFixedGeneric: new GenericStuff<Boolean>({ theGeneric: true })
 		},
 		{ token: '1234' });
 }

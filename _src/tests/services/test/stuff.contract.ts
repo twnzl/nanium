@@ -1,4 +1,4 @@
-import { ArrayType, GenericType, RequestType, Type } from '../../../serializers/core';
+import { ArrayType, RequestType, Type } from '../../../serializers/core';
 import { ServiceRequestBase } from '../serviceRequestBase';
 
 export class GenericStuff<TStuffSubType> {
@@ -15,7 +15,7 @@ export class GenericStuff<TStuffSubType> {
 	aNumber?: number;
 	aBoolean?: boolean;
 
-	@GenericType('TStuffSubType')
+	@Type('TStuffSubType')
 	theGeneric?: TStuffSubType;
 }
 
@@ -32,7 +32,6 @@ export enum StuffNumberEnum {
 	two
 }
 
-
 export class Stuff<TStuffSubType> {
 
 	constructor(data?: Partial<Stuff<TStuffSubType>>) {
@@ -48,6 +47,7 @@ export class Stuff<TStuffSubType> {
 			this.aNumberArray = data.aNumberArray;
 			this.aGenericObject = data.aGenericObject;
 			this.aGenericObjectArray = data.aGenericObjectArray;
+			this.anObjectWithFixedGeneric = data.anObjectWithFixedGeneric;
 		}
 	}
 
@@ -89,6 +89,9 @@ export class Stuff<TStuffSubType> {
 
 	@Type(GenericStuff)
 	aGenericObjectArray?: GenericStuff<TStuffSubType>[];
+
+	@Type(GenericStuff, { 'TStuffSubType': Boolean })
+	anObjectWithFixedGeneric: GenericStuff<Boolean>;
 
 	get aCalculatedProperty(): string {
 		return this.aStringArray?.join(' ');
