@@ -200,12 +200,11 @@ Unfortunately, the typescript compiler still does not support the generation of 
 runtime. But this information is necessary to make the contract serialization and deserialization work. Therefore,
 nanium uses decorators to fill this gap.
 
-Currently, there are four essential decorators.
+Currently, there are two essential decorators.
 
-- __@Type()__: The parameter is the class/constructor of the decorated property.
-- __@ArrayType()__: Array-Properties must use this decorator. The parameter is the class/constructor of the items.
-- __@GenericType()__: If a property has a generic type that uses a type variable from the parent class, an identifier
-  for this type variable must be provided using @GenericType()
+- __@Type()__: Used for Properties. The first Parameter is either generic Type-ID if the property has a generic Type or
+  it is the class/constructor of the property. The second parameter is a dictionary with GenericTypeIDs as key and
+  class/constructor as value.
 - __@RequestType()__: Use the property 'responseType' to set the class of the response. And for each defined generic
   type identifier specify the concrete class using the property 'genericTypes'
 
@@ -216,7 +215,7 @@ export class GenericStuff<TStuffSubType> {
 	@Type(String) aString?: string;
 	@Type(Number) aNumber?: number;
 	@Type(Boolean) aBoolean?: boolean;
-	@GenericType('TStuffSubType') theGeneric?: TStuffSubType;
+	@Type('TStuffSubType') theGeneric?: TStuffSubType;
 }
 
 export enum StuffEnum {
@@ -231,11 +230,18 @@ export class Stuff<TStuffSubType> {
 	@Type(Boolean) aBoolean?: boolean;
 	@Type(String) anEnum?: StuffEnum;
 	@Type(Date) aDate?: Date;
+
+	// property 'theGeneric' of 'anObject' will be a Date 
+	// as globaly set by decorator RequestType of surrounding Type StuffRequest
 	@Type(Stuff) anObject?: Stuff<TStuffSubType>;
-	@ArrayType(Stuff) anObjectArray?: Stuff<TStuffSubType>[];
-	@ArrayType(String) aStringArray?: string[];
-	@Type(GenericStuff) aGenericObject?: GenericStuff<TStuffSubType>;
-	@ArrayType(GenericStuff) aGenericObjectArray?: GenericStuff<TStuffSubType>[];
+	// property 'theGeneric' of 'aGenericObject' will be a Number (local definition overwrites global)
+	@Type(GenericStuff, { 'TStuffSubType': Number }) aGenericObject?: GenericStuff<TStuffSubType>;
+
+	@Type(Array, Stuff) anObjectArray?: Stuff<TStuffSubType>[];
+	@Type(Array, String) aStringArray?: string[];
+	@Type(Array, GenericStuff) aGenericObjectArray?: GenericStuff<TStuffSubType>[];
+
+	@Type(Object, Boolean) aBooleanDictionary: { [key: string]: Boolean };
 
 	get aCalculatedProperty(): string {
 		return this.aStringArray?.join(' ');

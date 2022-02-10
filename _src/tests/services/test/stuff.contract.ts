@@ -32,6 +32,10 @@ export enum StuffNumberEnum {
 	two
 }
 
+export class StuffDictionary<T> {
+	[key: string]: T;
+}
+
 export class Stuff<TStuffSubType> {
 
 	constructor(data?: Partial<Stuff<TStuffSubType>>) {
@@ -48,50 +52,28 @@ export class Stuff<TStuffSubType> {
 			this.aGenericObject = data.aGenericObject;
 			this.aGenericObjectArray = data.aGenericObjectArray;
 			this.anObjectWithFixedGeneric = data.anObjectWithFixedGeneric;
+			this.aNumberDictionary = data.aNumberDictionary;
 		}
 	}
 
 	aString?: string;
-
-	@Type(Number)
-	aNumber?: number;
-
-	@Type(Boolean)
-	aBoolean?: boolean;
-
+	@Type(Number) aNumber?: number;
+	@Type(Boolean) aBoolean?: boolean;
 	aStringEnum?: StuffStringEnum;
-
-	@Type(Number)
-	aNumberEnum?: StuffNumberEnum;
-
+	@Type(Number) aNumberEnum?: StuffNumberEnum;
 	@Type(Array, String) aStringEnumArray?: StuffStringEnum[];
 	@Type(Array, Number) aNumberEnumArray?: StuffNumberEnum[];
-
-	@Type(Date)
-	aDate?: Date;
-
-	@Type(Stuff)
-	anObject?: Stuff<TStuffSubType>;
-
-	@Type(Stuff)
-	anObjectArray?: Stuff<TStuffSubType>[];
-
-	aStringArray?: string[];
-
-	@Type(Array, Number)
-	aNumberArray?: number[];
-
-	@Type(Array, Number)
-	anotherNumberArray?: number[];
-
-	@Type(GenericStuff)
-	aGenericObject?: GenericStuff<TStuffSubType>;
-
-	@Type(GenericStuff)
-	aGenericObjectArray?: GenericStuff<TStuffSubType>[];
-
-	@Type(GenericStuff, { 'TStuffSubType': Boolean })
-	anObjectWithFixedGeneric: GenericStuff<Boolean>;
+	@Type(Date) aDate?: Date;
+	@Type(Stuff) anObject?: Stuff<TStuffSubType>;
+	@Type(Stuff) anObjectArray?: Stuff<TStuffSubType>[];
+	@Type(Array, String) aStringArray?: string[];
+	@Type(Array, Number) aNumberArray?: number[];
+	@Type(Array, Number) anotherNumberArray?: number[];
+	@Type(GenericStuff) aGenericObject?: GenericStuff<TStuffSubType>;
+	@Type(GenericStuff) aGenericObjectArray?: GenericStuff<TStuffSubType>[];
+	@Type(GenericStuff, { 'TStuffSubType': Boolean }) anObjectWithFixedGeneric: GenericStuff<Boolean>;
+	@Type(StuffDictionary, Number) aNumberDictionary: StuffDictionary<Number>;
+	@Type(Object, Boolean) aBooleanDictionary: { [key: string]: Boolean };
 
 	get aCalculatedProperty(): string {
 		return this.aStringArray?.join(' ');

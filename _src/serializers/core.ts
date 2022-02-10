@@ -127,13 +127,17 @@ export class NaniumSerializerCore {
 						result[property] = this.plainToClass(plain[property], c as ConstructorType, globalGenericTypes, pi.localGenerics);
 					}
 				} else {
-					//todo: if localgenerics are given use the first Element as Constructor for all unspecified properties - it would be the type of an indexer property
-					if (typeof plain[property] === 'object' && plain[property] !== null) {
+					if (typeof localGenericTypes === 'function') { // indexer Properties
+						if (Object.prototype.hasOwnProperty.call(plain, property)) {
+							result[property] = this.plainToClass(plain[property], localGenericTypes as ConstructorType, globalGenericTypes);
+						}
+					} else if (typeof plain[property] === 'object' && plain[property] !== null) {
 						if (!Array.isArray(plain[property]) || (plain[property].length && typeof plain[property][0] === 'object')) {
 							console.log(`NaniumSerializerCore.plainToClass: no type given for property ${property} of class ${constructor.name}`);
 						}
+					} else {
+						result[property] = plain[property];
 					}
-					result[property] = plain[property];
 				}
 			}
 		}

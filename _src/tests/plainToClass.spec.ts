@@ -1,4 +1,11 @@
-import { GenericStuff, Stuff, StuffNumberEnum, StuffRequest, StuffStringEnum } from './services/test/stuff.contract';
+import {
+	GenericStuff,
+	Stuff,
+	StuffDictionary,
+	StuffNumberEnum,
+	StuffRequest,
+	StuffStringEnum
+} from './services/test/stuff.contract';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestHelper } from './testHelper';
 import { ServiceResponseBase } from './services/serviceResponseBase';
@@ -56,6 +63,11 @@ describe('JsonToClassSerializer \n', function (): void {
 				expect(response[0].aGenericObjectArray[0].theGeneric instanceof Date).toBeTruthy();
 				expect((response[0].aGenericObjectArray[0] as GenericStuff<Date>).theGeneric.toISOString()).toBe(new Date(1600000000006).toISOString());
 				expect((response[0].anObjectWithFixedGeneric as GenericStuff<Boolean>).theGeneric).toBe(true);
+				expect(response[0].aNumberDictionary instanceof StuffDictionary).toBe(true);
+				expect((response[0].aNumberDictionary as StuffDictionary<Number>).a).toBe(1);
+				expect((response[0].aNumberDictionary as StuffDictionary<Number>).b).toBe(2);
+				expect((response[0].aBooleanDictionary).a).toBe(true);
+				expect((response[0].aBooleanDictionary).b).toBe(false);
 			});
 	});
 });
@@ -75,6 +87,14 @@ describe('plainToClass \n', function (): void {
 			strangeRequest.body.aNumber = request.body.aNumber.toString();
 			strangeRequest.body.aNumberArray = request.body.aNumberArray.map(v => v.toString());
 			strangeRequest.body.anotherNumberArray = strangeRequest.body.anotherNumberArray[0].toString();
+			strangeRequest.body.aNumberDictionary = {
+				a: request.body.aNumberDictionary.a.toString(),
+				b: request.body.aNumberDictionary.b.toString()
+			};
+			strangeRequest.body.aBooleanDictionary = {
+				a: request.body.aBooleanDictionary.a.toString(),
+				b: request.body.aBooleanDictionary.b.toString()
+			};
 			request2 = NaniumSerializerCore.plainToClass(strangeRequest, StuffRequest);
 		});
 
@@ -89,6 +109,10 @@ describe('plainToClass \n', function (): void {
 			expect(request2.body.aNumberArray[0]).toBe(request.body.aNumberArray[0]);
 			expect(request2.body.aNumberArray[1]).toBe(request.body.aNumberArray[1]);
 			expect(request2.body.anotherNumberArray[0]).toBe(request.body.anotherNumberArray[0]);
+			expect(request2.body.aNumberDictionary.a).toBe(request.body.aNumberDictionary.a);
+			expect(request2.body.aNumberDictionary.b).toBe(request.body.aNumberDictionary.b);
+			expect(request2.body.aBooleanDictionary.a).toBe(request.body.aBooleanDictionary.a);
+			expect(request2.body.aBooleanDictionary.b).toBe(request.body.aBooleanDictionary.b);
 		});
 	});
 });
@@ -147,7 +171,9 @@ function getRequest(): StuffRequest {
 					theGeneric: new Date(1600000000006)
 				})
 			],
-			anObjectWithFixedGeneric: new GenericStuff<Boolean>({ theGeneric: true })
+			anObjectWithFixedGeneric: new GenericStuff<Boolean>({ theGeneric: true }),
+			aNumberDictionary: { a: 1, b: 2 },
+			aBooleanDictionary: { a: true, b: false },
 		},
 		{ token: '1234' });
 }
