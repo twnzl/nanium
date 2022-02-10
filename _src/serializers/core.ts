@@ -15,8 +15,7 @@ export class NaniumPropertyInfoCore {
 	constructor(
 		public ctor: new (data?: any) => any,
 		public genericTypeId?: string,
-		public isArray?: boolean,
-		public localGenerics?: LocalGenerics
+		public localGenerics?: LocalGenerics | ConstructorType
 	) {
 	}
 }
@@ -38,27 +37,13 @@ export class NaniumEventInfo {
 	skipInterceptors?: boolean | (new() => ServiceRequestInterceptor<any>)[] | { [scope in ExecutionScope]: boolean | (new() => ServiceRequestInterceptor<any>)[]; } = false;
 }
 
-export function Type(clazzOrGenericTypeId: ConstructorOrGenericTypeId, generics?: LocalGenerics): Function {
+export function Type(clazzOrGenericTypeId: ConstructorOrGenericTypeId, generics?: LocalGenerics | ConstructorType): Function {
 	return (target: new () => any, propertyKey: string) => {
 		target.constructor[propertyInfoSymbol] = target.constructor[propertyInfoSymbol] ?? {};
 		if (typeof clazzOrGenericTypeId === 'string') {
-			target.constructor[propertyInfoSymbol][propertyKey] = new NaniumPropertyInfoCore(undefined, clazzOrGenericTypeId, false, generics);
+			target.constructor[propertyInfoSymbol][propertyKey] = new NaniumPropertyInfoCore(undefined, clazzOrGenericTypeId, generics);
 		} else {
-			target.constructor[propertyInfoSymbol][propertyKey] = new NaniumPropertyInfoCore(clazzOrGenericTypeId, undefined, false, generics);
-		}
-	};
-}
-
-//todo: ArrayType löschen und statt isArray auf main type is Array prüfen
-export function ArrayType(clazzOrGenericTypeId: ConstructorOrGenericTypeId, generics?: LocalGenerics): Function {
-	return (target: new () => any, propertyKey: string) => {
-		target.constructor[propertyInfoSymbol] = target.constructor[propertyInfoSymbol] ?? {};
-		if (typeof clazzOrGenericTypeId === 'string') {
-			target.constructor[propertyInfoSymbol][propertyKey] =
-				new NaniumPropertyInfoCore(undefined, clazzOrGenericTypeId, true, generics);
-		} else {
-			target.constructor[propertyInfoSymbol][propertyKey] =
-				new NaniumPropertyInfoCore(clazzOrGenericTypeId, undefined, true, generics);
+			target.constructor[propertyInfoSymbol][propertyKey] = new NaniumPropertyInfoCore(clazzOrGenericTypeId, undefined, generics);
 		}
 	};
 }
@@ -82,7 +67,7 @@ export function EventType(info: NaniumEventInfo): Function {
 
 export class NaniumSerializerCore {
 
-	static plainToClass(plain: any, constructor: new (data?: any) => any, globalGenericTypes?: NaniumGenericTypeInfo, localGenericTypes?: LocalGenerics): any {
+	static plainToClass(plain: any, constructor: new (data?: any) => any, globalGenericTypes?: NaniumGenericTypeInfo, localGenericTypes?: LocalGenerics | ConstructorType): any {
 		// undefined or null
 		if (plain === undefined || plain === null) {
 			return plain;
@@ -132,13 +117,17 @@ export class NaniumSerializerCore {
 					if (c === undefined) {
 						return plain;
 					}
-					if (pi.isArray && !Array.isArray(plain[property])) {
-						result[property] = [this.plainToClass(plain[property], c as ConstructorType, globalGenericTypes, pi.localGenerics)];
+					if (c === Array) {
+						if (!Array.isArray(plain[property])) {
+							result[property] = [this.plainToClass(plain[property], pi.localGenerics as ConstructorType, globalGenericTypes, pi.localGenerics)];
+						} else {
+							result[property] = this.plainToClass(plain[property], pi.localGenerics as ConstructorType, globalGenericTypes, pi.localGenerics);
+						}
 					} else {
 						result[property] = this.plainToClass(plain[property], c as ConstructorType, globalGenericTypes, pi.localGenerics);
 					}
 				} else {
-					// todo: if generics are given use the first Element as Constructor for all unspecified properties - it would be the type of an indexer property
+					//todo: if localgenerics are given use the first Element as Constructor for all unspecified properties - it would be the type of an indexer property
 					if (typeof plain[property] === 'object' && plain[property] !== null) {
 						if (!Array.isArray(plain[property]) || (plain[property].length && typeof plain[property][0] === 'object')) {
 							console.log(`NaniumSerializerCore.plainToClass: no type given for property ${property} of class ${constructor.name}`);

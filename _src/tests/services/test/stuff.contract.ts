@@ -1,4 +1,4 @@
-import { ArrayType, RequestType, Type } from '../../../serializers/core';
+import { RequestType, Type } from '../../../serializers/core';
 import { ServiceRequestBase } from '../serviceRequestBase';
 
 export class GenericStuff<TStuffSubType> {
@@ -64,8 +64,8 @@ export class Stuff<TStuffSubType> {
 	@Type(Number)
 	aNumberEnum?: StuffNumberEnum;
 
-	@ArrayType(String) aStringEnumArray?: StuffStringEnum[];
-	@ArrayType(Number) aNumberEnumArray?: StuffNumberEnum[];
+	@Type(Array, String) aStringEnumArray?: StuffStringEnum[];
+	@Type(Array, Number) aNumberEnumArray?: StuffNumberEnum[];
 
 	@Type(Date)
 	aDate?: Date;
@@ -78,10 +78,10 @@ export class Stuff<TStuffSubType> {
 
 	aStringArray?: string[];
 
-	@ArrayType(Number)
+	@Type(Array, Number)
 	aNumberArray?: number[];
 
-	@ArrayType(Number)
+	@Type(Array, Number)
 	anotherNumberArray?: number[];
 
 	@Type(GenericStuff)
