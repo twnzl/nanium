@@ -1,7 +1,7 @@
 import { Nanium } from 'nanium/core';
 import { ServiceRequestQueueEntry } from 'nanium/interfaces/serviceRequestQueueEntry';
 import { ServiceRequestHead } from './serviceRequestHead';
-import { GenericType, Type } from 'nanium/serializers/core';
+import { Type } from 'nanium/serializers/core';
 import { ExecutionContext } from 'nanium/interfaces/executionContext';
 
 export class ServiceRequestBase<TRequestBody, TResponse> {
@@ -9,7 +9,7 @@ export class ServiceRequestBase<TRequestBody, TResponse> {
 	@Type(ServiceRequestHead)
 	head?: ServiceRequestHead;
 
-	@GenericType('TRequestBody')
+	@Type('TRequestBody')
 	body: TRequestBody;
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {

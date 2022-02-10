@@ -282,38 +282,42 @@ function init(): void {
 
 	// nanium.json
 	fileContent = JSON.stringify({
-		serviceDirectory: 'src/server/services',
-		indentString: '\t',
-		namespace: '',
-		outDir: 'sdk',
-		sdkPackage: {
-			name: 'myServices',
-			description: 'SDK for my services',
-			author: 'unknown',
-			license: 'MIT',
-			keywords: [
-				'my',
-				'contracts',
-				'sdk',
-				'API'
-			]
-		},
-		sdkTsConfig: {
-			'compilerOptions': {
-				'module': 'commonjs',
-				'sourceMap': false,
-				'declaration': true,
-				'watch': false,
-				'noEmitOnError': false,
-				'emitDecoratorMetadata': true,
-				'experimentalDecorators': true,
-				'target': 'ES2020',
-				'lib': ['ES2020'],
-				'types': ['node']
+		...{
+			serviceDirectory: 'src/server/services',
+			eventsDirectory: 'src/server/events',
+			indentString: '\t',
+			namespace: '',
+			outDir: 'sdk',
+			sdkPackage: {
+				name: 'myServices',
+				description: 'SDK for my services',
+				author: 'unknown',
+				license: 'MIT',
+				keywords: [
+					'my',
+					'contracts',
+					'sdk',
+					'API'
+				]
+			},
+			sdkTsConfig: {
+				'compilerOptions': {
+					'module': 'commonjs',
+					'sourceMap': false,
+					'declaration': true,
+					'watch': false,
+					'noEmitOnError': false,
+					'emitDecoratorMetadata': true,
+					'experimentalDecorators': true,
+					'target': 'ES2020',
+					'lib': ['ES2020'],
+					'types': ['node']
+				}
 			}
-		}
+		},
+		...config
 	}, null, 2);
-	fs.writeFileSync(path.join(process.cwd(), 'nanium.json'), fileContent);
+	fs.writeFileSync(path.join(process.cwd(), 'nanium.json'), fileContent + '\n');
 
 	// serviceRequestBase.ts
 	fileContent = fromTemplate('serviceRequestBase.ts.template');

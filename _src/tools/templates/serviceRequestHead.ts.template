@@ -5,4 +5,3 @@ export class ServiceRequestHead {
 	language?: string;
 	timezone?: string;
 }
-
