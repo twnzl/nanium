@@ -88,9 +88,6 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 				}
 				req.end();
 			} catch (e) {
-				if (e.statusCode === 500) {
-					reject(e.error);
-				}
 				reject(e);
 			}
 		});

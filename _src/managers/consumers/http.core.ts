@@ -35,17 +35,22 @@ export class HttpCore {
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
 		const uri: string = new URL(this.config.apiUrl).toString() + '#' + serviceName;
 		const bodyString: string = await this.config.serializer.serialize({ serviceName, request });
-		const str: string = await this.httpRequest('POST', uri, bodyString);
-		if (str === undefined || str === null) {
-			return str;
-		} else if (str === '') {
-			return request.constructor[responseTypeSymbol] !== String ? undefined : str;
+		try {
+			const str: string = await this.httpRequest('POST', uri, bodyString);
+			if (str === undefined || str === null) {
+				return str;
+			} else if (str === '') {
+				return request.constructor[responseTypeSymbol] !== String ? undefined : str;
+			}
+			const r: any = NaniumSerializerCore.plainToClass(
+				await this.config.serializer.deserialize(str),
+				request.constructor[responseTypeSymbol],
+				request.constructor[genericTypesSymbol]);
+			return r;
+		} catch (e) {
+			// todo: make an Error class configurable so that plainToClass can also be used.
+			throw await this.config.serializer.deserialize(e);
 		}
-		const r: any = NaniumSerializerCore.plainToClass(
-			await this.config.serializer.deserialize(str),
-			request.constructor[responseTypeSymbol],
-			request.constructor[genericTypesSymbol]);
-		return r;
 	}
 
 	async subscribe(eventConstructor: any, handler: EventHandler, retries: number = 0): Promise<EventSubscription> {

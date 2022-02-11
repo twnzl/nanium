@@ -12,7 +12,7 @@ import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
-	server: HttpServer | HttpsServer;
+	server: HttpServer | HttpsServer | { use: Function };
 	apiPath?: string;
 	eventPath?: string;
 	longPollingRequestTimeoutInSeconds?: number;
@@ -42,28 +42,48 @@ export class NaniumHttpChannel implements Channel {
 	async init(serviceRepository: NaniumRepository): Promise<void> {
 		this.serviceRepository = serviceRepository;
 		this.eventSubscriptions = {};
-		this.config.server.listeners('request').forEach((listener: (...args: any[]) => void) => {
-			this.config.server.removeListener('request', listener);
-			this.config.server.on('request', async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-				// original listener
-				listener(req, res);
+
+		const handleFunction: (req: IncomingMessage, res: ServerResponse, next?: Function) => Promise<void> =
+			async (
+				req: IncomingMessage, res: ServerResponse, next?: Function
+			): Promise<void> => {
+				if (res.writableFinished) {
+					return;
+				}
+				const url: string = req['originalUrl'] || req.url;
 
 				// event subscriptions
-				if (req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath) {
+				if ((url).split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath) {
 					await this.handleIncomingEventSubscription(req, res);
 				}
 
 				// event unsubscriptions
-				else if (req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath + '/delete') {
+				else if (url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath + '/delete') {
 					await this.handleIncomingEventUnsubscription(req, res);
 				}
 
 				// service requests
-				else if (req.method.toLowerCase() === 'post' && req.url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
+				else if (req.method.toLowerCase() === 'post' && url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
 					await this.handleIncomingServiceRequest(req, res);
 				}
-			});
-		});
+
+				// something different
+				else if (next) {
+					next();
+				}
+			};
+
+		if (typeof this.config.server['use'] === 'function') { // express-like
+			this.config.server['use'](handleFunction);
+		} else {
+			const server: HttpsServer | HttpServer = (this.config.server as HttpServer | HttpsServer);
+			const listeners: Function[] = server.listeners('request');
+			if (listeners.length === 1 && typeof listeners[0]['use'] === 'function') { // http(s) server from express-like
+				listeners[0]['use'](this.config.apiPath, handleFunction);
+			} else { // pure http(s) server
+				server.addListener('request', handleFunction);
+			}
+		}
 	}
 
 	//#region service request handling
