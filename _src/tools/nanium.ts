@@ -279,6 +279,7 @@ function generateEvent([eventsPath, scope, namespace]: [string, string, string])
 function init(): void {
 	let fileContent: string;
 	fs.mkdirSync(config.serviceDirectory, { recursive: true });
+	fs.mkdirSync(config.eventsDirectory, { recursive: true });
 
 	// nanium.json
 	fileContent = JSON.stringify({
