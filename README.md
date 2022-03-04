@@ -107,18 +107,27 @@ ways to through which public services can be executed from outside the server (e
 or another server using tcp).
 
 ```ts
-const httpServer: HttpServer = http.createServer(() => {
+import * as http from 'http';
+import { Nanium } from 'nanium/core';
+import { NaniumHttpChannel } from 'nanium/managers/providers/channels/http';
+import { NaniumProviderNodejs } from 'nanium/managers/providers/nodejs';
+
+const httpServer: http.Server = http.createServer(() => {
 });
 httpServer.listen(3000);
 
-await Nanium.addManager(new NaniumNodejsProvider({
-	requestChannels: [
-		new NaniumHttpChannel({
-			apiPath: '/api',
-			server: httpServer
-		})
-	]
-}));
+async function run(): Promise<void> {
+	await Nanium.addManager(new NaniumProviderNodejs({
+		channels: [
+			new NaniumHttpChannel({
+				apiPath: '/api',
+				server: httpServer // https-server or an express-like app are also possible
+			})
+		]
+	}));
+}
+
+run();
 ```
 
 ### Init the client (browser)
@@ -649,26 +658,24 @@ Nevertheless, if you don't want to do without nanium features yourself but still
 service, then nanium makes it possible.
 
 ```bash
-npm i nanium-channel-express-rest
+npm i nanium-channel-rest
 ```
 
 ```ts
-this.expressApp = express();
-this.expressApp.listen(3000);
-
-await Nanium.addManager(new NaniumNodejsProvider({
-	servicePath: 'dist/testservices',
-	requestChannels: [
-		new NaniumExpressRestChannel({
-			apiBasePath: '/api',
-			expressApp: this.expressApp
-		})
-	]
+await Nanium.addManager(new NaniumProviderNodejs({
+	servicePath: 'services',
+	channels: [
+		new NaniumHttpChannel({ apiPath: '/api', eventPath: '/events', server: server }),
+		new NaniumRestChannel({ apiBasePath: '/api2', server: server })
+	],
+	eventSubscriptionReceiveInterceptors: [DemoEventSubscriptionReceiveInterceptor],
+	eventEmissionSendInterceptors: [DemoEventEmissionSendInterceptor]
 }));
 ```
 
 This provides a REST-style API using the paths of service contract files to create the endpoint and the name of the
-contract file to choose the HTTP method. It is not perfect, but if you want more just use it as a base to extend it.
+contract file to choose the HTTP method. If you want a different algorithm, just use this as a starting point and
+implement your own channel.
 
 ## Extensibility
 
