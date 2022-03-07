@@ -49,7 +49,11 @@ export class HttpCore {
 			return r;
 		} catch (e) {
 			// todo: make an Error class configurable so that plainToClass can also be used.
-			throw await this.config.serializer.deserialize(e);
+			if (typeof e === 'string') {
+				throw await this.config.serializer.deserialize(e);
+			} else {
+				throw e;
+			}
 		}
 	}
 

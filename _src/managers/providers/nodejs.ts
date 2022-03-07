@@ -40,11 +40,6 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
 
 	/**
-	 * which log output should be made?
-	 */
-	logMode?: LogMode;
-
-	/**
 	 * exception handling function
 	 */
 	handleError?: (e: Error | any, serviceName: string, request: any, context?: ExecutionContext) => Promise<void>;
@@ -79,6 +74,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 	repository: NaniumRepository;
 	internalEventSubscriptions: { [eventName: string]: ((event: any) => void)[] } = {};
 	config: NaniumNodejsProviderConfig = {
+		servicePath: 'services',
 		requestInterceptors: [],
 		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
 		isResponsibleForEvent: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
@@ -111,14 +107,20 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 
 		// init repository
 		if (this.config.servicePath) {
-			const files: string[] = await findFiles(this.config.servicePath,
-				[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
+			let files: string[];
+			try {
+				files = await findFiles(path.resolve(this.config.servicePath),
+					[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
+			} catch (e) {
+				console.error(e);
+				throw new Error('nanium: service path does not exist. Please specify an absolute path (or relative to the working directory) to the property "servicePath" when initializing NaniumProviderNodejs');
+			}
 			for (const file of files) {
 				try {
 					const request: any = NaniumProviderNodejs.findClassWithServiceNameProperty(require(path.resolve(file)));
 					if (!request) {
 						if (Nanium.logMode >= LogMode.warning) {
-							console.warn('invalid contract file (no request class found): ' + file);
+							console.warn('nanium: invalid contract file (no request class found): ' + file);
 						}
 						continue;
 					}
@@ -126,10 +128,10 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 						require(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
 					this.addService(request, executor);
 					if (Nanium.logMode >= LogMode.info) {
-						console.log('service ready: ' + executor.serviceName);
+						console.log('nanium: service ready: ' + executor.serviceName);
 					}
 				} catch (e) {
-					if (this.config.logMode >= LogMode.error) {
+					if (Nanium.logMode >= LogMode.error) {
 						console.log(e);
 					}
 					throw e;
@@ -308,7 +310,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 	}
 
 	async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
-		const eventName: string = (eventConstructor as any).eventName;
+		const eventName: string = eventConstructor.eventName;
 		if (handler) {
 			this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName].filter(h => h !== handler);
 		} else {
@@ -321,11 +323,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			let interceptor: EventSubscriptionReceiveInterceptor<any>;
 			for (const instanceOrClass of this.config.eventSubscriptionReceiveInterceptors) {
 				interceptor = typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass;
-				try {
-					await interceptor.execute(subscriptionData);
-				} catch (e) {
-					throw e;
-				}
+				await interceptor.execute(subscriptionData);
 			}
 		}
 	}

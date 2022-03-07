@@ -9,29 +9,29 @@ import { AsyncHelper, DateHelper } from './helper';
 import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
 import { EventSubscription } from './interfaces/eventSubscription';
 
-export class Nanium {
-	static #isShutDownInitiated: boolean;
+export class CNanium {
+	private _isShutDownInitiated: boolean;
 
-	static managers: ServiceManager[] = [];
-	static queues: ServiceRequestQueue[] = [];
-	static logMode: LogMode = LogMode.error;
+	managers: ServiceManager[] = [];
+	queues: ServiceRequestQueue[] = [];
+	logMode: LogMode = LogMode.error;
 
-	static get isShutDownInitiated(): boolean {
-		return this.#isShutDownInitiated;
+	get isShutDownInitiated(): boolean {
+		return this._isShutDownInitiated;
 	}
 
-	static async addManager(manager: ServiceManager): Promise<void> {
+	async addManager(manager: ServiceManager): Promise<void> {
 		this.managers.push(manager);
 		await manager.init();
 	}
 
-	static async addQueue(queue: ServiceRequestQueue): Promise<void> {
+	async addQueue(queue: ServiceRequestQueue): Promise<void> {
 		this.queues.push(queue);
 		await queue.init();
-		await Nanium.startQueue(queue);
+		await this.startQueue(queue);
 	}
 
-	static async removeQueue(fn: (q: ServiceRequestQueue) => boolean): Promise<void> {
+	async removeQueue(fn: (q: ServiceRequestQueue) => boolean): Promise<void> {
 		const queues: ServiceRequestQueue[] = this.queues.filter(fn);
 		await Promise.all(queues.map(queue => {
 			return queue.stop();
@@ -39,8 +39,8 @@ export class Nanium {
 		this.queues = this.queues.filter((q: ServiceRequestQueue) => !fn(q));
 	}
 
-	static async execute(request: any, serviceName?: string, context?: ExecutionContext): Promise<any> {
-		serviceName = serviceName || (request.constructor as any).serviceName;
+	async execute(request: any, serviceName?: string, context?: ExecutionContext): Promise<any> {
+		serviceName = serviceName || request.constructor.serviceName;
 		const manager: ServiceManager = await this.getResponsibleManager(request, serviceName);
 		if (!manager) {
 			throw new Error('no responsible manager for Service "' + serviceName + '" found');
@@ -48,8 +48,8 @@ export class Nanium {
 		return await manager.execute(serviceName, request, context);
 	}
 
-	static stream<TResult = any>(request: any, serviceName?: string, context?: ExecutionContext): Observable<TResult> {
-		serviceName = serviceName || (request.constructor as any).serviceName;
+	stream<TResult = any>(request: any, serviceName?: string, context?: ExecutionContext): Observable<TResult> {
+		serviceName = serviceName || request.constructor.serviceName;
 		const managerPromise: Promise<ServiceManager> = this.getResponsibleManager(request, serviceName);
 		return new Observable((observer: Observer<any>): void => {
 			managerPromise.then(manager => {
@@ -72,7 +72,7 @@ export class Nanium {
 		});
 	}
 
-	static async enqueue<TRequest>(
+	async enqueue<TRequest>(
 		entry: ServiceRequestQueueEntry,
 		executionContext?: ExecutionContext
 	): Promise<ServiceRequestQueueEntry> {
@@ -85,16 +85,16 @@ export class Nanium {
 		entry.state = 'ready';
 
 		const result: ServiceRequestQueueEntry = await queue.enqueue(entry, executionContext);
-		Nanium.executeTimeControlled(result, queue);
+		this.executeTimeControlled(result, queue);
 		return result;
 	}
 
-	static emit(event: any, eventName?: string, context?: ExecutionContext): void {
-		eventName = eventName ?? (event.constructor as any).eventName;
+	emit(event: any, eventName?: string, context?: ExecutionContext): void {
+		eventName = eventName ?? event.constructor.eventName;
 		this.managers.forEach((manager: ServiceManager) => manager.emit(eventName, event, context));
 	}
 
-	static async subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<EventSubscription> {
+	async subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<EventSubscription> {
 		const manager: ServiceManager = await this.getResponsibleManagerForEvent(eventConstructor.eventName);
 		if (!manager) {
 			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
@@ -102,7 +102,7 @@ export class Nanium {
 		return await manager.subscribe(eventConstructor, handler);
 	}
 
-	static async unsubscribe(subscription?: EventSubscription): Promise<void> {
+	async unsubscribe(subscription?: EventSubscription): Promise<void> {
 		const manager: ServiceManager = await this.getResponsibleManagerForEvent(subscription.eventName);
 		if (!manager) {
 			throw new Error('no responsible manager for event "' + subscription.eventName + '" found');
@@ -110,13 +110,16 @@ export class Nanium {
 		await manager.unsubscribe(subscription);
 	}
 
-	static async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 		await AsyncHelper.parallel(this.managers, async (manager: ServiceManager) => {
 			await manager.receiveSubscription(subscriptionData);
 		});
 	}
 
-	static async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {
+	async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {
+		if (this.managers.length === 0) {
+			throw new Error('nanium: no managers registered - call Nanium.addManager().');
+		}
 		const irResults: KindOfResponsibility[] = await Promise.all(
 			this.managers.map((manager: ServiceManager) => manager.isResponsible(request, serviceName)));
 		let idx: number = irResults.indexOf('yes');
@@ -130,7 +133,7 @@ export class Nanium {
 		return undefined;
 	}
 
-	static async getResponsibleManagerForEvent(eventName: string): Promise<ServiceManager> {
+	async getResponsibleManagerForEvent(eventName: string): Promise<ServiceManager> {
 		const irResults: KindOfResponsibility[] = await Promise.all(
 			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName)));
 		let idx: number = irResults.indexOf('yes');
@@ -146,7 +149,7 @@ export class Nanium {
 
 
 	//#region queue
-	static async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
+	async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
 		const result: ServiceRequestQueue = this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'yes');
 		if (result) {
 			return result;
@@ -154,17 +157,16 @@ export class Nanium {
 		return this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'fallback');
 	}
 
-	static async onReadyQueueEntry(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
+	async onReadyQueueEntry(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
 		try {
-			await Nanium.executeTimeControlled(entry, requestQueue);
+			await this.executeTimeControlled(entry, requestQueue);
 		} catch (e) {
 			console.error(e.stack ? e.stack.toString() : e.toString);
-			// Nanium.emit(NaniumEvents.exception, e);
 		}
 	}
 
 	// execute an request considering the settings of startDate, interval, etc.
-	private static executeTimeControlled(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): void {
+	private executeTimeControlled(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): void {
 		if (!this.isShutDownInitiated && !requestQueue.isShutdownInitiated) {
 			if (!entry.startDate || new Date(entry.startDate) < new Date()) {
 				this.tryStart(entry, requestQueue).then();
@@ -172,12 +174,12 @@ export class Nanium {
 		}
 	}
 
-	private static async start(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
+	private async start(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
 		try {
 			entry = await requestQueue.onBeforeStart(entry);
 			entry.startDate = entry.startDate || new Date();
 			await requestQueue.updateEntry(entry);
-			entry.response = await Nanium.execute(
+			entry.response = await this.execute(
 				entry.request,
 				entry.serviceName,
 				await requestQueue.getExecutionContext(entry));
@@ -197,7 +199,7 @@ export class Nanium {
 		}
 	}
 
-	private static async tryStart(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<boolean> {
+	private async tryStart(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<boolean> {
 		if (entry.endOfInterval && new Date() >= entry.endOfInterval) {
 			entry.endDate = new Date();
 			entry.state = 'canceled';
@@ -235,7 +237,7 @@ export class Nanium {
 		return true;
 	}
 
-	static async shutdown(): Promise<void> {
+	async shutdown(): Promise<void> {
 		if (this.queues?.length) {
 			await Promise.all(
 				this.queues.map((q: ServiceRequestQueue) => {
@@ -248,14 +250,27 @@ export class Nanium {
 		this.managers = [];
 	}
 
-	private static async startQueue(requestQueue: ServiceRequestQueue): Promise<void> {
+	private async startQueue(requestQueue: ServiceRequestQueue): Promise<void> {
 		// load all current entries that have not been started so far and start them as configured
 		const readyEntries: ServiceRequestQueueEntry[] = await requestQueue
 			.getEntries({ states: ['ready'], startDateReached: true });
 		for (const entry of readyEntries) {
-			await Nanium.executeTimeControlled(entry, requestQueue);
+			await this.executeTimeControlled(entry, requestQueue);
 		}
 	}
 
 	//#endregion queue
 }
+
+
+if (typeof global !== 'undefined') {
+	if (!global['__nanium__']) {
+		global['__nanium__'] = new CNanium();
+	}
+} else {
+	if (!window['__nanium__']) {
+		window['__nanium__'] = new CNanium();
+	}
+}
+
+export const Nanium: CNanium = typeof global !== 'undefined' ? global['__nanium__'] : window['__nanium__'];

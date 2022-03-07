@@ -5,7 +5,6 @@ import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
-import { LogMode } from '../interfaces/logMode';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 
@@ -19,7 +18,6 @@ describe('execute TestRequest on server \n', function (): void {
 
 	beforeEach(async function (): Promise<void> {
 		await Nanium.addManager(new NaniumProviderNodejs({
-			logMode: LogMode.error,
 			servicePath: 'tests/services',
 			requestInterceptors: [TestServerRequestInterceptor],
 			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),

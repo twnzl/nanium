@@ -112,6 +112,9 @@ export class NaniumHttpChannel implements Channel {
 
 	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
 		const serviceName: string = deserialized.serviceName;
+		if (!serviceRepository[serviceName]) {
+			throw new Error(`nanium: unknown service ${serviceName}`);
+		}
 		const request: any = NaniumSerializerCore.plainToClass(deserialized.request, serviceRepository[serviceName].Request);
 		if (deserialized.streamed) {
 			if (!request.stream) {

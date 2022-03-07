@@ -6,7 +6,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Nanium } from '../core';
 import { NaniumProviderNodejs } from '../managers/providers/nodejs';
-import { LogMode } from '../interfaces/logMode';
 import { NaniumHttpChannel } from '../managers/providers/channels/http';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
@@ -59,7 +58,6 @@ export class TestHelper {
 
 		// Nanium provider
 		this.provider = new NaniumProviderNodejs({
-			logMode: LogMode.error,
 			servicePath: 'tests/services',
 			channels: [
 				new NaniumHttpChannel({
