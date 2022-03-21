@@ -1,6 +1,6 @@
-import { ServiceExecutionScope } from 'nanium/interfaces/serviceExecutionScope';
-import { StreamServiceRequestBase } from '${relativeToRoot}streamServiceRequestBase';
+import { ExecutionScope } from 'nanium/interfaces/executionScope';
 import { RequestType } from 'nanium/serializers/core';
+import { StreamServiceRequestBase } from '${relativeToRoot}streamServiceRequestBase';
 
 export class ${coreClassName}RequestBody {
 }
@@ -17,6 +17,6 @@ export class ${coreClassName}Response {
 })
 export class ${coreClassName}Request extends StreamServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
 	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
-	static scope: ServiceExecutionScope = '${scope}';
+	static scope: ExecutionScope = '${scope}';
 	static skipInterceptors: boolean = false;
 }
