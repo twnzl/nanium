@@ -80,14 +80,24 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				// transmission
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
 				let seenBytes: number = 0;
+				let deserialized: any;
 				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						const r: any = NaniumSerializerCore.plainToClass(
-							await this.config.serializer.deserialize(xhr.response.substr(seenBytes)),
-							request.constructor[responseTypeSymbol],
-							request.constructor[genericTypesSymbol]
-						);
-						if (Array.isArray(r)) {
+						let r: any;
+						if (xhr.response) {
+							try {
+								// todo: this is only working if there is time between each packet. Otherwise buffering on server side will concat packets an we need a protocol (e.g. split char) to split packets
+								deserialized = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
+								r = NaniumSerializerCore.plainToClass(
+									deserialized,
+									request.constructor[responseTypeSymbol],
+									request.constructor[genericTypesSymbol]
+								);
+							} catch (e) {
+								observer.error(e);
+							}
+						}
+						if (r !== undefined && Array.isArray(r)) {
 							for (const item of r) {
 								observer.next(item);
 							}
@@ -95,14 +105,16 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 							observer.next(r);
 						}
 						seenBytes = xhr.responseText.length;
+					} else if (xhr.readyState === 4) {
+						observer.complete();
 					}
 				};
 				xhr.addEventListener('error', (e: any) => {
 					this.config.handleError(e).then(
 						() => {
 						},
-						(e: any) => {
-							observer.error(e);
+						(err: any) => {
+							observer.error(err);
 						});
 				});
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);

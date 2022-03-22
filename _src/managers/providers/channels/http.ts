@@ -97,8 +97,10 @@ export class NaniumHttpChannel implements Channel {
 					const body: string = Buffer.concat(data).toString();
 					const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
 					await this.process(deserialized, res);
-					res.end();
-					resolve();
+					if (!deserialized.streamed) {
+						res.end();
+						resolve();
+					}
 				} catch (e) {
 					reject(e);
 				}

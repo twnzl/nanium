@@ -7,12 +7,12 @@ import * as http from 'http';
 import { ClientRequest, RequestOptions as HttpRequestOptions } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
-import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { URL } from 'url';
 import { EventSubscription } from '../../interfaces/eventSubscription';
+import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -115,33 +115,44 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 				}
 
 				// transmission
-				const xhr: XMLHttpRequest = new XMLHttpRequest();
-				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-				let seenBytes: number = 0;
-				xhr.onreadystatechange = async (): Promise<void> => {
-					if (xhr.readyState === 3) {
-						const r: any = NaniumSerializerCore.plainToClass(
-							await this.config.serializer.deserialize(xhr.response.substr(seenBytes)),
-							request.constructor[responseTypeSymbol],
-							request.constructor[genericTypesSymbol]
-						);
-						if (Array.isArray(r)) {
-							for (const item of r) {
-								observer.next(item);
+				const uri: URL = new URL(this.config.apiUrl);
+				try {
+					const options: HttpRequestOptions | HttpsRequestOptions = {
+						...{
+							host: uri.hostname,
+							path: uri.pathname + '#' + serviceName,
+							port: uri.port,
+							method: 'POST',
+							protocol: uri.protocol
+						},
+						...this.config.options
+					};
+					const requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest
+						= uri.protocol.startsWith('https') ? https.request : http.request;
+					const req: ClientRequest = requestFn(options, (response) => {
+						response.on('data', async (chunk: Buffer) => {
+							if (chunk.length > 0) {
+								const str: string = chunk.toString('utf8');
+								const r: any = NaniumSerializerCore.plainToClass(
+									await this.config.serializer.deserialize(str),
+									request.constructor[responseTypeSymbol],
+									request.constructor[genericTypesSymbol]
+								);
+								observer.next(r);
 							}
-						} else {
-							observer.next(r);
-						}
-						seenBytes = xhr.responseText.length;
-					}
-				};
-				xhr.addEventListener('error', (e: any) => {
-					this.config.handleError(e).then(() => {
-
+						});
+						response.on('end', async () => {
+							observer.complete();
+						});
+						response.on('error', async (e) => {
+							observer.error(e);
+						});
 					});
+					req.write(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
+					req.end();
+				} catch (e) {
 					observer.error(e);
-				});
-				xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
+				}
 			};
 
 			core();

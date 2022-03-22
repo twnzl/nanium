@@ -286,6 +286,8 @@ const response = new StuffRequest().execute();
 
 ## Streaming
 
+!!! experimental & under construction !!!
+
 If you want a service executor to provide the possibility to return partial results, you can create a streamed service
 by:
 

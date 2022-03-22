@@ -1,6 +1,6 @@
 {
   "name": "nanium",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "description": "nanoservice based fullstack software architecture framework",
   "author": "twnzl",
   "license": "MIT",
@@ -54,7 +54,7 @@
   ],
   "dependencies": {
     "recursive-readdir": "^2.2.2",
-    "rxjs": "^6.6.3",
+    "rxjs": "^6.6.7",
     "shelljs": "^0.8.5"
   },
   "devDependencies": {
