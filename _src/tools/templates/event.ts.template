@@ -8,9 +8,9 @@ export class ${coreClassName}Event extends EventBase {
 	static eventName: string = '${prefix}:${subPath}/${lastName}';
 
   // todo: define the events properties here
-	// @Type(String) someProperty?: string;
+	@Type(String) someProperty?: string;
 
-	constructor(data: ${coreClassName}Event) {
+	constructor(data: Partial<${coreClassName}Event>) {
 		super();
 		Object.assign(this, data);
 	}
