@@ -13,7 +13,7 @@ export class ServiceRequestBase<TRequestBody, TResponse> {
 	body: TRequestBody;
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
-		this.body = body || {} as TRequestBody;
+		this.body = body;
 		this.head = head;
 	}
 

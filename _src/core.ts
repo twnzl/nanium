@@ -260,6 +260,11 @@ export class CNanium {
 	}
 
 	//#endregion queue
+
+	initObject(obj: any, data: any): void {
+		Object.assign(obj, data);
+		// todo: use the info from @Type decorator to set only the defined properties
+	}
 }
 
 

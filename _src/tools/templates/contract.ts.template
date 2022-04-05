@@ -13,5 +13,5 @@ export class ${coreClassName}Response {
 	scope: '${scope}'
 })
 export class ${coreClassName}Request extends ServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
-	static serviceName: string = '${prefix}:${subPath}/${serviceLastName}';
+	static serviceName: string = '${prefix}:${subPath}${serviceLastName}';
 }

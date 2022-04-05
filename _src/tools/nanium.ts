@@ -200,7 +200,7 @@ function generateServiceCore(
 
 	const templateData: object = {
 		relativeToRoot,
-		subPath: subPath,
+		subPath: subPath ? subPath + '/' : '',
 		coreClassName: coreClassName,
 		serviceLastName,
 		prefix: namespace,
@@ -239,7 +239,7 @@ function generateEvent([eventsPath, scope, namespace]: [string, string, string])
 	const subPath: string = parts.slice(0, parts.length - 1).join('/');
 	const coreClassName: string = parts.map((n: string) => n[0].toUpperCase() + n.substring(1)).join('');
 	const lastName: string = parts.slice(-1).join('');
-	const eventFileName: string = path.join(root, config.eventsDirectory, subPath, lastName + '.executor.ts');
+	const eventFileName: string = path.join(root, config.eventsDirectory, subPath, lastName + '.event.ts');
 	scope = scope ?? 'private';
 	namespace = namespace ?? config.namespace;
 
@@ -251,7 +251,8 @@ function generateEvent([eventsPath, scope, namespace]: [string, string, string])
 
 	const templateData: object = {
 		relativeToRoot,
-		subPath: subPath,
+		subPath: subPath ? subPath + '/' : '',
+		lastName: lastName,
 		coreClassName: coreClassName,
 		serviceLastName: lastName,
 		prefix: namespace,

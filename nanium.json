@@ -1,5 +1,6 @@
 {
-  "serviceDirectory": "src/tests/services",
+  "serviceDirectory": "_src/tests/services",
+  "eventsDirectory": "_src/tests/events",
   "indentString": "\t",
   "namespace": "NaniumTest",
   "outDir": "_tmp/sdk",
