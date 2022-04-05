@@ -45,11 +45,6 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			this.config.apiUrl = window.location.protocol + '//' + window.location.host +
 				(this.config.apiUrl.startsWith('/') ? '' : '/') + this.config.apiUrl;
 		}
-		// every consumer instance gets its own unique id from the server and will use it for every subscription.
-		// we get this from the server to prevent browser incompatibilities
-		this.httpCore.id = await this.config.serializer.deserialize(
-			await this.httpRequest('GET', this.config.apiEventUrl)
-		);
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {

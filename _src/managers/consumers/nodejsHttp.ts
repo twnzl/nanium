@@ -48,9 +48,6 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	}
 
 	async init(): Promise<void> {
-		// every consumer instance gets its own unique id from the server and will use it for every subscription.
-		// we get this from the server to prevent browser incompatibilities
-		this.httpCore.id = await this.httpRequest('GET', this.config.apiEventUrl);
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {

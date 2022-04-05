@@ -104,7 +104,11 @@ export class HttpCore {
 			await interceptor.execute(eventConstructor, subscription);
 		}
 		const requestBody: string = await this.config.serializer.serialize(subscription);
-		await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
+		try {
+			await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
+		} catch (e) {
+			setTimeout(() => this.sendEventSubscription(eventConstructor, subscription), 1000);
+		}
 	}
 
 	async unsubscribe(subscription?: EventSubscription): Promise<void> {
@@ -127,9 +131,28 @@ export class HttpCore {
 		}
 	}
 
+	// every consumer instance gets its own unique id from the server and will use it for every subscription.
+	// we get this from the server to prevent browser incompatibilities
+	private async trySetClientId(): Promise<boolean> {
+		if (this.id) {
+			return true;
+		}
+		try {
+			this.id = await this.config.serializer.deserialize(
+				await this.httpRequest('GET', this.config.apiEventUrl));
+			return true;
+		} catch (e) {
+			return false;
+		}
+	}
+
 	private async startLongPolling(resendSubscriptions: boolean = false): Promise<void> {
 		let eventResponse: NaniumEventResponse;
 		try {
+			if (!(await this.trySetClientId())) {
+				setTimeout(() => this.startLongPolling(true), 5000);
+				return;
+			}
 			if (resendSubscriptions) {
 				let subscription: EventSubscription;
 				for (const eventName in this.eventSubscriptions) {
