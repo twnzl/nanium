@@ -7,6 +7,7 @@ import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/priva
 import { ServiceResponseBase } from './services/serviceResponseBase';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { ServiceRequestContext } from './services/serviceRequestContext';
+import { TimeRequest } from './services/test/time.contract';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
@@ -164,6 +165,17 @@ describe('execute TestRequest on server \n', function (): void {
 
 		it('--> \n', async function (): Promise<void> {
 			expect(privateResponse.body, 'result should be correct').toBe(2);
+		});
+	});
+
+	describe('optional body\n', function (): void {
+		it('-->body = undefined\n', async function (): Promise<void> {
+			const result: ServiceResponseBase<Date> = await new TimeRequest(undefined, { token: '1234' }).execute(executionContext);
+			expect(result.body).toBe(undefined);
+		});
+		it('-->body = Date\n', async function (): Promise<void> {
+			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute(executionContext);
+			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 		});
 	});
 });

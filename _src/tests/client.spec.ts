@@ -8,6 +8,7 @@ import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestHelper } from './testHelper';
 import { AnonymousRequest } from './services/test/anonymous.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
+import { TimeRequest } from './services/test/time.contract';
 
 const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
@@ -117,6 +118,17 @@ describe('host services via https \n', function (): void {
 
 		it('--> the original request listener of the server should have handled the request \n', async () => {
 			expect(result).toBe('*** https fallback ***');
+		});
+	});
+
+	describe('optional body\n', function (): void {
+		it('-->body = undefined\n', async function (): Promise<void> {
+			const result: ServiceResponseBase<Date> = await new TimeRequest(undefined, { token: '1234' }).execute(executionContext);
+			expect(result.body).toBe(undefined);
+		});
+		it('-->body = Date\n', async function (): Promise<void> {
+			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute(executionContext);
+			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 		});
 	});
 });
