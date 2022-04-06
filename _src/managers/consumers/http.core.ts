@@ -33,7 +33,7 @@ export class HttpCore {
 	}
 
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
-		const uri: string = new URL(this.config.apiUrl).toString() + '#' + serviceName;
+		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
 		const bodyString: string = await this.config.serializer.serialize({ serviceName, request });
 		try {
 			const str: string = await this.httpRequest('POST', uri, bodyString);
