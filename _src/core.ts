@@ -94,20 +94,27 @@ export class CNanium {
 		this.managers.forEach((manager: ServiceManager) => manager.emit(eventName, event, context));
 	}
 
-	async subscribe(eventConstructor: any, handler: (data: any) => Promise<void>): Promise<EventSubscription> {
-		const manager: ServiceManager = await this.getResponsibleManagerForEvent(eventConstructor.eventName);
+	async subscribe(
+		eventConstructor: any,
+		handler: (data: any) => Promise<void>,
+		context?: ServiceManager | Omit<any, 'subscribe'>
+	): Promise<EventSubscription> {
+		let manager: ServiceManager;
+		if (context && (context as ServiceManager).subscribe) {
+			manager = context as ServiceManager;
+		} else {
+			manager = await this.getResponsibleManagerForEvent(eventConstructor.eventName, context);
+		}
 		if (!manager) {
 			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
 		}
-		return await manager.subscribe(eventConstructor, handler);
+		const subscription: EventSubscription = await manager.subscribe(eventConstructor, handler);
+		subscription.manager = manager;
+		return subscription;
 	}
 
-	async unsubscribe(subscription?: EventSubscription): Promise<void> {
-		const manager: ServiceManager = await this.getResponsibleManagerForEvent(subscription.eventName);
-		if (!manager) {
-			throw new Error('no responsible manager for event "' + subscription.eventName + '" found');
-		}
-		await manager.unsubscribe(subscription);
+	async unsubscribe(subscription: EventSubscription): Promise<void> {
+		await subscription.manager.unsubscribe(subscription);
 	}
 
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
@@ -133,9 +140,9 @@ export class CNanium {
 		return undefined;
 	}
 
-	async getResponsibleManagerForEvent(eventName: string): Promise<ServiceManager> {
+	async getResponsibleManagerForEvent(eventName: string, context: any): Promise<ServiceManager> {
 		const irResults: KindOfResponsibility[] = await Promise.all(
-			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName)));
+			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, context)));
 		let idx: number = irResults.indexOf('yes');
 		if (idx >= 0) {
 			return this.managers[idx];

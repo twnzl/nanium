@@ -159,8 +159,8 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	emit(eventName: string, event: any, context: ExecutionContext): void {
 	}
 
-	async isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility> {
-		return await this.config.isResponsibleForEvent(eventName);
+	async isResponsibleForEvent(eventName: string, context?: any): Promise<KindOfResponsibility> {
+		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
 	async subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription> {

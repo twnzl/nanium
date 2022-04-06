@@ -52,8 +52,9 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
 	 * returns if the Manager is responsible for the given eventName
 	 * @param eventName
+	 * @param context
 	 */
-	isResponsibleForEvent?: (eventName: string) => Promise<KindOfResponsibility>;
+	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<KindOfResponsibility>;
 
 	/**
 	 * event subscription interceptors
@@ -297,8 +298,8 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		}
 	}
 
-	async isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility> {
-		return await this.config.isResponsibleForEvent(eventName);
+	async isResponsibleForEvent(eventName: string, context?: any): Promise<KindOfResponsibility> {
+		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
 	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<EventSubscription> {

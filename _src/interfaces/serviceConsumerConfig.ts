@@ -37,8 +37,9 @@ export interface ServiceConsumerConfig {
 	/**
 	 * function that returns, if this consumer is responsible for a specific event
 	 * @param eventName
+	 * @param context
 	 */
-	isResponsibleForEvent?: (eventName: string) => Promise<KindOfResponsibility>;
+	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<KindOfResponsibility>;
 
 	/**
 	 * the serializer that shall be used to serialize data before they are sent to the provider,

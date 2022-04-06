@@ -2,6 +2,7 @@ import { Nanium } from 'nanium/core';
 import { EventHandler } from 'nanium/interfaces/eventHandler';
 import { ExecutionContext } from 'nanium/interfaces/executionContext';
 import { EventSubscription } from 'nanium/interfaces/eventSubscription';
+import { ServiceManager } from 'nanium/interfaces/serviceManager';
 
 export class EventBase {
 
@@ -9,11 +10,11 @@ export class EventBase {
 		Nanium.emit(this, undefined, context);
 	}
 
-	static async subscribe(handler: EventHandler): Promise<EventSubscription> {
-		return await Nanium.subscribe(this, handler);
+	static async subscribe(handler: EventHandler, context?: ServiceManager | any): Promise<EventSubscription> {
+		return await Nanium.subscribe(this, handler, context);
 	}
 
-	static async unsubscribe(subscription?: EventSubscription): Promise<void> {
+	static async unsubscribe(subscription: EventSubscription): Promise<void> {
 		await Nanium.unsubscribe(subscription);
 	}
 }

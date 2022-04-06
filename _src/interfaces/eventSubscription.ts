@@ -1,11 +1,13 @@
 import { Nanium } from '../core';
 import { EventHandler } from './eventHandler';
+import { ServiceManager } from './serviceManager';
 
 export class EventSubscription<TData = any> {
 	private static nextId: number = 0;
 
 	id: number;
 	clientId: string;
+	manager: ServiceManager;
 	eventName?: string;
 	handler?: EventHandler;
 	additionalData?: TData;

@@ -134,8 +134,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		throw new Error('not yet implemented');
 	}
 
-	async isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility> {
-		return await this.config.isResponsibleForEvent(eventName);
+	async isResponsibleForEvent(eventName: string, context?: any): Promise<KindOfResponsibility> {
+		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
 	receiveSubscription(subscriptionData: EventSubscription): Promise<void> {

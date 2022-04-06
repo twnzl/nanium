@@ -39,9 +39,10 @@ export interface ServiceManager {
 	 * initialize the manager.
 	 * Nanium will call this when the manager (provider or consumer) is added to the nanium service managers via Nanium.addManager
 	 * must return 'yes' if this manager is responsible for events with the given name
-	 * @param eventName
+	 * @param eventName name of the event
+	 * @param context additional information that can be passed to the subscribe function of event classes, to use them to find the right manager for the subscription
 	 */
-	isResponsibleForEvent(eventName: string): Promise<KindOfResponsibility>;
+	isResponsibleForEvent(eventName: string, context?: any): Promise<KindOfResponsibility>;
 
 	/**
 	 * emit an event
@@ -62,7 +63,7 @@ export interface ServiceManager {
 	 * unsubscribe from a specific eventType
 	 * @param subscription
 	 */
-	unsubscribe(subscription?: EventSubscription): Promise<void>;
+	unsubscribe(subscription: EventSubscription): Promise<void>;
 
 	/**
 	 * receive a subscription: decide to accept or to reject the subscription

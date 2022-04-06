@@ -2,6 +2,7 @@ import { EventBase } from '${relativeToRoot}eventBase';
 import { EventType, Type } from 'nanium/serializers/core';
 import { EventSubscription } from 'nanium/interfaces/eventSubscription';
 import { Nanium } from 'nanium/core';
+import { ServiceManager } from 'nanium/interfaces/serviceManager';
 
 @EventType({
 	scope: '${scope}'
@@ -17,7 +18,10 @@ export class ${coreClassName}Event extends EventBase {
 		Nanium.initObject(this, data);
 	}
 
-	static override async subscribe(handler: (event: ${coreClassName}Event) => void): Promise<EventSubscription> {
-		return await super.subscribe(handler)
+	static override async subscribe(
+		handler: (event: ${coreClassName}Event) => void,
+		context?: ServiceManager | any
+	): Promise<EventSubscription> {
+		return await super.subscribe(handler, context);
 	}
 }
