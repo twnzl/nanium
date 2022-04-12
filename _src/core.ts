@@ -114,7 +114,9 @@ export class CNanium {
 	}
 
 	async unsubscribe(subscription: EventSubscription): Promise<void> {
-		await subscription.manager.unsubscribe(subscription);
+		if (subscription) {
+			await subscription.manager.unsubscribe(subscription);
+		}
 	}
 
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {

@@ -26,13 +26,12 @@ export class TestHelper {
 		if (protocol === 'http') {
 			// http server
 			this.httpServer = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-				if (!/^\/(api[\/#?]|events$|events\/delete$)/gi.test(req.url)) {
+				if (!/^\/(api[\/#?]|events?$|events\/delete?$)/gi.test(req.url)) {
 					res.write('*** http fallback ***');
 					res.statusCode = 200;
 					res.end();
 				}
 			});
-			this.httpServer.listen(this.port);
 		}
 
 		// https server
@@ -48,8 +47,13 @@ export class TestHelper {
 						res.end();
 					}
 				});
-			this.httpServer.listen(this.port);
 		}
+
+		await new Promise<void>((resolve: Function) => {
+			this.httpServer.listen(this.port, () => {
+				resolve();
+			});
+		});
 	}
 
 	static async initClientServerScenario(protocol: 'http' | 'https', providerIsSubscriber: boolean = false): Promise<void> {
@@ -108,7 +112,16 @@ export class TestHelper {
 	}
 
 	static async shutdown(): Promise<void> {
-		this.httpServer?.close();
-		await Nanium.shutdown();
+		await new Promise<void>((resolve: Function) => {
+			if (this.httpServer) {
+				this.httpServer.close();
+				setTimeout(() => {
+					this.httpServer = null;
+					resolve();
+				}, 100);
+			} else {
+				resolve();
+			}
+		});
 	}
 }

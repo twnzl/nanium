@@ -132,7 +132,7 @@ export class NaniumHttpChannel implements Channel {
 			res.statusCode = 200;
 			result.subscribe({
 				next: async (value: any): Promise<void> => {
-					res.write(await config.serializer.serialize(value) + '\n');
+					res.write(await config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
 					if (res['flush']) { // if compression is enabled we have to call flush
 						res['flush']();
 					}

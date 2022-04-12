@@ -3,11 +3,11 @@ import { ServiceManager } from '../../interfaces/serviceManager';
 import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NaniumJsonSerializer } from '../../serializers/json';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { EventSubscription } from '../../interfaces/eventSubscription';
+import { genericTypesSymbol, responseTypeSymbol } from '../../serializers/core';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -75,29 +75,28 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				// transmission
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
 				let seenBytes: number = 0;
-				let deserialized: any;
+				let deserialized: {
+					rest: string;
+					data: any;
+				} = { data: '', rest: '' };
 				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						let r: any;
 						if (xhr.response) {
 							try {
-								// todo: this is only working if there is time between each packet. Otherwise buffering on server side will concat packets an we need a protocol (e.g. split char) to split packets
-								deserialized = await this.config.serializer.deserialize(xhr.response.substr(seenBytes));
-								r = NaniumSerializerCore.plainToClass(
-									deserialized,
+								deserialized = await this.config.serializer.getData(
+									deserialized.rest + xhr.response.substr(seenBytes),
 									request.constructor[responseTypeSymbol],
-									request.constructor[genericTypesSymbol]
-								);
+									request.constructor[genericTypesSymbol]);
 							} catch (e) {
 								observer.error(e);
 							}
 						}
-						if (r !== undefined && Array.isArray(r)) {
-							for (const item of r) {
+						if (deserialized.data !== undefined && Array.isArray(deserialized.data)) {
+							for (const item of deserialized.data) {
 								observer.next(item);
 							}
 						} else {
-							observer.next(r);
+							observer.next(deserialized.data);
 						}
 						seenBytes = xhr.responseText.length;
 					} else if (xhr.readyState === 4) {

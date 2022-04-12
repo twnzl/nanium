@@ -5,15 +5,10 @@ import { AsyncHelper } from '../../helper';
 import { TestEventSubscriptionReceiveInterceptor, TestEventSubscriptionSendInterceptor } from './test.interceptor';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 
-
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 let stuffCreatedEventSubscription: EventSubscription = null;
 
 describe('events \n', function (): void {
-
-	afterEach(async () => {
-		await TestHelper.shutdown();
-	});
 
 	describe('same provider subscribes and emits the event \n', () => {
 		const sendEvent: StuffCreatedEvent = new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6));
@@ -28,6 +23,7 @@ describe('events \n', function (): void {
 
 		afterEach(async () => {
 			await stuffCreatedEventSubscription?.unsubscribe();
+			await TestHelper.shutdown();
 		});
 
 		it('--> subscribed handler should have been executed and the event must be received as real event instance with correct property values and value types \n', async () => {
@@ -48,6 +44,7 @@ describe('events \n', function (): void {
 
 		afterEach(async () => {
 			await StuffCreatedEvent.unsubscribe(stuffCreatedEventSubscription);
+			await TestHelper.shutdown();
 		});
 
 		describe('with no interceptor \n', () => {
@@ -85,30 +82,6 @@ describe('events \n', function (): void {
 					expect(receivedEvent.aNumber).toBe(sendEvent.aNumber);
 					expect(receivedEvent.aString).toBe(sendEvent.aString);
 					expect(receivedEvent.aDate.toISOString()).toBe(sendEvent.aDate.toISOString()); // plainToClass not yet implemented für events
-				});
-			});
-
-			describe('interceptor rejects subscription \n', function (): void {
-				beforeEach(async function (): Promise<void> {
-					TestEventSubscriptionSendInterceptor.tenant = 'WrongCompany';
-					try {
-						await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
-							receivedEvent = e;
-						});
-					} catch (e) {
-						expect(e?.message).toBe('unauthorized');
-					}
-					try {
-						receivedEvent = undefined;
-						sendEvent.emit(executionContext);
-						await AsyncHelper.waitUntil(() => receivedEvent !== undefined, 1000, 1000);
-					} catch (e) {
-						expect(e?.message).toBe('timeout');
-					}
-				});
-
-				it('--> subscribed handler should not have been executed\n', async () => {
-					expect(receivedEvent).toBeUndefined();
 				});
 			});
 		});

@@ -1,6 +1,6 @@
 {
   "name": "nanium",
-  "version": "0.12.9",
+  "version": "0.13.0",
   "description": "nanoservice based fullstack software architecture framework",
   "author": "twnzl",
   "license": "MIT",
@@ -29,10 +29,10 @@
   "scripts": {
     "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates",
-    "test": "jest",
+    "test": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest",
     "prepare": "",
     "publishlist": "npm pack && tar -xvzf *.tgz && ts-node _src/tools/nanium.ts rm nanium-*.tgz",
-    "bundle": "npm run build && npm publish"
+    "bundle": "npm run build && npm test && npm publish"
   },
   "files": [
     "README.md",
@@ -59,14 +59,14 @@
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "^1.0.5",
-    "@types/jest": "^27.0.1",
     "@types/jest-expect-message": "^1.0.3",
+    "@types/jest": "^27.4.1",
+    "ts-jest": "^27.1.4",
     "@types/node": "14.17.17",
+    "jest": "^27.5.1",
     "@types/recursive-readdir": "^2.2.0",
     "@types/shelljs": "^0.8.5",
     "@types/typescript": "^2.0.0",
-    "jest": "^27.2.0",
-    "ts-jest": "^27.0.5",
     "ts-node": "^8.3.0",
     "tslint": "^5.18.0",
     "typescript": "^4.4.3"

@@ -113,7 +113,7 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('-->  \n', async function (): Promise<void> {
-			expect(dtoList.length, 'length of result list should be correct').toBe(3);
+			expect(dtoList.length, 'length of result list should be correct').toBe(999);
 		});
 	});
 
@@ -125,7 +125,7 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 
 		it('-->  \n', async function (): Promise<void> {
-			expect(dtoList.length, 'length of result list should be correct').toBe(3);
+			expect(dtoList.length, 'length of result list should be correct').toBe(999);
 			expect(dtoList[0].a, 'property a of first result should be correct').toBe('1');
 			expect(dtoList[0].b, 'property b of first result should be correct').toBe(1);
 		});

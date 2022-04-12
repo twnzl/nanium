@@ -286,8 +286,6 @@ const response = new StuffRequest().execute();
 
 ## Streaming
 
-!!! experimental & under construction !!!
-
 If you want a service executor to provide the possibility to return partial results, you can create a streamed service
 by:
 
@@ -316,6 +314,32 @@ export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest
 		});
 	}
 }
+```
+
+Now, you can start streaming and do some work as soon as any item of the overall result array arrives, use next function
+of the subscription:
+
+```ts
+const result: TestDto[] = [];
+new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
+	next: (value: TestDto): void => {
+		result.push(value);
+		// todo: maybe calculate some progress or something else
+	},
+	complete: (): void => resolve(),
+	error: (err: Error) => {
+		console.log(err.message);
+	}
+});
+```
+
+Or if you want the server to stream the result, but want the client to just wait for the whole result just call
+execute()
+
+```ts
+const result: TestDto[] = await new TestQueryRequest(
+	{ input: 1 }, { token: '1234' }
+).execute();
 ```
 
 The overall result of this example service is a List of instances of class TestDto. But it will return only one per

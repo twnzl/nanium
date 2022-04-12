@@ -55,17 +55,18 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	}
 
 	private async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<string> {
-		const uri: URL = new URL(url);
+		const [baseUri, query]: string[] = url.split('?');
+		const uri: URL = new URL(baseUri);
 		return new Promise<any>((resolve, reject) => {
 			try {
 				const options: HttpRequestOptions | HttpsRequestOptions = {
 					...{
 						host: uri.hostname,
-						path: uri.pathname + uri.hash,
+						path: uri.pathname + (query ? '?' + query : ''),
 						port: uri.port,
 						method: method,
 						protocol: uri.protocol,
-						headers: headers
+						headers: headers,
 					},
 					...this.config.options
 				};

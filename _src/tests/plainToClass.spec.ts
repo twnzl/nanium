@@ -15,15 +15,14 @@ let request: StuffRequest = null;
 let response: ServiceResponseBase<Stuff<Date>[]>;
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 
-beforeAll(async () => {
-	await TestHelper.initClientServerScenario('http');
-});
-
-afterAll(async () => {
-	await TestHelper.shutdown();
-});
-
 describe('JsonToClassSerializer \n', function (): void {
+	beforeAll(async () => {
+		await TestHelper.initClientServerScenario('http');
+	});
+
+	afterAll(async () => {
+		await TestHelper.shutdown();
+	});
 
 	describe('execute with all types of properties set in the request \n', function (): void {
 		beforeEach(async () => {
