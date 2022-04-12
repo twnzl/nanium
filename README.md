@@ -316,8 +316,8 @@ export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest
 }
 ```
 
-Now, you can start streaming and do some work as soon as any item of the overall result array arrives, use next function
-of the subscription:
+Now, you can start streaming by subscribing to the observable of the *stream* function.
+Within the *next* function, you can do some work, whenever an item of the overall result array arrives.
 
 ```ts
 const result: TestDto[] = [];
@@ -333,8 +333,8 @@ new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
 });
 ```
 
-Or if you want the server to stream the result, but want the client to just wait for the whole result just call
-execute()
+Or if you want the server to stream the result, but want the client to just wait for the whole result, use the
+*execute* function.
 
 ```ts
 const result: TestDto[] = await new TestQueryRequest(
