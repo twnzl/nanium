@@ -1,6 +1,6 @@
 {
   "name": "nanium",
-  "version": "1.14.0",
+  "version": "1.14.1",
   "description": "nanoservice based fullstack software architecture framework",
   "author": "twnzl",
   "license": "MIT",
@@ -38,6 +38,8 @@
     "README.md",
     "core.js",
     "core.d.ts",
+    "objects.js",
+    "objects.d.ts",
     "helper.js",
     "helper.d.ts",
     "interfaces/**/*.js",
