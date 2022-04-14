@@ -12,7 +12,7 @@ import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { URL } from 'url';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
+import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -131,7 +131,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 						response.on('data', async (chunk: Buffer) => {
 							if (chunk.length > 0) {
 								const str: string = chunk.toString('utf8');
-								const r: any = NaniumSerializerCore.plainToClass(
+								const r: any = NaniumObject.plainToClass(
 									await this.config.serializer.deserialize(str),
 									request.constructor[responseTypeSymbol],
 									request.constructor[genericTypesSymbol]

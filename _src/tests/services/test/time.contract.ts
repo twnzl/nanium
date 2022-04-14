@@ -1,6 +1,6 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { RequestType } from '../../../serializers/core';
 import { ServiceResponseBase } from '../serviceResponseBase';
+import { RequestType } from '../../../objects';
 
 @RequestType({
 	responseType: ServiceResponseBase,

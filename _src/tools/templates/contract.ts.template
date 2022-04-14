@@ -1,10 +1,10 @@
+import { NaniumObject, RequestType } from 'nanium/objects';
 import { ServiceRequestBase } from '${relativeToRoot}serviceRequestBase';
-import { RequestType } from 'nanium/serializers/core';
 
-export class ${coreClassName}RequestBody {
+export class ${coreClassName}RequestBody extends NaniumObject<${coreClassName}RequestBody> {
 }
 
-export class ${coreClassName}Response {
+export class ${coreClassName}Response extends NaniumObject<${coreClassName}RequestBody> {
 }
 
 @RequestType({

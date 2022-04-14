@@ -7,7 +7,7 @@ import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, responseTypeSymbol } from '../../serializers/core';
+import { genericTypesSymbol, responseTypeSymbol } from '../../objects';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;

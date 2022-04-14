@@ -15,6 +15,7 @@ package-lock.json
 /tools
 /core.*
 /helper.*
+/objects.*
 
 # temporarry folders for development
 /_tmp

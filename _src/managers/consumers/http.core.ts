@@ -1,6 +1,6 @@
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
-import { genericTypesSymbol, NaniumSerializerCore, responseTypeSymbol } from '../../serializers/core';
+import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 
@@ -42,7 +42,7 @@ export class HttpCore {
 			} else if (str === '') {
 				return request.constructor[responseTypeSymbol] !== String ? undefined : str;
 			}
-			const r: any = NaniumSerializerCore.plainToClass(
+			const r: any = NaniumObject.plainToClass(
 				await this.config.serializer.deserialize(str),
 				request.constructor[responseTypeSymbol],
 				request.constructor[genericTypesSymbol]);
@@ -190,7 +190,7 @@ export class HttpCore {
 			setTimeout(async () => {
 				const eventConstructor: any = this.eventSubscriptions[eventResponse.eventName].eventConstructor;
 				// type-save deserialization
-				const event: any = NaniumSerializerCore.plainToClass(
+				const event: any = NaniumObject.plainToClass(
 					eventResponse.event,
 					eventConstructor,
 					eventConstructor[genericTypesSymbol]

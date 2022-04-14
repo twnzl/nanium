@@ -7,9 +7,9 @@ import { ChannelConfig } from '../../../interfaces/channelConfig';
 import { Channel } from '../../../interfaces/channel';
 import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
-import { NaniumSerializerCore } from '../../../serializers/core';
 import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
+import { NaniumObject } from '../../../objects';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -117,7 +117,7 @@ export class NaniumHttpChannel implements Channel {
 		if (!serviceRepository[serviceName]) {
 			throw new Error(`nanium: unknown service ${serviceName}`);
 		}
-		const request: any = NaniumSerializerCore.plainToClass(deserialized.request, serviceRepository[serviceName].Request);
+		const request: any = NaniumObject.plainToClass(deserialized.request, serviceRepository[serviceName].Request);
 		if (deserialized.streamed) {
 			if (!request.stream) {
 				res.statusCode = 500;

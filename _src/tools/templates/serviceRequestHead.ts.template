@@ -1,4 +1,6 @@
-export class ServiceRequestHead {
+import { NaniumObject } from 'nanium/objects';
+
+export class ServiceRequestHead extends NaniumObject<ServiceRequestHead> {
 	user?: string;
 	password?: string;
 	token?: string;

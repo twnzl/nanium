@@ -9,7 +9,7 @@ import {
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestHelper } from './testHelper';
 import { ServiceResponseBase } from './services/serviceResponseBase';
-import { NaniumSerializerCore } from '../serializers/core';
+import { NaniumObject } from '../objects';
 
 let request: StuffRequest = null;
 let response: ServiceResponseBase<Stuff<Date>[]>;
@@ -94,7 +94,7 @@ describe('plainToClass \n', function (): void {
 				a: request.body.aBooleanDictionary.a.toString(),
 				b: request.body.aBooleanDictionary.b.toString()
 			};
-			request2 = NaniumSerializerCore.plainToClass(strangeRequest, StuffRequest);
+			request2 = NaniumObject.plainToClass(strangeRequest, StuffRequest);
 		});
 
 		it('-->  \n', async function (): Promise<void> {
@@ -162,9 +162,9 @@ function getRequest(): StuffRequest {
 				aStringArray: ['hello', 'world'],
 				aNumber: 46
 			}),
-			aGenericObject: new GenericStuff<Date>({
+			aGenericObject: {
 				theGeneric: new Date(1600000000005)
-			}),
+			},
 			aGenericObjectArray: [
 				new GenericStuff<Date>({
 					theGeneric: new Date(1600000000006)

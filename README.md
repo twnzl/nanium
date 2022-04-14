@@ -152,19 +152,18 @@ This will generate two files:
 
 ```ts
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { RequestType } from 'nanium/serializers/core';
+import { RequestType } from 'nanium/objects';
+import { NaniumObject } from './objects';
 
-export class StuffGetRequestBody {
+export class StuffGetRequestBody extends NaniumObject<StuffGetRequestBody> {
 }
 
-export class StuffGetResponse {
+export class StuffGetResponse extends NaniumObject<StuffGetResponse> {
 }
 
 @RequestType({
 	responseType: StuffGetResponse,
-	genericTypes: {
-		TRequestBody: StuffGetRequestBody
-	},
+	genericTypes: { TRequestBody: StuffGetRequestBody },
 	scope: 'public'
 })
 export class StuffGetRequest extends ServiceRequestBase<StuffGetRequestBody, StuffGetResponse> {
@@ -200,10 +199,12 @@ Whether you're in the node script that hosts the service or in the browser, it's
 worry about.
 
 ```ts
-const response = new StuffRequest().execute();
+const response = await new StuffRequest().execute();
 ```
 
 ### Prepare the contracts
+
+#### Decorators
 
 Unfortunately, the typescript compiler still does not support the generation of type information that can be used at
 runtime. But this information is necessary to make the contract serialization and deserialization work. Therefore,
@@ -217,10 +218,12 @@ Currently, there are two essential decorators.
 - __@RequestType()__: Use the property 'responseType' to set the class of the response. And for each defined generic
   type identifier specify the concrete class using the property 'genericTypes'
 
-Example:
+complex example:
 
 ```ts
-export class GenericStuff<TStuffSubType> {
+import { NaniumObject } from './objects';
+
+export class GenericStuff<TStuffSubType> extends NaniumObject<GenericStuff<TStuffSubType>> {
 	@Type(String) aString?: string;
 	@Type(Number) aNumber?: number;
 	@Type(Boolean) aBoolean?: boolean;
@@ -233,7 +236,7 @@ export enum StuffEnum {
 	two = 't'
 }
 
-export class Stuff<TStuffSubType> {
+export class Stuff<TStuffSubType> extends NaniumObject<Stuff<TStuffSubType>> {
 	@Type(String) aString?: string;
 	@Type(Number) aNumber?: number;
 	@Type(Boolean) aBoolean?: boolean;
@@ -276,13 +279,49 @@ export class StuffRequest extends ServiceRequestBase<Stuff<Date>, Stuff<Date>[]>
 }
 ```
 
-Further decorators are planned, with which you will have more options to adjust which data will leave the server in
-which case. For example properties can be skipped depending on the executing user or rights or other properties of the
-executionContext.
+#### initializers
+
+In the example above, the contract classes extend the type NaniumObject. This is not necessary, but it automatically
+provides an initializer constructor for classes. So when you create new instances, you can pass initial data to the
+constructor and nanium will put the data into your new Object in a type save way. That means all property values, even
+those of sub objects will be real instances of its classes defined by the Type decorators.
+
+example:
 
 ```ts
-const response = new StuffRequest().execute();
+class Person extends NaniumObject<Person> {
+	@Type(String) name: string;
+	@Type(Array, Person) friends?: Person[];
+}
+
+const john = new Person({
+	name: 'John',
+	friends: [
+		new Person({ name: 'Jane' }),
+		{ name: 'Bob' },
+	]
+});
+
+if (john.friends[1] instanceof Person) {
+	console.log([
+		john.name,
+		john.friends[0].name,
+		john.friends[1].name
+	].join(' & '));
+}
 ```
+
+The output is 'John & Jane & Bob'.
+
+The initialization of Bob will also work, but if there are any getters or functions in class Person typescript will
+complain that they are missing here. But not, when using the constructor like for Jane.
+
+The constructor will have two more parameters. The second one you can use to specify Types for generic
+type ids, if there are some. And if you set the third parameter *strict* to true nanium will ensure that only that
+properties will be
+created in the new instance, that are decorated with the Type decorator. This is e.g. useful to convert between internal
+data structures and external data structures and to ensure no internal data leave the server and no invalid external
+data are stored to the database.
 
 ## Streaming
 

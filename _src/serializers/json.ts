@@ -1,5 +1,5 @@
 import { NaniumSerializer } from '../interfaces/serializer';
-import { NaniumSerializerCore } from './core';
+import { NaniumObject } from '../objects';
 
 export class NaniumJsonSerializer implements NaniumSerializer {
 
@@ -30,7 +30,7 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 		rest = packets.pop();
 		for (const packet of packets) {
 			deserialized = await this.deserialize(packet);
-			result.push(NaniumSerializerCore.plainToClass(deserialized, ctor, generics));
+			result.push(NaniumObject.plainToClass(deserialized, ctor, generics));
 		}
 		return { data: result, rest };
 	}

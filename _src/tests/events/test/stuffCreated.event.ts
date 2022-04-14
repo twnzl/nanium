@@ -1,5 +1,5 @@
 import { EventBase } from '../eventBase';
-import { EventType, Type } from '../../../serializers/core';
+import { EventType, Type } from '../../../objects';
 
 @EventType({
 	scope: 'public'

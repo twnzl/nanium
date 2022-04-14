@@ -1,10 +1,11 @@
 import { Nanium } from 'nanium/core';
+import { NaniumObject } from 'nanium/objects';
 import { EventHandler } from 'nanium/interfaces/eventHandler';
 import { ExecutionContext } from 'nanium/interfaces/executionContext';
 import { EventSubscription } from 'nanium/interfaces/eventSubscription';
 import { ServiceManager } from 'nanium/interfaces/serviceManager';
 
-export class EventBase {
+export class EventBase<T> extends NaniumObject<T>{
 
 	emit(context?: ExecutionContext): void {
 		Nanium.emit(this, undefined, context);

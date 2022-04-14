@@ -1,22 +1,16 @@
 import { EventBase } from '${relativeToRoot}eventBase';
-import { EventType, Type } from 'nanium/serializers/core';
+import { EventType, Type } from 'nanium/objects';
 import { EventSubscription } from 'nanium/interfaces/eventSubscription';
-import { Nanium } from 'nanium/core';
 import { ServiceManager } from 'nanium/interfaces/serviceManager';
 
 @EventType({
 	scope: '${scope}'
 })
-export class ${coreClassName}Event extends EventBase {
+export class ${coreClassName}Event extends EventBase<${coreClassName}Event> {
 	static eventName: string = '${prefix}:${subPath}${lastName}';
 
 	// todo: define the events properties here
 	@Type(String) someProperty: string;
-
-	constructor(data: Partial<${coreClassName}Event>) {
-		super();
-		Nanium.initObject(this, data);
-	}
 
 	static override async subscribe(
 		handler: (event: ${coreClassName}Event) => void,

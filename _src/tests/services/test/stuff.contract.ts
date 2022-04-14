@@ -1,16 +1,7 @@
-import { RequestType, Type } from '../../../serializers/core';
 import { ServiceRequestBase } from '../serviceRequestBase';
+import { NaniumObject, RequestType, Type } from '../../../objects';
 
-export class GenericStuff<TStuffSubType> {
-	constructor(data?: Partial<GenericStuff<TStuffSubType>>) {
-		if (data) {
-			this.aString = data.aString;
-			this.aNumber = data.aNumber;
-			this.aBoolean = data.aBoolean;
-			this.theGeneric = data.theGeneric;
-		}
-	}
-
+export class GenericStuff<TStuffSubType> extends NaniumObject<GenericStuff<TStuffSubType>> {
 	aString?: string;
 	aNumber?: number;
 	aBoolean?: boolean;
@@ -36,30 +27,11 @@ export class StuffDictionary<T> {
 	[key: string]: T;
 }
 
-export class Stuff<TStuffSubType> {
-
-	constructor(data?: Partial<Stuff<TStuffSubType>>) {
-		if (data) {
-			this.aString = data.aString;
-			this.aNumber = data.aNumber;
-			this.aBoolean = data.aBoolean;
-			this.aStringEnum = data.aStringEnum;
-			this.aDate = data.aDate;
-			this.anObject = data.anObject;
-			this.anObjectArray = data.anObjectArray;
-			this.aStringArray = data.aStringArray;
-			this.aNumberArray = data.aNumberArray;
-			this.aGenericObject = data.aGenericObject;
-			this.aGenericObjectArray = data.aGenericObjectArray;
-			this.anObjectWithFixedGeneric = data.anObjectWithFixedGeneric;
-			this.aNumberDictionary = data.aNumberDictionary;
-		}
-	}
-
+export class Stuff<TStuffSubType> extends NaniumObject<Stuff<TStuffSubType>> {
 	aString?: string;
 	@Type(Number) aNumber?: number;
 	@Type(Boolean) aBoolean?: boolean;
-	aStringEnum?: StuffStringEnum;
+	@Type(String) aStringEnum?: StuffStringEnum;
 	@Type(Number) aNumberEnum?: StuffNumberEnum;
 	@Type(Array, String) aStringEnumArray?: StuffStringEnum[];
 	@Type(Array, Number) aNumberEnumArray?: StuffNumberEnum[];

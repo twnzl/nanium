@@ -1,22 +1,17 @@
-import { ExecutionScope } from 'nanium/interfaces/executionScope';
-import { RequestType } from 'nanium/serializers/core';
+import { NaniumObject, RequestType } from 'nanium/objects';
 import { StreamServiceRequestBase } from '${relativeToRoot}streamServiceRequestBase';
 
-export class ${coreClassName}RequestBody {
+export class ${coreClassName}RequestBody extends NaniumObject<${coreClassName}RequestBody>  {
 }
 
-export class ${coreClassName}Response {
+export class ${coreClassName}Response extends NaniumObject<${coreClassName}Response>  {
 }
 
 @RequestType({
 	responseType: ${coreClassName}Response,
-	genericTypes: {
-		TRequestBody: ${coreClassName}RequestBody
-	},
+	genericTypes: { TRequestBody: ${coreClassName}RequestBody },
 	scope: '${scope}'
 })
 export class ${coreClassName}Request extends StreamServiceRequestBase<${coreClassName}RequestBody, ${coreClassName}Response> {
 	static serviceName: string = '${prefix}:${subPath}${serviceLastName}';
-	static scope: ExecutionScope = '${scope}';
-	static skipInterceptors: boolean = false;
 }

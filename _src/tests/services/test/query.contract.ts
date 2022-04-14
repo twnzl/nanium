@@ -1,6 +1,6 @@
 import { StreamServiceRequestBase } from '../streamServiceRequestBase';
-import { RequestType } from '../../../serializers/core';
 import { ServiceResponseBase } from '../serviceResponseBase';
+import { RequestType } from '../../../objects';
 
 export class TestQueryRequestBody {
 	input: number;

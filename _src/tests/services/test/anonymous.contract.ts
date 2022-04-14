@@ -1,7 +1,7 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { RequestType } from '../../../serializers/core';
 import { ServiceResponseBase } from '../serviceResponseBase';
 import { TestServerRequestInterceptor } from '../../interceptors/server/test.request.interceptor';
+import { RequestType } from '../../../objects';
 
 // disabled to test services without this decorator
 @RequestType({

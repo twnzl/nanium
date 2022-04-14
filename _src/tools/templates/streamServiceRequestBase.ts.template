@@ -1,7 +1,7 @@
 import { Nanium } from 'nanium/core';
 import { Observable } from 'rxjs';
 import { ServiceRequestHead } from './serviceRequestHead';
-import { Type } from 'nanium/serializers/core';
+import { NaniumObject, Type, ConstructorType} from 'nanium/objects';
 
 export class StreamServiceRequestBase<TRequestBody, TResult> {
 
@@ -13,8 +13,8 @@ export class StreamServiceRequestBase<TRequestBody, TResult> {
 
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
-		this.body =  body ?? {} as TRequestBody;
-		this.head = head;
+		this.body = body ? NaniumObject.create(body, 'TRequestBody', this.constructor as ConstructorType) : undefined;
+		this.head = head ? new ServiceRequestHead(head) : undefined;
 	}
 
 	async execute(): Promise<Array<TResult>> {

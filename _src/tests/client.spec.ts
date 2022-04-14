@@ -53,8 +53,12 @@ describe('host services via http \n', function (): void {
 	});
 
 	describe('execute and skip interceptor \n', function (): void {
-		const anonymousRequest: AnonymousRequest = new AnonymousRequest(undefined, {});
+		let anonymousRequest: AnonymousRequest;
 		let anonymousResponse: ServiceResponseBase<string>;
+
+		beforeEach(() => {
+			anonymousRequest = new AnonymousRequest(undefined, {});
+		});
 
 		it('--> \n', async function (): Promise<void> {
 			anonymousResponse = await anonymousRequest.execute(executionContext);
