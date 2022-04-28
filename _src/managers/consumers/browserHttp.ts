@@ -91,12 +91,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 								observer.error(e);
 							}
 						}
-						if (deserialized.data !== undefined && Array.isArray(deserialized.data)) {
-							for (const item of deserialized.data) {
-								observer.next(item);
-							}
-						} else {
-							observer.next(deserialized.data);
+						for (const data of deserialized.data) {
+							observer.next(data);
 						}
 						seenBytes = xhr.responseText.length;
 					} else if (xhr.readyState === 4) {

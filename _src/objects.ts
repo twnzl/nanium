@@ -188,6 +188,11 @@ export class NaniumEventInfo {
 	skipInterceptors?: boolean | (new() => ServiceRequestInterceptor<any>)[] | { [scope in ExecutionScope]: boolean | (new() => ServiceRequestInterceptor<any>)[]; } = false;
 }
 
+/**
+ * Make type information for a property available at runtime.
+ * @param clazzOrGenericTypeId If the type of the property is a generic Type, use a unique ID string for this Type. If it is not a generic Type, use the class/constructor. If it is, a dictionary use class Object.
+ * @param generics If the property is not a generic Type, but it uses a generic Type (e.g. Stuff<T1, T2>), specify a dictionary with the IDs of the generic types as keys and the constructors as values
+ */
 export function Type(clazzOrGenericTypeId: ConstructorOrGenericTypeId, generics?: LocalGenerics | ConstructorType): Function {
 	return (target: new () => any, propertyKey: string) => {
 		target.constructor[propertyInfoSymbol] = target.constructor[propertyInfoSymbol] ?? {};
