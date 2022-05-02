@@ -79,23 +79,29 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 					rest: string;
 					data: any;
 				} = { data: '', rest: '' };
+
+				const processResponse: (xhr: XMLHttpRequest) => Promise<void> = async (xhr: XMLHttpRequest) => {
+					if (xhr.response) {
+						try {
+							deserialized = await this.config.serializer.getData(
+								deserialized.rest + xhr.response.substr(seenBytes),
+								request.constructor[responseTypeSymbol],
+								request.constructor[genericTypesSymbol]);
+						} catch (e) {
+							observer.error(e);
+						}
+					}
+					for (const data of deserialized.data) {
+						observer.next(data);
+					}
+					seenBytes = xhr.responseText.length;
+				};
+
 				xhr.onreadystatechange = async (): Promise<void> => {
 					if (xhr.readyState === 3) {
-						if (xhr.response) {
-							try {
-								deserialized = await this.config.serializer.getData(
-									deserialized.rest + xhr.response.substr(seenBytes),
-									request.constructor[responseTypeSymbol],
-									request.constructor[genericTypesSymbol]);
-							} catch (e) {
-								observer.error(e);
-							}
-						}
-						for (const data of deserialized.data) {
-							observer.next(data);
-						}
-						seenBytes = xhr.responseText.length;
+						await processResponse(xhr);
 					} else if (xhr.readyState === 4) {
+						await processResponse(xhr);
 						observer.complete();
 					}
 				};
