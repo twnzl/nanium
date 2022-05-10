@@ -179,7 +179,7 @@ export class NaniumRequestInfo {
 	responseType: new() => any;
 	genericTypes?: { [id: string]: new() => any; };
 	scope?: ExecutionScope = 'private';
-	skipInterceptors?: boolean | (new() => ServiceRequestInterceptor<any>)[] | { [scope in ExecutionScope]: boolean | (new() => ServiceRequestInterceptor<any>)[]; } = false;
+	skipInterceptors?: boolean | string[] | { [scope in ExecutionScope]: boolean | string[]; } = false;
 }
 
 export class NaniumEventInfo {

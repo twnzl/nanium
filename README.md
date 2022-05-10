@@ -500,12 +500,13 @@ await Nanium.addManager(new NaniumConsumerBrowserHttp({
 For example, if you have an interceptor that checks authentication, but you want to have a service that is callable
 without authorization (anonymous), you can skip the execution of this interceptor for this special service. To do so use
 the property 'skipInterceptors' of the RequestType Decorator. If set to true, then all interceptors are skipped. If you
-only want to skip specific interceptors, use an array with the interceptor classes or instances to skip.
+only want to skip specific interceptors, use an array with the names of the interceptor classes. To skip interceptors
+depending on the execution scope, you can use an object with the scope as properties and bool or string array as values.
 
 ```ts
 @RequestType({
 	responseType: ServiceResponseBase,
-	skipInterceptors: [MyInterceptorService],
+	skipInterceptors: ['MyInterceptorService'],
 	scope: 'public'
 })
 export class AnonymousRequest extends ServiceRequestBase<void, string> {

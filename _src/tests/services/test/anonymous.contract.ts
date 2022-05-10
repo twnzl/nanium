@@ -6,7 +6,7 @@ import { RequestType } from '../../../objects';
 // disabled to test services without this decorator
 @RequestType({
 	responseType: ServiceResponseBase,
-	skipInterceptors: [TestServerRequestInterceptor],
+	skipInterceptors: ['TestServerRequestInterceptor'],
 	scope: 'public'
 })
 export class AnonymousRequest extends ServiceRequestBase<void, string> {
