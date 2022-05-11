@@ -45,14 +45,20 @@ export class HttpCore {
 			const r: any = NaniumObject.plainToClass(
 				await this.config.serializer.deserialize(str),
 				request.constructor[responseTypeSymbol],
-				request.constructor[genericTypesSymbol]);
+				request.constructor[genericTypesSymbol]
+			);
 			return r;
 		} catch (e) {
-			// todo: make an Error class configurable so that plainToClass can also be used.
-			if (typeof e === 'string') {
-				throw await this.config.serializer.deserialize(e);
-			} else {
+			if (e instanceof Error) {
 				throw e;
+			} else {
+				const deserialized: any = await this.config.serializer.deserialize(e);
+				// todo: make an Error class configurable so that plainToClass can also be used for Error Objects.
+				if (this.config.handleError) {
+					await this.config.handleError(deserialized);
+				} else {
+					throw deserialized;
+				}
 			}
 		}
 	}

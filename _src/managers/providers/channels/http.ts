@@ -155,7 +155,16 @@ export class NaniumHttpChannel implements Channel {
 				res.statusCode = 200;
 			} catch (e) {
 				res.statusCode = 500;
-				res.write(await config.serializer.serialize(e));
+				let serialized: string;
+				if (e instanceof Error) {
+					serialized = await config.serializer.serialize({
+						message: e.message,
+						// stack should not be sent out
+					});
+				} else {
+					serialized = await config.serializer.serialize(e);
+				}
+				res.write(serialized);
 			}
 		}
 	}

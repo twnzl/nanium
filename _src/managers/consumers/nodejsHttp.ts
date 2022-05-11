@@ -77,7 +77,13 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					response.on('data', (chunk: string) => {
 						str += chunk;
 					});
+					response.on('error', async (e) => {
+						reject(e);
+					});
 					response.on('end', async () => {
+						if (response.statusCode === 500) {
+							reject(str);
+						}
 						resolve(str);
 					});
 				});

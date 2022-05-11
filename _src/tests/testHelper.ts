@@ -105,7 +105,7 @@ export class TestHelper {
 				return providerIsSubscriber ? 'no' : 'yes';
 			},
 			handleError: async (err: any): Promise<any> => {
-				throw err;
+				throw { handleError: err };
 			}
 		});
 		await Nanium.addManager(this.consumer);

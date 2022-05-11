@@ -65,6 +65,18 @@ describe('host services via http \n', function (): void {
 			expect(anonymousResponse.body, 'output should be correct').toBe(':-)');
 		});
 	});
+
+	describe('execute with error result (handling by errorHandle) \n', function (): void {
+		it('--> the errorHandler function should have handled the error \n', async () => {
+			try {
+				await new TestGetRequest({ input1: 'hello world' }, { token: 'wrong' }).execute(executionContext);
+				expect(false, 'an exception should be thrown').toBeTruthy();
+			} catch (e) {
+				expect(e.handleError).toBeDefined();
+				expect(e.handleError.message).toBe('unauthorized');
+			}
+		});
+	});
 });
 
 describe('host services via https \n', function (): void {
