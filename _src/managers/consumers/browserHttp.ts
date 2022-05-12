@@ -113,6 +113,9 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 							observer.error(err);
 						});
 				});
+				xhr.onerror = (evt) => {
+					observer.error(evt);
+				};
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
 				xhr.setRequestHeader('Content-Type', 'application/json');
 				xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));

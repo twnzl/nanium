@@ -77,6 +77,43 @@ describe('host services via http \n', function (): void {
 			}
 		});
 	});
+
+	describe('execute with connection error \n', function (): void {
+		it('--> execute should immediately return with exception \n', async () => {
+			const apiUrl: string = TestHelper.consumer.config.apiUrl;
+			try {
+				TestHelper.consumer.config.apiUrl = 'https:/not.available/api';
+				await new TestGetRequest({ input1: 'hello world' }).execute(executionContext);
+				expect(false, 'an exception should be thrown').toBeTruthy();
+			} catch (e) {
+				expect((e.message as string).includes('ENOTFOUND')).toBeTruthy();
+			} finally {
+				TestHelper.consumer.config.apiUrl = apiUrl;
+			}
+		});
+	});
+
+	// describe('execute with timeout \n', function (): void {
+	// 	it('--> execute should return with exception after the timeout \n', async () => {
+	// 		const timeout: number = TestHelper.consumer.config.timeout;
+	// 		const apiUrl: string = TestHelper.consumer.config.apiUrl;
+	// 		const start: number = Date.now();
+	// 		try {
+	// 			TestHelper.consumer.config.timeout = 1000;
+	// 			TestHelper.consumer.config.apiUrl = 'https:/not.available/api';
+	// 			await new TestGetRequest({ input1: 'hello world' }).execute(executionContext);
+	// 			expect(false, 'an exception should be thrown').toBeTruthy();
+	// 		} catch (e) {
+	// 			expect((e.message as string).includes('ENOTFOUND')).toBeTruthy();
+	// 			expect(Date.now() - start).toBeGreaterThan(1000);
+	// 			expect(Date.now() - start).toBeLessThan(2000);
+	// 		} finally {
+	// 			TestHelper.consumer.config.timeout = timeout;
+	// 			TestHelper.consumer.config.apiUrl = apiUrl;
+	// 		}
+	// 	});
+	// });
+
 });
 
 describe('host services via https \n', function (): void {

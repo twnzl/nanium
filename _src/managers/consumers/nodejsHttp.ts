@@ -87,6 +87,9 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 						resolve(str);
 					});
 				});
+				req.on('error', (err) => {
+					reject(err);
+				});
 				if (body) {
 					req.write(body);
 				}
