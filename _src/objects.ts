@@ -176,8 +176,8 @@ export class NaniumGenericTypeInfo {
 }
 
 export class NaniumRequestInfo {
-	responseType: new() => any;
-	genericTypes?: { [id: string]: new() => any; };
+	responseType?: new() => any = Object;
+	genericTypes?: { [id: string]: ConstructorType };
 	scope?: ExecutionScope = 'private';
 	skipInterceptors?: boolean | string[] | { [scope in ExecutionScope]: boolean | string[]; } = false;
 }
@@ -221,7 +221,7 @@ export function EventType(info: NaniumEventInfo): Function {
 	};
 }
 
-export type ConstructorType = (new (data?: any) => any);
+export type ConstructorType = (new (...data: any[]) => any);
 
 export type ConstructorOrGenericTypeId = (ConstructorType | string);
 

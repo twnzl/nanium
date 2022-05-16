@@ -1,3 +1,5 @@
+import { ConstructorType } from '../objects';
+
 export interface NaniumSerializer {
 	serialize(obj: any): Promise<string>;
 
@@ -5,7 +7,7 @@ export interface NaniumSerializer {
 
 	getData(
 		rawData: any,
-		ctor: new (data?: any) => any,
+		ctor: ConstructorType,
 		generics: { [id: string]: new() => any; }
 	): Promise<{
 		data: any;

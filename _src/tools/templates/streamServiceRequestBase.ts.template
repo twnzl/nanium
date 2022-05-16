@@ -13,7 +13,7 @@ export class StreamServiceRequestBase<TRequestBody, TResult> {
 
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
-		this.body = body ? NaniumObject.create(body, 'TRequestBody', this.constructor as ConstructorType) : undefined;
+		this.body = NaniumObject.create(body ? body : {}, 'TRequestBody', this.constructor as ConstructorType);
 		this.head = head ? new ServiceRequestHead(head) : undefined;
 	}
 
