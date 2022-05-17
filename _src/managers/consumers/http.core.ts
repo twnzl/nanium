@@ -49,9 +49,7 @@ export class HttpCore {
 			);
 			return r;
 		} catch (e) {
-			if (e instanceof Error) {
-				throw e;
-			} else {
+			if (typeof e === 'string') {
 				const deserialized: any = await this.config.serializer.deserialize(e);
 				// todo: make an Error class configurable so that plainToClass can also be used for Error Objects.
 				if (this.config.handleError) {
@@ -59,6 +57,8 @@ export class HttpCore {
 				} else {
 					throw deserialized;
 				}
+			} else {
+				throw e;
 			}
 		}
 	}
