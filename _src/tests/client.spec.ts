@@ -71,6 +71,7 @@ describe('host services via http \n', function (): void {
 				} catch (e) {
 					expect((e.message as string).includes('ENOTFOUND')).toBeTruthy();
 				} finally {
+					TestHelper.hasServerBeenCalled = false;
 					TestHelper.consumer.config.apiUrl = apiUrl;
 				}
 			});
