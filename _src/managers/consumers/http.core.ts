@@ -77,7 +77,7 @@ export class HttpCore {
 				}
 				setTimeout(async () => {
 					resolve(await this.subscribe(eventConstructor, handler, ++retries));
-				}, 100);
+				}, 1000);
 			});
 		}
 		const subscription: EventSubscription<any> = new EventSubscription(this.id, eventConstructor.eventName);
