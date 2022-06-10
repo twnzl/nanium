@@ -25,6 +25,11 @@ export class CNanium {
 		await manager.init();
 	}
 
+	async removeManager(manager: ServiceManager): Promise<void> {
+		this.managers = this.managers.filter(m => m !== manager);
+		await manager.terminate();
+	}
+
 	async addQueue(queue: ServiceRequestQueue): Promise<void> {
 		this.queues.push(queue);
 		await queue.init();
@@ -248,12 +253,13 @@ export class CNanium {
 
 	async shutdown(): Promise<void> {
 		if (this.queues?.length) {
-			await Promise.all(
-				this.queues.map((q: ServiceRequestQueue) => {
+			await Promise.all([
+				...this.queues.map((q: ServiceRequestQueue) => {
 					q.isShutdownInitiated = true;
 					return q.stop();
-				})
-			);
+				}),
+				...this.managers.map(m => m.terminate())
+			]);
 			this.queues = [];
 		}
 		this.managers = [];

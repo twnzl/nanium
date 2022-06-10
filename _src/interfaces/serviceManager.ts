@@ -13,6 +13,12 @@ export interface ServiceManager {
 	init(): Promise<void>;
 
 	/**
+	 * terminate the manager
+	 * this will be called, wenn a manager is removed manually by Nanium.removeManager() or when Nanium gets down via Nanium.shutdown()
+	 */
+	terminate(): Promise<void>;
+
+	/**
 	 * execute a request
 	 * @param serviceName
 	 * @param request

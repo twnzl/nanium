@@ -148,6 +148,9 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		}
 	}
 
+	async terminate(): Promise<void> {
+	}
+
 	private static findClassWithServiceNameProperty(module: any): any {
 		for (const requestModuleKey in module) {
 			if (module[requestModuleKey].hasOwnProperty('serviceName')) {

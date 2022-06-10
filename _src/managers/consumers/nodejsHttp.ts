@@ -47,7 +47,11 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		this.httpCore = new HttpCore(this.config, this.httpRequest);
 	}
 
+
 	async init(): Promise<void> {
+	}
+
+	async terminate(): Promise<void> {
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {

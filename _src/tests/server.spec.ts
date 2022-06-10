@@ -13,25 +13,26 @@ describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
 	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1);
 	const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
+	const testProvider: NaniumProviderNodejs = new NaniumProviderNodejs({
+		servicePath: 'tests/services',
+		requestInterceptors: [TestServerRequestInterceptor],
+		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+		handleError: async (err: any): Promise<any> => {
+			if (err.hasOwnProperty('code')) {
+				return new ServiceResponseBase({}, { errors: [err] });
+			}
+			if (err instanceof Error && err.message === 'no!') {
+				return new ServiceResponseBase({}, { exceptions: [{ code: 'ErrorLogId0815' }] });
+			}
+			throw err;
+		}
+	});
 
 	let response: TestGetResponse;
 	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
-		await Nanium.addManager(new NaniumProviderNodejs({
-			servicePath: 'tests/services',
-			requestInterceptors: [TestServerRequestInterceptor],
-			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
-			handleError: async (err: any): Promise<any> => {
-				if (err.hasOwnProperty('code')) {
-					return new ServiceResponseBase({}, { errors: [err] });
-				}
-				if (err instanceof Error && err.message === 'no!') {
-					return new ServiceResponseBase({}, { exceptions: [{ code: 'ErrorLogId0815' }] });
-				}
-				throw err;
-			}
-		}));
+		await Nanium.addManager(testProvider);
 	});
 
 	describe('execute successful \n', function (): void {
@@ -176,6 +177,16 @@ describe('execute TestRequest on server \n', function (): void {
 		it('-->body = Date\n', async function (): Promise<void> {
 			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute(executionContext);
 			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
+		});
+	});
+
+	describe('remove manager \n', function (): void {
+		beforeEach(async function (): Promise<void> {
+			await Nanium.removeManager(testProvider);
+		});
+
+		it('--> manager should be terminated and removed \n', async function (): Promise<void> {
+			expect(Nanium.managers.length).toBe(0);
 		});
 	});
 });

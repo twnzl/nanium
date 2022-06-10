@@ -47,6 +47,9 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		}
 	}
 
+	async terminate(): Promise<void> {
+	}
+
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
 		return await this.config.isResponsible(request, serviceName);
 	}
