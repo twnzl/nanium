@@ -173,11 +173,15 @@ export class NaniumHttpChannel implements Channel {
 
 	//#region event handling
 	private async handleIncomingEventSubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		Nanium.logger.info('channel http: longPollingResponses', this.longPollingResponses);
 		// request a unique clientId
 		if (req.method.toLowerCase() === 'get') {
+			Nanium.logger.info('channel http: incoming client ID request');
 			res.statusCode = 200;
-			res.write(await this.config.serializer.serialize(randomUUID()));
+			const id: string = randomUUID();
+			res.write(await this.config.serializer.serialize(id));
 			res.end();
+			Nanium.logger.info('channel http: sent client ID: ', id);
 		}
 		// subscription
 		else if (req.method.toLowerCase() === 'post') {
@@ -193,10 +197,12 @@ export class NaniumHttpChannel implements Channel {
 
 						// store subscription information
 						if (subscriptionData.eventName) {
+							Nanium.logger.info('channel http: incoming event subscription: ', subscriptionData.eventName);
 							// ask the manager to execute interceptors and to decide if the subscription is accepted or not
 							try {
 								await Nanium.receiveSubscription(subscriptionData);
 							} catch (e) {
+								Nanium.logger.error(e);
 								res.statusCode = 400;
 								const responseBody: string = await this.config.serializer.serialize(e.message);
 								res.write(responseBody);
@@ -207,16 +213,20 @@ export class NaniumHttpChannel implements Channel {
 							this.eventSubscriptions[subscriptionData.eventName] = this.eventSubscriptions[subscriptionData.eventName] ?? [];
 							this.eventSubscriptions[subscriptionData.eventName].push(subscriptionData);
 							res.end();
+							Nanium.logger.info('channel http: event subscription successful');
 							resolve();
 						}
 
 						// use keep request open for the long polling mechanism
 						else {
+							Nanium.logger.info('channel http: new long-polling request from clientId: ', subscriptionData.clientId);
 							res.setTimeout(this.config.longPollingRequestTimeoutInSeconds * 1000, () => {
 								res.end();
+								Nanium.logger.info('channel http: long-polling request from clientId timed out: ', subscriptionData.clientId);
 								// todo: self cleaning: delete this.longPollingResponses[subscriptionData.clientId];
 							});
 							this.longPollingResponses[subscriptionData.clientId] = res;
+							Nanium.logger.info('channel http: open long-polling requests from clientId ', subscriptionData.clientId);
 						}
 					} catch (e) {
 						reject(e);
@@ -259,6 +269,9 @@ export class NaniumHttpChannel implements Channel {
 	}
 
 	async emitEvent(event: any, subscription?: EventSubscription): Promise<void> {
+		Nanium.logger.info('channel http: emitEvent: ', event, subscription);
+		Nanium.logger.info('channel http: eventSubscriptions: ', this.eventSubscriptions);
+		Nanium.logger.info('channel http: longPollingResponses: ', this.longPollingResponses);
 		const promises: Promise<void>[] = [];
 		promises.push(this.emitEventCore(event, subscription));
 		await Promise.all(promises);

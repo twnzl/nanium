@@ -2,19 +2,65 @@
 import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from './interfaces/serviceManager';
 import { ExecutionContext } from './interfaces/executionContext';
-import { LogMode } from './interfaces/logMode';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { AsyncHelper, DateHelper } from './helper';
 import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
 import { EventSubscription } from './interfaces/eventSubscription';
+import { Logger, LogLevel } from './interfaces/logger';
+
+class ConsoleLogger implements Logger {
+	loglevel: LogLevel = LogLevel.none;
+
+	constructor(level: LogLevel) {
+		this.loglevel = level;
+	}
+
+	error(...args: any[]): void {
+		if (this.loglevel >= LogLevel.error) {
+			console.error('nanium: ', args.map(a => {
+				if (a?.message) {
+					return a.message + a.stack;
+				} else if (typeof a === 'object') {
+					return JSON.stringify(a);
+				} else {
+					return a;
+				}
+			}));
+		}
+	}
+
+	warn(...args: any[]): void {
+		if (this.loglevel >= LogLevel.warn) {
+			console.warn('nanium: ', args.map(a => {
+				if (typeof a === 'object') {
+					return JSON.stringify(a);
+				} else {
+					return a;
+				}
+			}));
+		}
+	}
+
+	info(...args: any[]): void {
+		if (this.loglevel >= LogLevel.info) {
+			console.log('nanium: ', args.map(a => {
+				if (typeof a === 'object') {
+					return JSON.stringify(a);
+				} else {
+					return a;
+				}
+			}));
+		}
+	}
+}
 
 export class CNanium {
 	private _isShutDownInitiated: boolean;
 
 	managers: ServiceManager[] = [];
 	queues: ServiceRequestQueue[] = [];
-	logMode: LogMode = LogMode.error;
+	logger: Logger = new ConsoleLogger(LogLevel.warn);
 
 	get isShutDownInitiated(): boolean {
 		return this._isShutDownInitiated;
@@ -175,7 +221,7 @@ export class CNanium {
 		try {
 			await this.executeTimeControlled(entry, requestQueue);
 		} catch (e) {
-			console.error(e.stack ? e.stack.toString() : e.toString);
+			Nanium.logger.error(e.message, e.stack);
 		}
 	}
 
@@ -207,8 +253,8 @@ export class CNanium {
 				entry.endDate = new Date();
 				await requestQueue.updateEntry(entry);
 			} catch (e) {
-				console.log(JSON.stringify(error));
-				console.log(JSON.stringify(e));
+				await Nanium.logger.error(error);
+				await Nanium.logger.error(e);
 			}
 		}
 	}
@@ -229,7 +275,7 @@ export class CNanium {
 			lastRun = new Date();
 			await this.start(entry, requestQueue);
 		} catch (e) {
-			console.log(e);
+			Nanium.logger.error(e);
 		} finally {
 			entry = await requestQueue.refreshEntry(entry);
 			let nextRun: Date = DateHelper.addSeconds(entry.interval, lastRun);

@@ -1,5 +1,6 @@
 import { ExecutionScope } from './interfaces/executionScope';
 import { ServiceRequestInterceptor } from './interfaces/serviceRequestInterceptor';
+import { Nanium } from './core';
 
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
 export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');
@@ -98,7 +99,7 @@ export class NaniumObject<T> {
 						}
 					} else if (typeof plain[property] === 'object' && plain[property] !== null) {
 						if (!Array.isArray(plain[property]) || (plain[property].length && typeof plain[property][0] === 'object')) {
-							console.log(`NaniumSerializerCore.plainToClass: no type given for property ${property} of class ${constructor.name}`);
+							Nanium.logger.warn(`NaniumSerializerCore.plainToClass: no type given for property ${property} of class ${constructor.name}`);
 						}
 					} else {
 						if (!strict) {

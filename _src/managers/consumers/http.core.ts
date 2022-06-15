@@ -3,6 +3,7 @@ import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscrip
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
+import { Nanium } from '../../core';
 
 interface NaniumEventResponse {
 	eventName: string;
@@ -140,7 +141,7 @@ export class HttpCore {
 			delete this.eventSubscriptions[eventName];
 			const error: string = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
 			if (error) {
-				console.log(await this.config.serializer.deserialize(error));
+				Nanium.logger.error(await this.config.serializer.deserialize(error));
 				return;
 			}
 		}

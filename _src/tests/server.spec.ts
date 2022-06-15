@@ -8,6 +8,8 @@ import { ServiceResponseBase } from './services/serviceResponseBase';
 import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TimeRequest } from './services/test/time.contract';
+import { TestLogger } from './testLogger';
+import { LogLevel } from '../interfaces/logger';
 
 describe('execute TestRequest on server \n', function (): void {
 	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
@@ -32,7 +34,15 @@ describe('execute TestRequest on server \n', function (): void {
 	let privateResponse: PrivateStuffResponse;
 
 	beforeEach(async function (): Promise<void> {
+		Nanium.logger = new TestLogger(LogLevel.info);
 		await Nanium.addManager(testProvider);
+	});
+
+	it('--> Services should have been initialized and info should have been logged \n', async function (): Promise<void> {
+		expect((Nanium.logger as TestLogger).infos.length > 0).toBeTruthy();
+		expect((Nanium.logger as TestLogger).errors.length).toBe(0);
+		expect((Nanium.logger as TestLogger).warnings.length).toBe(0);
+		expect((Nanium.logger as TestLogger).infos[0].toString().startsWith('service ready: NaniumTest:')).toBeTruthy();
 	});
 
 	describe('execute successful \n', function (): void {
@@ -107,7 +117,7 @@ describe('execute TestRequest on server \n', function (): void {
 					},
 					complete: (): void => resolve(),
 					error: (err: Error) => {
-						console.log(err.message);
+						Nanium.logger.error(err.message, err.stack);
 					}
 				});
 			});

@@ -13,6 +13,8 @@ import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
 import { TestEventSubscriptionSendInterceptor } from './events/test.interceptor';
+import { TestLogger } from './testLogger';
+import { LogLevel } from '../interfaces/logger';
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
@@ -59,6 +61,9 @@ export class TestHelper {
 	static async initClientServerScenario(protocol: 'http' | 'https', providerIsSubscriber: boolean = false): Promise<void> {
 		await this.initHttpServer(protocol);
 		this.hasServerBeenCalled = false;
+
+		// Logging
+		Nanium.logger = new TestLogger(LogLevel.info);
 
 		// Nanium provider
 		this.provider = new NaniumProviderNodejs({

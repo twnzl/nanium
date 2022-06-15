@@ -13,6 +13,7 @@ import { HttpCore } from './http.core';
 import { URL } from 'url';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { Nanium } from '../../core';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -36,7 +37,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 				requestInterceptors: [],
 				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {
-					console.error(response);
+					Nanium.logger.error(response);
 					return Promise.resolve();
 				},
 				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
