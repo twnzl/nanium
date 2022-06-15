@@ -63,44 +63,53 @@ export class HttpCore {
 		}
 	}
 
-	async subscribe(eventConstructor: any, handler: EventHandler, retries: number = 0): Promise<EventSubscription> {
-		// if not yet done, open long-polling request to receive events, do not use await because it is a long-polling request ;-)
-		if (!this.eventSubscriptions) {
-			this.eventSubscriptions = {};
-			this.startLongPolling().then();
-		}
-		// try later if the client does not yet have an id
-		if (!this.id) {
-			return await new Promise<EventSubscription>((resolve: Function, reject: Function) => {
-				if (retries > 10) {
-					reject(new Error('subscription not possible: client has no ID'));
+	async subscribe(eventConstructor: any, handler: EventHandler): Promise<EventSubscription> {
+		return await new Promise<EventSubscription>(async (resolve: Function, reject: Function) => {
+			// if not yet done, open long-polling request to receive events, do not use await because it is a long-polling request ;-)
+			if (!this.eventSubscriptions) {
+				this.eventSubscriptions = {};
+				this.startLongPolling().then();
+			}
+			let retries: number = 0;
+			const core: () => void = () => {
+				// try later if the client does not yet have an id (the startLongPolling function will retry to get the id meanwhile)
+				if (!this.id) {
+					if (retries > 10) {
+						reject(new Error('subscription not possible: client has no ID'));
+						return;
+					} else {
+						retries++;
+						setTimeout(async () => core(), 1000);
+						return;
+					}
 				}
-				setTimeout(async () => {
-					resolve(await this.subscribe(eventConstructor, handler, ++retries));
-				}, 1000);
-			});
-		}
-		const subscription: EventSubscription<any> = new EventSubscription(this.id, eventConstructor.eventName);
+				const subscription: EventSubscription = new EventSubscription(this.id, eventConstructor.eventName);
 
-		// execute interceptors
+				// execute interceptors
 
-		// add basics to eventSubscriptions for this eventName and inform the server
-		if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
-			this.eventSubscriptions[eventConstructor.eventName] = {
-				eventName: eventConstructor.eventName,
-				eventConstructor: eventConstructor,
-				eventHandlers: new Map<number, EventHandler>()
+				// add basics to eventSubscriptions for this eventName and inform the server
+				if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
+					this.eventSubscriptions[eventConstructor.eventName] = {
+						eventName: eventConstructor.eventName,
+						eventConstructor: eventConstructor,
+						eventHandlers: new Map<number, EventHandler>()
+					};
+					this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
+					this.sendEventSubscription(eventConstructor, subscription).then(
+						() => resolve(subscription),
+						() => core()
+					);
+				}
+
+				// if server has already been informed, just add the new handler locally
+				else {
+					this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
+					resolve(subscription);
+				}
 			};
-			this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
-			await this.sendEventSubscription(eventConstructor, subscription);
-		}
 
-		// if server has already been informed, just add the new handler locally
-		else {
-			this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
-		}
-
-		return subscription;
+			core();
+		});
 	}
 
 	private async sendEventSubscription(eventConstructor: any, subscription: EventSubscription<any>): Promise<void> {
