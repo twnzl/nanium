@@ -8,11 +8,10 @@ import {
 } from './services/test/stuff.contract';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestHelper } from './testHelper';
-import { ServiceResponseBase } from './services/serviceResponseBase';
 import { NaniumObject } from '../objects';
 
 let request: StuffRequest = null;
-let response: ServiceResponseBase<Stuff<Date>[]>;
+let response: Stuff<Date>[];
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 
 describe('JsonToClassSerializer \n', function (): void {

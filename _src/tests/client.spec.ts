@@ -7,7 +7,6 @@ import { URL } from 'url';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestHelper } from './testHelper';
 import { AnonymousRequest } from './services/test/anonymous.contract';
-import { ServiceResponseBase } from './services/serviceResponseBase';
 import { TimeRequest } from './services/test/time.contract';
 import { TestNoIORequest } from './services/test/noIO.contract';
 
@@ -30,14 +29,14 @@ describe('host services via http \n', function (): void {
 			it('--> the service should have been called via the http channel and should return the right result \n', async () => {
 				request.body.input2 = null;
 				response = await request.execute(executionContext);
-				expect(response.body.output1, 'o1 should be correct').toBe('hello world :-)');
-				expect(response.body.output2, 'o2 should be correct').toBe(2);
+				expect(response.output1, 'o1 should be correct').toBe('hello world :-)');
+				expect(response.output2, 'o2 should be correct').toBe(2);
 			});
 		});
 
 		describe('execute and skip interceptor \n', function (): void {
 			let anonymousRequest: AnonymousRequest;
-			let anonymousResponse: ServiceResponseBase<string>;
+			let anonymousResponse: string;
 
 			beforeEach(() => {
 				anonymousRequest = new AnonymousRequest(undefined, {});
@@ -45,7 +44,7 @@ describe('host services via http \n', function (): void {
 
 			it('--> \n', async function (): Promise<void> {
 				anonymousResponse = await anonymousRequest.execute(executionContext);
-				expect(anonymousResponse.body, 'output should be correct').toBe(':-)');
+				expect(anonymousResponse, 'output should be correct').toBe(':-)');
 			});
 		});
 
@@ -118,8 +117,8 @@ describe('host services via https \n', function (): void {
 		it('--> the service should have been called via the http channel and should return the right result \n', async () => {
 			request.body.input2 = null;
 			response = await request.execute(executionContext);
-			expect(response.body.output1, 'o1 should be correct').toBe('hello world :-)');
-			expect(response.body.output2, 'o2 should be correct').toBe(2);
+			expect(response.output1, 'o1 should be correct').toBe('hello world :-)');
+			expect(response.output2, 'o2 should be correct').toBe(2);
 		});
 	});
 
@@ -152,12 +151,12 @@ describe('host services via https \n', function (): void {
 
 	describe('optional body\n', function (): void {
 		it('-->body = undefined\n', async function (): Promise<void> {
-			const result: ServiceResponseBase<Date> = await new TimeRequest(undefined, { token: '1234' }).execute(executionContext);
-			expect(result.body).toBe(undefined);
+			const result: Date = await new TimeRequest(undefined, { token: '1234' }).execute(executionContext);
+			expect(result).toBe(undefined);
 		});
 		it('-->body = Date\n', async function (): Promise<void> {
-			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute(executionContext);
-			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
+			const result: Date = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute(executionContext);
+			expect(result.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 		});
 	});
 });

@@ -1,11 +1,7 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
-import { RequestType } from '../../../objects';
+import { NaniumObject, RequestType } from '../../../objects';
 
-export class TestGetResponse extends ServiceResponseBase<TestGetResponseBody> {
-}
-
-export class TestGetResponseBody {
+export class TestGetResponse extends NaniumObject<TestGetResponse> {
 	output1: string;
 	output2: number;
 }
@@ -16,13 +12,10 @@ export class TestGetRequestBody {
 }
 
 @RequestType({
-	responseType: ServiceResponseBase,
-	genericTypes: {
-		TRequestBody: TestGetRequestBody,
-		TResponseBody: TestGetResponseBody
-	},
+	responseType: TestGetResponse,
+	genericTypes: { TRequestBody: TestGetRequestBody },
 	scope: 'public'
 })
-export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponseBody> {
+export class TestGetRequest extends ServiceRequestBase<TestGetRequestBody, TestGetResponse> {
 	static serviceName: string = 'NaniumTest:test/get';
 }

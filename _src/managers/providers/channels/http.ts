@@ -96,11 +96,8 @@ export class NaniumHttpChannel implements Channel {
 				try {
 					const body: string = Buffer.concat(data).toString();
 					const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
-					await this.process(deserialized, res);
-					if (!deserialized.streamed) {
-						res.end();
-						resolve();
-					}
+					await this.process(this.config, this.serviceRepository, deserialized, res);
+					resolve();
 				} catch (e) {
 					reject(e);
 				}
@@ -108,68 +105,88 @@ export class NaniumHttpChannel implements Channel {
 		});
 	}
 
-	async process(deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
-		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, deserialized, res);
-	}
-
-	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
+	async process(config: ChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<void> {
 		const serviceName: string = deserialized.serviceName;
 		if (!serviceRepository[serviceName]) {
 			throw new Error(`nanium: unknown service ${serviceName}`);
 		}
 		const request: any = NaniumObject.plainToClass(deserialized.request, serviceRepository[serviceName].Request);
 		if (deserialized.streamed) {
-			if (!request.stream) {
-				res.statusCode = 500;
-				res.write(await config.serializer.serialize('the service does not support result streaming'));
-			}
-			res.setHeader('Cache-Control', 'no-cache');
-			res.setHeader('Content-Type', 'text/event-stream');
-			res.setHeader('Access-Control-Allow-Origin', '*');
-			res.setHeader('Connection', 'keep-alive');
-			res.flushHeaders(); // flush the headers to establish SSE with client
-			const result: Observable<any> = Nanium.stream(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
-			res.statusCode = 200;
-			result.subscribe({
-				next: async (value: any): Promise<void> => {
-					res.write(await config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
-					if (res['flush']) { // if compression is enabled we have to call flush
-						res['flush']();
-					}
-				},
-				complete: (): void => {
-					res.end();
-				},
-				error: async (e: any): Promise<void> => {
-					res.statusCode = 500;
-					res.write(await config.serializer.serialize(e));
-				}
-			});
+			this.processStream(request, res, serviceName, config);
 		} else {
-			try {
-				res.setHeader('Content-Type', config.serializer.mimeType);
-				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
-				if (result !== undefined && result !== null) {
-					res.write(await config.serializer.serialize(result));
-				}
-				res.statusCode = 200;
-			} catch (e) {
-				res.statusCode = 500;
-				let serialized: string;
-				if (e instanceof Error) {
-					serialized = await config.serializer.serialize({
-						message: e.message,
-						// stack should not be sent out
-					});
-				} else {
-					serialized = await config.serializer.serialize(e);
-				}
-				res.write(serialized);
-			}
+			await this.processExecute(res, config, request, serviceName);
 		}
 	}
 
-	//#endregion service request handling
+	private async processExecute(res: ServerResponse, config: ChannelConfig, request: any, serviceName: string): Promise<void> {
+		let encoding: BufferEncoding = 'utf8';
+		try {
+			res.setHeader('Content-Type', config.serializer.mimeType);
+			const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
+			if (result !== undefined && result !== null) {
+				if (result instanceof Buffer) {
+					encoding = 'binary';
+					res.write(result, encoding);
+				} else {
+					res.write(await config.serializer.serialize(result));
+				}
+				res.end(null, encoding);
+			} else {
+				res.end();
+			}
+			res.statusCode = 200;
+		} catch (e) {
+			res.statusCode = 500;
+			let serialized: string;
+			if (e instanceof Error) {
+				serialized = await config.serializer.serialize({
+					message: e.message,
+					// stack should not be sent out
+				});
+			} else {
+				serialized = await config.serializer.serialize(e);
+			}
+			res.write(serialized);
+			res.end();
+		}
+	}
+
+	private processStream(request: any, res: ServerResponse, serviceName: string, config: ChannelConfig): void {
+		let encoding: BufferEncoding = 'utf8';
+		if (!request.stream) {
+			throw new Error('the service does not support result streaming');
+		}
+		res.setHeader('Cache-Control', 'no-cache');
+		res.setHeader('Content-Type', 'text/event-stream');
+		res.setHeader('Access-Control-Allow-Origin', '*');
+		res.setHeader('Connection', 'keep-alive');
+		res.flushHeaders(); // flush the headers to establish SSE with client
+		const result: Observable<any> = Nanium.stream(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
+		res.statusCode = 200;
+		result.subscribe({
+			next: async (value: any): Promise<void> => {
+				if (value instanceof Buffer) {
+					encoding = 'binary';
+					res.write(value, encoding);
+				} else {
+					res.write(await config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
+				}
+				if (res['flush']) { // if compression is enabled we have to call flush
+					res['flush']();
+				}
+			},
+			complete: (): void => {
+				res.end(null, encoding);
+			},
+			error: async (e: any): Promise<void> => {
+				res.statusCode = 500;
+				res.write(await config.serializer.serialize(e));
+				res.end();
+			}
+		});
+	}
+
+//#endregion service request handling
 
 	//#region event handling
 	private async handleIncomingEventSubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {

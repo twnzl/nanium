@@ -176,7 +176,7 @@ export class NaniumGenericTypeInfo {
 }
 
 export class NaniumRequestInfo {
-	responseType?: new() => any = Object;
+	responseType?: new(arg1: any) => any = Object;
 	genericTypes?: { [id: string]: ConstructorType };
 	scope?: ExecutionScope = 'private';
 	skipInterceptors?: boolean | string[] | { [scope in ExecutionScope]: boolean | string[]; } = false;
@@ -205,7 +205,7 @@ export function Type(clazzOrGenericTypeId: ConstructorOrGenericTypeId, generics?
 }
 
 export function RequestType(info: NaniumRequestInfo): Function {
-	return (target: new () => any) => {
+	return (target: (new () => any) | Buffer) => {
 		target[responseTypeSymbol] = info.responseType;
 		target[genericTypesSymbol] = info.genericTypes;
 		target[scopeProperty] = target[scopeProperty] ?? info.scope;

@@ -1,11 +1,10 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
 import { TestServerRequestInterceptor } from '../../interceptors/server/test.request.interceptor';
 import { RequestType } from '../../../objects';
 
 // disabled to test services without this decorator
 @RequestType({
-	responseType: ServiceResponseBase,
+	responseType: String,
 	skipInterceptors: ['TestServerRequestInterceptor'],
 	scope: 'public'
 })

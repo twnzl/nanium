@@ -1,9 +1,8 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
 import { RequestType } from '../../../objects';
 
 @RequestType({
-	responseType: ServiceResponseBase,
+	responseType: Number,
 	scope: 'private'
 })
 export class PrivateStuffRequest extends ServiceRequestBase<number, number> {
@@ -14,7 +13,4 @@ export class PrivateStuffRequest extends ServiceRequestBase<number, number> {
 			return ['100 not allowed'];
 		}
 	}
-}
-
-export class PrivateStuffResponse extends ServiceResponseBase<number> {
 }

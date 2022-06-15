@@ -1,5 +1,4 @@
 import { StreamServiceRequestBase } from '../streamServiceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
 import { RequestType } from '../../../objects';
 
 export class TestQueryRequestBody {
@@ -12,11 +11,8 @@ export class TestDto {
 }
 
 @RequestType({
-	responseType: ServiceResponseBase,
-	genericTypes: {
-		TRequestBody: TestQueryRequestBody,
-		TResponseBody: TestDto
-	},
+	responseType: TestDto,
+	genericTypes: { TRequestBody: TestQueryRequestBody },
 	scope: 'public'
 })
 export class TestQueryRequest extends StreamServiceRequestBase<TestQueryRequestBody, TestDto> {
