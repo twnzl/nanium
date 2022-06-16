@@ -18,6 +18,7 @@ export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 export class NaniumConsumerBrowserHttp implements ServiceManager {
 	config: NaniumConsumerBrowserHttpConfig;
 	private httpCore: HttpCore;
+	private activeRequests: XMLHttpRequest[] = [];
 
 	constructor(config?: NaniumConsumerBrowserHttpConfig) {
 		this.config = {
@@ -37,7 +38,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			},
 			...(config || {})
 		};
-		this.httpCore = new HttpCore(this.config, this.httpRequest);
+		this.httpCore = new HttpCore(this.config,
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
 	async init(): Promise<void> {
@@ -48,6 +50,14 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 	}
 
 	async terminate(): Promise<void> {
+		for (const xhr of this.activeRequests) {
+			xhr.abort();
+		}
+		this.activeRequests = [];
+		this.httpCore.id = undefined;
+		this.httpCore.terminated = true;
+		this.httpCore = new HttpCore(this.config,
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
@@ -77,6 +87,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 				// transmission
 				const xhr: XMLHttpRequest = new XMLHttpRequest();
+				this.activeRequests.push(xhr);
 				let seenBytes: number = 0;
 				let deserialized: {
 					rest: string;
@@ -91,6 +102,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 								request.constructor[responseTypeSymbol],
 								request.constructor[genericTypesSymbol]);
 						} catch (e) {
+							this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 							observer.error(e);
 						}
 					}
@@ -105,6 +117,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 						await processResponse(xhr);
 					} else if (xhr.readyState === 4) {
 						await processResponse(xhr);
+						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 						observer.complete();
 					}
 				};
@@ -113,10 +126,12 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 						() => {
 						},
 						(err: any) => {
+							this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 							observer.error(err);
 						});
 				});
 				xhr.onerror = (evt) => {
+					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 					observer.error(evt);
 				};
 				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
@@ -151,22 +166,28 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<string> {
 		return new Promise<string>((resolve: Function, reject: Function) => {
+			let xhr: XMLHttpRequest;
 			try {
-				const xhr: XMLHttpRequest = new XMLHttpRequest();
+				xhr = new XMLHttpRequest();
+				this.activeRequests.push(xhr);
 				xhr.onabort = (e) => {
+					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 					reject(e);
 				};
 				xhr.onerror = (e) => {
+					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 					reject(e);
 				};
 				xhr.onload = async (): Promise<void> => {
 					if (xhr.status === 200) {
+						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 						if (xhr.response !== undefined && xhr.response !== '') {
 							resolve(xhr.response);
 						} else {
 							resolve();
 						}
 					} else {
+						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 						if (xhr.response !== undefined && xhr.response !== '') {
 							reject(xhr.response);
 						} else {
@@ -187,6 +208,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 					xhr.send(body);
 				}
 			} catch (e) {
+				this.activeRequests = this.activeRequests.filter(r => r !== xhr);
 				reject(e);
 			}
 		});

@@ -7,7 +7,6 @@ import * as findFiles from 'recursive-readdir';
 import * as util from 'util';
 import * as readline from 'readline';
 import { Interface } from 'readline';
-import { Nanium } from '../core';
 
 export class NaniumToolConfig {
 	eventsDirectory: string;
@@ -81,7 +80,7 @@ const config: NaniumToolConfig = (function (): NaniumToolConfig {
 		if (fs.existsSync(configFile)) {
 			configFromFile = JSON.parse(fs.readFileSync(configFile, 'utf8'));
 			if (!configFromFile.namespace) {
-				Nanium.logger.error('nanium.json: namespace not found');
+				console.error('nanium.json: namespace not found');
 				process.exit(1);
 			}
 			break;

@@ -26,6 +26,7 @@ interface NaniumHttpConfig extends ServiceConsumerConfig {
 export class HttpCore {
 	public id: string;
 	public eventSubscriptions: { [eventName: string]: ConsumerEventSubscription };
+	public terminated: boolean = false;
 
 	constructor(
 		public config: NaniumHttpConfig,
@@ -129,10 +130,13 @@ export class HttpCore {
 
 	async unsubscribe(subscription?: EventSubscription): Promise<void> {
 		const eventName: string = subscription.eventName;
-		if (subscription) {
-			this.eventSubscriptions[eventName].eventHandlers.delete(subscription.id);
+		if (!this.eventSubscriptions) {
+			return;
 		}
-		if (!subscription || this.eventSubscriptions[eventName].eventHandlers.size === 0) {
+		if (subscription) {
+			this.eventSubscriptions[eventName]?.eventHandlers?.delete(subscription.id);
+		}
+		if (!subscription || this.eventSubscriptions[eventName]?.eventHandlers?.size === 0) {
 			const requestBody: string = await this.config.serializer.serialize({
 				clientId: this.id,
 				eventName: subscription.eventName,
@@ -163,6 +167,9 @@ export class HttpCore {
 	}
 
 	private async startLongPolling(resendSubscriptions: boolean = false): Promise<void> {
+		if (this.terminated) {
+			return;
+		}
 		let eventResponse: NaniumEventResponse;
 		try {
 			if (!(await this.trySetClientId())) {

@@ -11,20 +11,33 @@ import { Logger, LogLevel } from './interfaces/logger';
 
 class ConsoleLogger implements Logger {
 	loglevel: LogLevel = LogLevel.none;
+	includeTimestamp: boolean = true;
 
 	constructor(level: LogLevel) {
 		this.loglevel = level;
 	}
 
+	trySerialize(arg: any): any {
+		if (typeof arg === 'object') {
+			try {
+				return JSON.stringify(arg);
+			} catch {
+			}
+		}
+		return arg;
+	}
+
+	time(): string {
+		return (this.includeTimestamp ? new Date().toISOString() + ': ' : '');
+	}
+
 	error(...args: any[]): void {
 		if (this.loglevel >= LogLevel.error) {
-			console.error('nanium: ', args.map(a => {
+			console.error(this.time() + 'nanium: ', ...args.map(a => {
 				if (a?.message) {
 					return a.message + a.stack;
-				} else if (typeof a === 'object') {
-					return JSON.stringify(a);
 				} else {
-					return a;
+					return this.trySerialize(a);
 				}
 			}));
 		}
@@ -32,24 +45,16 @@ class ConsoleLogger implements Logger {
 
 	warn(...args: any[]): void {
 		if (this.loglevel >= LogLevel.warn) {
-			console.warn('nanium: ', args.map(a => {
-				if (typeof a === 'object') {
-					return JSON.stringify(a);
-				} else {
-					return a;
-				}
+			console.warn(this.time() + 'nanium: ', ...args.map(a => {
+				return this.trySerialize(a);
 			}));
 		}
 	}
 
 	info(...args: any[]): void {
 		if (this.loglevel >= LogLevel.info) {
-			console.log('nanium: ', args.map(a => {
-				if (typeof a === 'object') {
-					return JSON.stringify(a);
-				} else {
-					return a;
-				}
+			console.log(this.time() + 'nanium: ', ...args.map(a => {
+				return this.trySerialize(a);
 			}));
 		}
 	}

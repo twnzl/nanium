@@ -173,7 +173,6 @@ export class NaniumHttpChannel implements Channel {
 
 	//#region event handling
 	private async handleIncomingEventSubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
-		Nanium.logger.info('channel http: longPollingResponses', this.longPollingResponses);
 		// request a unique clientId
 		if (req.method.toLowerCase() === 'get') {
 			Nanium.logger.info('channel http: incoming client ID request');
@@ -270,8 +269,6 @@ export class NaniumHttpChannel implements Channel {
 
 	async emitEvent(event: any, subscription?: EventSubscription): Promise<void> {
 		Nanium.logger.info('channel http: emitEvent: ', event, subscription);
-		Nanium.logger.info('channel http: eventSubscriptions: ', this.eventSubscriptions);
-		Nanium.logger.info('channel http: longPollingResponses: ', this.longPollingResponses);
 		const promises: Promise<void>[] = [];
 		promises.push(this.emitEventCore(event, subscription));
 		await Promise.all(promises);
@@ -280,10 +277,12 @@ export class NaniumHttpChannel implements Channel {
 	async emitEventCore(event: any, subscription?: EventSubscription, tryCount: number = 0): Promise<void> {
 		// try later if there is no open long-polling response (e.g. because of a recent event transmission)
 		if (!this.longPollingResponses[subscription.clientId] || this.longPollingResponses[subscription.clientId].writableFinished) {
+			Nanium.logger.info('channel http: emitEventCore: no open long-polling response');
 			if (tryCount > 5) {
 				// client seams to be gone, so remove subscription from this client
 				for (const eventName in this.eventSubscriptions) {
 					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
+						Nanium.logger.info('channel http: emitEventCore: client seams to be gone, so remove subscription from client: ' + subscription.clientId);
 						this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter((s) => s.clientId !== subscription.clientId);
 					}
 				}
@@ -299,6 +298,7 @@ export class NaniumHttpChannel implements Channel {
 
 		// else, transmit the data and end the long-polling request
 		else {
+			Nanium.logger.info('channel http: emitEventCore: transmit the data and end the long-polling request');
 			try {
 				const responseBody: string = await this.config.serializer.serialize({
 					eventName: event.constructor.eventName,

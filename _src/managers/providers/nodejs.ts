@@ -263,6 +263,8 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			if (!channel.eventSubscriptions) {
 				continue;
 			}
+			Nanium.logger.info('provider nodejs emit: event ', eventName, channel.eventSubscriptions[eventName]?.length ?? 0);
+			Nanium.logger.info('provider nodejs emit: active subscriptions. ', channel.eventSubscriptions[eventName]?.length ?? 0);
 			for (const subscription of channel.eventSubscriptions[eventName] ?? []) { // subscriptions
 				emissionOk = true;
 				for (const interceptor of interceptors) { // interceptors

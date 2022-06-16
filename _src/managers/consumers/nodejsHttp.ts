@@ -25,6 +25,7 @@ export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 export class NaniumConsumerNodejsHttp implements ServiceManager {
 	config: NaniumConsumerNodejsHttpConfig;
 	private httpCore: HttpCore;
+	private activeRequests: ClientRequest[] = [];
 
 	constructor(config?: NaniumConsumerNodejsHttpConfig) {
 		this.config = {
@@ -45,7 +46,8 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			},
 			...(config || {})
 		};
-		this.httpCore = new HttpCore(this.config, this.httpRequest);
+		this.httpCore = new HttpCore(this.config,
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
 
@@ -53,6 +55,14 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	}
 
 	async terminate(): Promise<void> {
+		for (const xhr of this.activeRequests) {
+			xhr.destroy();
+		}
+		this.activeRequests = [];
+		this.httpCore.id = undefined;
+		this.httpCore.terminated = true;
+		this.httpCore = new HttpCore(this.config,
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
@@ -63,6 +73,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		const [baseUri, query]: string[] = url.split('?');
 		const uri: URL = new URL(baseUri);
 		return new Promise<any>((resolve, reject) => {
+			let req: ClientRequest;
 			try {
 				const options: HttpRequestOptions | HttpsRequestOptions = {
 					...{
@@ -77,15 +88,17 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 				};
 				const requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest
 					= uri.protocol.startsWith('https') ? https.request : http.request;
-				const req: ClientRequest = requestFn(options, (response) => {
+				req = requestFn(options, (response) => {
 					let str: string = '';
 					response.on('data', (chunk: string) => {
 						str += chunk;
 					});
 					response.on('error', async (e) => {
+						this.activeRequests = this.activeRequests.filter(r => r !== req);
 						reject(e);
 					});
 					response.on('end', async () => {
+						this.activeRequests = this.activeRequests.filter(r => r !== req);
 						if (response.statusCode === 500) {
 							reject(str);
 						}
@@ -93,13 +106,17 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					});
 				});
 				req.on('error', (err) => {
+					this.activeRequests = this.activeRequests.filter(r => r !== req);
 					reject(err);
 				});
 				if (body) {
 					req.write(body);
 				}
+				this.activeRequests.push(req);
+				Nanium.logger.info('active HTTP requests.d ', this.activeRequests);
 				req.end();
 			} catch (e) {
+				this.activeRequests = this.activeRequests.filter(r => r !== req);
 				reject(e);
 			}
 		});
@@ -128,6 +145,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 
 				// transmission
 				const uri: URL = new URL(this.config.apiUrl);
+				let req: ClientRequest;
 				try {
 					const options: HttpRequestOptions | HttpsRequestOptions = {
 						...{
@@ -141,7 +159,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					};
 					const requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest
 						= uri.protocol.startsWith('https') ? https.request : http.request;
-					const req: ClientRequest = requestFn(options, (response) => {
+					req = requestFn(options, (response) => {
 						response.on('data', async (chunk: Buffer) => {
 							if (chunk.length > 0) {
 								const str: string = chunk.toString('utf8');
@@ -154,15 +172,19 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 							}
 						});
 						response.on('end', async () => {
+							this.activeRequests = this.activeRequests.filter(r => r !== req);
 							observer.complete();
 						});
 						response.on('error', async (e) => {
+							this.activeRequests = this.activeRequests.filter(r => r !== req);
 							observer.error(e);
 						});
 					});
+					this.activeRequests.push(req);
 					req.write(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
 					req.end();
 				} catch (e) {
+					this.activeRequests = this.activeRequests.filter(r => r !== req);
 					observer.error(e);
 				}
 			};
