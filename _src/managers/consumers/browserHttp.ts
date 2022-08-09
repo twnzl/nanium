@@ -18,7 +18,7 @@ export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 export class NaniumConsumerBrowserHttp implements ServiceManager {
 	config: NaniumConsumerBrowserHttpConfig;
 	private httpCore: HttpCore;
-	private activeRequests: XMLHttpRequest[] = [];
+	private activeRequests: { abort: Function }[] = [];
 
 	constructor(config?: NaniumConsumerBrowserHttpConfig) {
 		this.config = {
@@ -86,57 +86,77 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				}
 
 				// transmission
-				const xhr: XMLHttpRequest = new XMLHttpRequest();
-				this.activeRequests.push(xhr);
-				let seenBytes: number = 0;
-				let deserialized: {
-					rest: string;
-					data: any;
-				} = { data: '', rest: '' };
-
-				const processResponse: (xhr: XMLHttpRequest) => Promise<void> = async (xhr: XMLHttpRequest) => {
-					if (xhr.response) {
-						try {
-							deserialized = await this.config.serializer.getData(
-								deserialized.rest + xhr.response.substr(seenBytes),
-								request.constructor[responseTypeSymbol],
-								request.constructor[genericTypesSymbol]);
-						} catch (e) {
-							this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-							observer.error(e);
-						}
-					}
-					for (const data of deserialized.data) {
-						observer.next(data);
-					}
-					seenBytes = xhr.responseText.length;
-				};
-
-				xhr.onreadystatechange = async (): Promise<void> => {
-					if (xhr.readyState === 3) {
-						await processResponse(xhr);
-					} else if (xhr.readyState === 4) {
-						await processResponse(xhr);
-						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-						observer.complete();
-					}
-				};
-				xhr.addEventListener('error', (e: any) => {
-					this.config.handleError(e).then(
-						() => {
-						},
-						(err: any) => {
-							this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-							observer.error(err);
-						});
+				const abortController: AbortController = new AbortController();
+				this.activeRequests.push(abortController);
+				const req: Request = new Request(this.config.apiUrl + '?' + serviceName, {
+					method: 'post',
+					mode: 'cors',
+					redirect: 'follow',
+					body: this.config.serializer.serialize({ serviceName, streamed: true, request }),
+					signal: abortController.signal // make the request abortable
 				});
-				xhr.onerror = (evt) => {
-					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-					observer.error(evt);
-				};
-				xhr.open('POST', this.config.apiUrl + '?' + serviceName);
-				xhr.setRequestHeader('Content-Type', 'application/json');
-				xhr.send(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
+
+				fetch(req)
+					.then((response) => response.body)
+					.then((rb) => {
+						const reader: ReadableStreamDefaultReader<Uint8Array> = rb.getReader();
+
+						let restFromLastTime: any;
+						let deserialized: {
+							data: any;
+							rest: any;
+						};
+
+						return new ReadableStream({
+							cancel: (reason?: any): void => {
+								observer.error(reason);
+								this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+							},
+							start: (controller: ReadableStreamDefaultController<any>): void => {
+								const push: () => void = () => {
+									reader.read().then(({ done, value }) => {
+										if (done) {
+											console.log('done', done);
+											controller.close();
+											observer.complete();
+											this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+											return;
+										}
+										try {
+											if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
+												observer.next(value);
+											} else {
+												deserialized = this.config.serializer.deserializePartial(
+													value,
+													request.constructor[responseTypeSymbol],
+													request.constructor[genericTypesSymbol],
+													restFromLastTime
+												);
+												if (deserialized.data?.length) {
+													for (const data of deserialized.data) {
+														observer.next(data);
+													}
+												}
+												restFromLastTime = deserialized.rest;
+											}
+										} catch (e) {
+											this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+											controller.close();
+											observer.error(e);
+										}
+
+										// read next portion from stream
+										push();
+									});
+								};
+
+								// start reading from stream
+								push();
+							},
+						});
+					});
+
+				this.config.serializer.serialize({ serviceName, streamed: true, request });
 			};
 
 			core();
@@ -164,7 +184,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		throw new Error('not implemented');
 	}
 
-	async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<string> {
+	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any): Promise<string> {
 		return new Promise<string>((resolve: Function, reject: Function) => {
 			let xhr: XMLHttpRequest;
 			try {

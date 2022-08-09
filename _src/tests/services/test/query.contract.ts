@@ -1,14 +1,14 @@
 import { StreamServiceRequestBase } from '../streamServiceRequestBase';
 import { ServiceResponseBase } from '../serviceResponseBase';
-import { RequestType } from '../../../objects';
+import { RequestType, Type } from '../../../objects';
 
 export class TestQueryRequestBody {
-	input: number;
+	@Type(Number) input: number;
 }
 
 export class TestDto {
-	a: string;
-	b: number;
+	@Type(String) a: string;
+	@Type(Number) b: number;
 }
 
 @RequestType({

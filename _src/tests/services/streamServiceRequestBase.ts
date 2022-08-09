@@ -1,12 +1,12 @@
 import { ServiceRequestHead } from './serviceRequestHead';
 import { Nanium } from '../../core';
 import { Observable } from 'rxjs';
-import { ConstructorType, NaniumObject } from '../../objects';
+import { ConstructorType, NaniumObject, Type } from '../../objects';
 
 export class StreamServiceRequestBase<TRequestBody, TResult> {
 
-	head: ServiceRequestHead;
-	body: TRequestBody;
+	@Type(ServiceRequestHead) head: ServiceRequestHead;
+	@Type('TRequestBody') body: TRequestBody;
 
 	constructor(body?: TRequestBody, head?: Partial<ServiceRequestHead>) {
 		this.body = body ? NaniumObject.create(body, 'TRequestBody', this.constructor as ConstructorType) : undefined;

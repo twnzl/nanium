@@ -95,7 +95,7 @@ export class NaniumHttpChannel implements Channel {
 			}).on('end', async () => {
 				try {
 					const body: string = Buffer.concat(data).toString();
-					const deserialized: NaniumHttpChannelBody = await this.config.serializer.deserialize(body);
+					const deserialized: NaniumHttpChannelBody = this.config.serializer.deserialize(body);
 					await this.process(deserialized, res);
 					if (!deserialized.streamed) {
 						res.end();
@@ -121,7 +121,7 @@ export class NaniumHttpChannel implements Channel {
 		if (deserialized.streamed) {
 			if (!request.stream) {
 				res.statusCode = 500;
-				res.write(await config.serializer.serialize('the service does not support result streaming'));
+				res.write(config.serializer.serialize('the service does not support result streaming'));
 			}
 			res.setHeader('Cache-Control', 'no-cache');
 			res.setHeader('Content-Type', 'text/event-stream');
@@ -132,7 +132,7 @@ export class NaniumHttpChannel implements Channel {
 			res.statusCode = 200;
 			result.subscribe({
 				next: async (value: any): Promise<void> => {
-					res.write(await config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
+					res.write(config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
 					if (res['flush']) { // if compression is enabled we have to call flush
 						res['flush']();
 					}
@@ -142,7 +142,7 @@ export class NaniumHttpChannel implements Channel {
 				},
 				error: async (e: any): Promise<void> => {
 					res.statusCode = 500;
-					res.write(await config.serializer.serialize(e));
+					res.write(config.serializer.serialize(e));
 				}
 			});
 		} else {
@@ -150,19 +150,19 @@ export class NaniumHttpChannel implements Channel {
 				res.setHeader('Content-Type', config.serializer.mimeType);
 				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
-					res.write(await config.serializer.serialize(result));
+					res.write(config.serializer.serialize(result));
 				}
 				res.statusCode = 200;
 			} catch (e) {
 				res.statusCode = 500;
-				let serialized: string;
+				let serialized: string | ArrayBuffer;
 				if (e instanceof Error) {
-					serialized = await config.serializer.serialize({
+					serialized = config.serializer.serialize({
 						message: e.message,
 						// stack should not be sent out
 					});
 				} else {
-					serialized = await config.serializer.serialize(e);
+					serialized = config.serializer.serialize(e);
 				}
 				res.write(serialized);
 			}
@@ -178,7 +178,7 @@ export class NaniumHttpChannel implements Channel {
 			Nanium.logger.info('channel http: incoming client ID request');
 			res.statusCode = 200;
 			const id: string = randomUUID();
-			res.write(await this.config.serializer.serialize(id));
+			res.write(this.config.serializer.serialize(id));
 			res.end();
 			Nanium.logger.info('channel http: sent client ID: ', id);
 		}
@@ -191,7 +191,7 @@ export class NaniumHttpChannel implements Channel {
 				}).on('end', async () => {
 					try {
 						// deserialize subscription info
-						const subscriptionData: EventSubscription = await this.config.serializer.deserialize(Buffer.concat(data).toString());
+						const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
 						// todo: events: subscriptionData = NaniumSerializerCore.plainToClass(subscriptionData, this.config.subscriptionDataConstructor);
 
 						// store subscription information
@@ -203,7 +203,7 @@ export class NaniumHttpChannel implements Channel {
 							} catch (e) {
 								Nanium.logger.error(e);
 								res.statusCode = 400;
-								const responseBody: string = await this.config.serializer.serialize(e.message);
+								const responseBody: string | ArrayBuffer = this.config.serializer.serialize(e.message);
 								res.write(responseBody);
 								res.end();
 								resolve();
@@ -247,7 +247,7 @@ export class NaniumHttpChannel implements Channel {
 			}).on('end', async () => {
 				try {
 					// deserialize subscription info
-					const subscriptionData: EventSubscription = await this.config.serializer.deserialize(Buffer.concat(data).toString());
+					const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
 					// todo: events: subscriptionData = NaniumSerializerCore.plainToClass(subscriptionData, this.config.subscriptionDataConstructor);
 
 					if (!this.eventSubscriptions[subscriptionData.eventName]) {
@@ -300,7 +300,7 @@ export class NaniumHttpChannel implements Channel {
 		else {
 			Nanium.logger.info('channel http: emitEventCore: transmit the data and end the long-polling request');
 			try {
-				const responseBody: string = await this.config.serializer.serialize({
+				const responseBody: string | ArrayBuffer = this.config.serializer.serialize({
 					eventName: event.constructor.eventName,
 					event
 				});

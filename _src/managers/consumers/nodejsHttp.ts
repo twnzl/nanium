@@ -12,7 +12,7 @@ import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { URL } from 'url';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { genericTypesSymbol, responseTypeSymbol } from '../../objects';
 import { Nanium } from '../../core';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
@@ -134,8 +134,14 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.httpCore.sendRequest(serviceName, request);
 	}
 
+	// todo: with node version 8 (fetch-api) this can be the same code as in browserHttp
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
+			let restFromLastTime: any;
+			let deserialized: {
+				data: any;
+				rest: any;
+			};
 
 			const core: Function = async (): Promise<void> => {
 				// interceptors
@@ -162,13 +168,18 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					req = requestFn(options, (response) => {
 						response.on('data', async (chunk: Buffer) => {
 							if (chunk.length > 0) {
-								const str: string = chunk.toString('utf8');
-								const r: any = NaniumObject.plainToClass(
-									await this.config.serializer.deserialize(str),
+								deserialized = this.config.serializer.deserializePartial(
+									chunk.toString(),
 									request.constructor[responseTypeSymbol],
-									request.constructor[genericTypesSymbol]
+									request.constructor[genericTypesSymbol],
+									restFromLastTime
 								);
-								observer.next(r);
+								if (deserialized.data?.length) {
+									for (const data of deserialized.data) {
+										observer.next(data);
+									}
+								}
+								restFromLastTime = deserialized.rest;
 							}
 						});
 						response.on('end', async () => {
@@ -181,7 +192,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 						});
 					});
 					this.activeRequests.push(req);
-					req.write(await this.config.serializer.serialize({ serviceName, streamed: true, request }));
+					req.write(this.config.serializer.serialize({ serviceName, streamed: true, request }));
 					req.end();
 				} catch (e) {
 					this.activeRequests = this.activeRequests.filter(r => r !== req);

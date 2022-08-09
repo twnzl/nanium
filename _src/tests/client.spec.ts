@@ -10,6 +10,8 @@ import { AnonymousRequest } from './services/test/anonymous.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
 import { TimeRequest } from './services/test/time.contract';
 import { TestNoIORequest } from './services/test/noIO.contract';
+import { TestDto, TestQueryRequest } from './services/test/query.contract';
+import { Nanium } from '../core';
 
 const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
@@ -82,6 +84,24 @@ describe('host services via http \n', function (): void {
 				await new TestNoIORequest().execute(executionContext);
 			});
 		});
+
+		describe('response as stream\n', function (): void {
+			it('--> the service should have been called via the http channel and should return the right result \n', async () => {
+				const dtoList: TestDto[] = [];
+				await new Promise((resolve: Function): void => {
+					new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
+						next: (value: TestDto): void => {
+							dtoList.push(value);
+						},
+						complete: (): void => resolve(),
+						error: (err: Error) => {
+							Nanium.logger.error(err.message, err.stack);
+						}
+					});
+				});
+				expect(dtoList.length, 'length of result list should be correct').toBe(999);
+			});
+		});
 	});
 
 	describe('call an url of the http server that is not managed by nanium \n', function (): void {
@@ -102,7 +122,6 @@ describe('host services via http \n', function (): void {
 			expect(result).toBe('*** http fallback ***');
 		});
 	});
-
 });
 
 describe('host services via https \n', function (): void {

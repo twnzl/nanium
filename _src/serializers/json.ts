@@ -3,34 +3,53 @@ import { NaniumObject } from '../objects';
 
 export class NaniumJsonSerializer implements NaniumSerializer {
 
-	async deserialize(str: string): Promise<any> {
+	deserialize(raw: string | ArrayBuffer): any {
 		try {
-			return JSON.parse(str);
+			if (typeof raw === 'string') {
+				return JSON.parse(raw);
+			} else {
+				return JSON.parse(new TextDecoder('utf-8').decode(raw));
+			}
 		} catch (e) {
-			throw new Error('NaniumJsonSerializer: error while deserializing: "' + str + '"');
+			throw new Error('NaniumJsonSerializer: error while deserializing: "' + raw + '"');
 		}
 	}
 
-	async serialize(obj: any): Promise<string> {
+	serialize(obj: any): string | ArrayBuffer {
 		return JSON.stringify(obj);
 	}
 
-	async getData(
-		rawData: any,
+	deserializePartial(
+		raw: string | ArrayBuffer,
 		ctor: new (data?: any) => any,
-		generics: { [id: string]: new() => any; }
-	): Promise<{
+		generics: { [id: string]: new() => any; },
+		restFromLastTime?: string,
+	): {
 		data: any;
 		rest: any;
-	}> {
+	} {
+		let txt: string;
+		if (typeof raw === 'string') {
+			txt = raw;
+		} else {
+			txt = new TextDecoder('utf-8').decode(raw);
+		}
+		if (restFromLastTime) {
+			txt = restFromLastTime + txt;
+		}
+
 		let deserialized: any;
 		let rest: any;
-		const packets: string[] = rawData.split(this.packageSeparator);
+		const packets: string[] = txt.split(this.packageSeparator);
 		const result: any[] = [];
 		rest = packets.pop();
 		for (const packet of packets) {
-			deserialized = await this.deserialize(packet);
-			result.push(NaniumObject.plainToClass(deserialized, ctor, generics));
+			deserialized = this.deserialize(packet);
+			try {
+				result.push(NaniumObject.plainToClass(deserialized, ctor, generics));
+			} catch (e) {
+				console.log(e);
+			}
 		}
 		return { data: result, rest };
 	}

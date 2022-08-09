@@ -30,29 +30,29 @@ export class HttpCore {
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => Promise<string>
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => Promise<string>
 	) {
 	}
 
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
 		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
-		const bodyString: string = await this.config.serializer.serialize({ serviceName, request });
+		const body: string | ArrayBuffer = this.config.serializer.serialize({ serviceName, request });
 		try {
-			const str: string = await this.httpRequest('POST', uri, bodyString);
+			const str: string = await this.httpRequest('POST', uri, body);
 			if (str === undefined || str === null) {
 				return str;
 			} else if (str === '') {
 				return request.constructor[responseTypeSymbol] !== String ? undefined : str;
 			}
 			const r: any = NaniumObject.plainToClass(
-				await this.config.serializer.deserialize(str),
+				this.config.serializer.deserialize(str),
 				request.constructor[responseTypeSymbol],
 				request.constructor[genericTypesSymbol]
 			);
 			return r;
 		} catch (e) {
 			if (typeof e === 'string') {
-				const deserialized: any = await this.config.serializer.deserialize(e);
+				const deserialized: any = this.config.serializer.deserialize(e);
 				// todo: make an Error class configurable so that plainToClass can also be used for Error Objects.
 				if (this.config.handleError) {
 					await this.config.handleError(deserialized);
@@ -120,7 +120,7 @@ export class HttpCore {
 				= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
 			await interceptor.execute(eventConstructor, subscription);
 		}
-		const requestBody: string = await this.config.serializer.serialize(subscription);
+		const requestBody: string | ArrayBuffer = this.config.serializer.serialize(subscription);
 		try {
 			await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
 		} catch (e) {
@@ -137,7 +137,7 @@ export class HttpCore {
 			this.eventSubscriptions[eventName]?.eventHandlers?.delete(subscription.id);
 		}
 		if (!subscription || this.eventSubscriptions[eventName]?.eventHandlers?.size === 0) {
-			const requestBody: string = await this.config.serializer.serialize({
+			const requestBody: string | ArrayBuffer = this.config.serializer.serialize({
 				clientId: this.id,
 				eventName: subscription.eventName,
 				additionalData: {}
@@ -145,7 +145,7 @@ export class HttpCore {
 			delete this.eventSubscriptions[eventName];
 			const error: string = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
 			if (error) {
-				Nanium.logger.error(await this.config.serializer.deserialize(error));
+				Nanium.logger.error(this.config.serializer.deserialize(error));
 				return;
 			}
 		}
@@ -158,7 +158,7 @@ export class HttpCore {
 			return true;
 		}
 		try {
-			this.id = await this.config.serializer.deserialize(
+			this.id = this.config.serializer.deserialize(
 				await this.httpRequest('GET', this.config.apiEventUrl));
 			return true;
 		} catch (e) {
@@ -186,10 +186,10 @@ export class HttpCore {
 				}
 				await this.config.onServerConnectionRestored();
 			}
-			const eventResponseString: string = await this.httpRequest('POST', this.config.apiEventUrl,
-				await this.config.serializer.serialize({ clientId: this.id }));
+			const eventResponseString: string | ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl,
+				this.config.serializer.serialize({ clientId: this.id }));
 			if (eventResponseString) {
-				eventResponse = await this.config.serializer.deserialize(eventResponseString);
+				eventResponse = this.config.serializer.deserialize(eventResponseString);
 			}
 		} catch (e) {
 			if (typeof e === 'string') {

@@ -1,18 +1,19 @@
 import { ConstructorType } from '../objects';
 
 export interface NaniumSerializer {
-	serialize(obj: any): Promise<string>;
+	serialize(obj: any): string | ArrayBuffer;
 
-	deserialize(str: string): Promise<any>;
+	deserialize(raw: string | ArrayBuffer): any;
 
-	getData(
-		rawData: any,
+	deserializePartial(
+		rawData: string | ArrayBuffer,
 		ctor: ConstructorType,
-		generics: { [id: string]: new() => any; }
-	): Promise<{
+		generics: { [id: string]: new() => any; },
+		restFromLastTime?: any
+	): {
 		data: any;
 		rest: any;
-	}>;
+	};
 
 	packageSeparator: string;
 	mimeType: string;
