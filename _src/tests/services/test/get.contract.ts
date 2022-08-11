@@ -6,12 +6,12 @@ export class TestGetResponse extends ServiceResponseBase<TestGetResponseBody> {
 }
 
 export class TestGetResponseBody {
-	output1: string;
-	output2: number;
+	output1?: string;
+	output2?: number;
 }
 
 export class TestGetRequestBody {
-	input1: string;
+	input1?: string;
 	input2?: number;
 }
 

@@ -9,7 +9,7 @@ export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest
 	stream(request: TestQueryRequest, executionContext: ServiceRequestContext): Observable<TestDto> {
 		return new Observable((observer: Observer<TestDto>): void => {
 			for (let i: number = 1; i < 1000; i++) {
-				observer.next({ a: i.toString(), b: i });
+				observer.next({ a: i.toString(), b: i } as TestDto);
 			}
 			observer.complete();
 		});

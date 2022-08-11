@@ -1,6 +1,5 @@
-import { StreamServiceRequestBase } from '../streamServiceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
 import { RequestType, Type } from '../../../objects';
+import { StreamServiceRequestBase } from '../streamServiceRequestBase';
 
 export class TestQueryRequestBody {
 	@Type(Number) input: number;
@@ -9,10 +8,14 @@ export class TestQueryRequestBody {
 export class TestDto {
 	@Type(String) a: string;
 	@Type(Number) b: number;
+
+	formatted(): string {
+		return this.a + ':' + this.b;
+	}
 }
 
 @RequestType({
-	responseType: ServiceResponseBase,
+	responseType: TestDto,
 	genericTypes: {
 		TRequestBody: TestQueryRequestBody,
 		TResponseBody: TestDto

@@ -1,5 +1,4 @@
 import { NaniumSerializer } from '../interfaces/serializer';
-import { NaniumObject } from '../objects';
 
 export class NaniumJsonSerializer implements NaniumSerializer {
 
@@ -21,8 +20,6 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 
 	deserializePartial(
 		raw: string | ArrayBuffer,
-		ctor: new (data?: any) => any,
-		generics: { [id: string]: new() => any; },
 		restFromLastTime?: string,
 	): {
 		data: any;
@@ -45,11 +42,7 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 		rest = packets.pop();
 		for (const packet of packets) {
 			deserialized = this.deserialize(packet);
-			try {
-				result.push(NaniumObject.plainToClass(deserialized, ctor, generics));
-			} catch (e) {
-				console.log(e);
-			}
+			result.push(deserialized);
 		}
 		return { data: result, rest };
 	}

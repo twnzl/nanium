@@ -12,7 +12,7 @@ import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { URL } from 'url';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, responseTypeSymbol } from '../../objects';
+import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { Nanium } from '../../core';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
@@ -69,10 +69,10 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	private async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<string> {
+	private async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<ArrayBuffer> {
 		const [baseUri, query]: string[] = url.split('?');
 		const uri: URL = new URL(baseUri);
-		return new Promise<any>((resolve, reject) => {
+		return new Promise<ArrayBuffer>((resolve, reject) => {
 			let req: ClientRequest;
 			try {
 				const options: HttpRequestOptions | HttpsRequestOptions = {
@@ -89,9 +89,10 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 				const requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest
 					= uri.protocol.startsWith('https') ? https.request : http.request;
 				req = requestFn(options, (response) => {
-					let str: string = '';
-					response.on('data', (chunk: string) => {
-						str += chunk;
+					const chunks: Buffer[] = [];
+					// response.setEncoding('binary');
+					response.on('data', (chunk: Buffer) => {
+						chunks.push(chunk);
 					});
 					response.on('error', async (e) => {
 						this.activeRequests = this.activeRequests.filter(r => r !== req);
@@ -99,10 +100,12 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					});
 					response.on('end', async () => {
 						this.activeRequests = this.activeRequests.filter(r => r !== req);
+						let buffer = Buffer.concat(chunks);
+						let arrayBuffer: Uint8Array = new Uint8Array(buffer, 0, buffer.length);
 						if (response.statusCode === 500) {
-							reject(str);
+							reject(arrayBuffer.buffer);
 						}
-						resolve(str);
+						resolve(arrayBuffer.buffer);
 					});
 				});
 				req.on('error', (err) => {
@@ -168,18 +171,21 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					req = requestFn(options, (response) => {
 						response.on('data', async (chunk: Buffer) => {
 							if (chunk.length > 0) {
-								deserialized = this.config.serializer.deserializePartial(
-									chunk.toString(),
-									request.constructor[responseTypeSymbol],
-									request.constructor[genericTypesSymbol],
-									restFromLastTime
-								);
-								if (deserialized.data?.length) {
-									for (const data of deserialized.data) {
-										observer.next(data);
+								if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
+									observer.next(chunk);
+								} else {
+									deserialized = this.config.serializer.deserializePartial(chunk.toString(), restFromLastTime);
+									if (deserialized.data?.length) {
+										for (const data of deserialized.data) {
+											observer.next(NaniumObject.plainToClass(
+												data,
+												request.constructor[responseTypeSymbol],
+												request.constructor[genericTypesSymbol]
+											));
+										}
 									}
+									restFromLastTime = deserialized.rest;
 								}
-								restFromLastTime = deserialized.rest;
 							}
 						});
 						response.on('end', async () => {

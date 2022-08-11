@@ -1,6 +1,6 @@
 # ide
-/.idea
-/.vscode/
+.idea
+.vscode/
 
 # npm
 node_modules
@@ -16,6 +16,7 @@ package-lock.json
 /core.*
 /helper.*
 /objects.*
+/_src/tests/test-server/dst
 
 # temporarry folders for development
 /_tmp

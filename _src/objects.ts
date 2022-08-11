@@ -177,7 +177,7 @@ export class NaniumGenericTypeInfo {
 }
 
 export class NaniumRequestInfo {
-	responseType?: new() => any = Object;
+	responseType?: ConstructorType = Object;
 	genericTypes?: { [id: string]: ConstructorType };
 	scope?: ExecutionScope = 'private';
 	skipInterceptors?: boolean | string[] | { [scope in ExecutionScope]: boolean | string[]; } = false;

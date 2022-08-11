@@ -19,7 +19,7 @@ export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = 
 		this.head = head ? new ServiceRequestHead(head) : undefined;
 	}
 
-	async execute(context: ServiceRequestContext): Promise<ServiceResponseBase<TResponseBody>> {
+	async execute(context?: ServiceRequestContext): Promise<ServiceResponseBase<TResponseBody>> {
 		return await Nanium.execute(this, undefined, context);
 	}
 

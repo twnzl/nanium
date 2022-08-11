@@ -5,14 +5,12 @@
     "sourceMap": true,
     "inlineSourceMap": false,
     "declaration": true,
-    "outDir": ".",
+    "outDir": "dst",
     "watch": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "types": [
-      "node",
-      "jest",
-      "jest-expect-message"
+      "node"
     ],
     "moduleResolution": "Node",
     "typeRoots": [
@@ -20,17 +18,9 @@
     ]
   },
   "include": [
-    "_src"
+    "testserver.ts"
   ],
   "exclude": [
-    "node_modules",
-    "dist",
-    "_tmp/sdk",
-    "interfaces",
-    "managers",
-    "serializers",
-    "tests",
-    "tools",
-    "_src/tests/browser-client"
+    "*.js"
   ]
 }

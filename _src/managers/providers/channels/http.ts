@@ -9,7 +9,7 @@ import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { NaniumObject } from '../../../objects';
+import { NaniumObject, responseTypeSymbol } from '../../../objects';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -132,7 +132,11 @@ export class NaniumHttpChannel implements Channel {
 			res.statusCode = 200;
 			result.subscribe({
 				next: async (value: any): Promise<void> => {
-					res.write(config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
+					if (serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer) {
+						res.write(value);
+					} else {
+						res.write(config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
+					}
 					if (res['flush']) { // if compression is enabled we have to call flush
 						res['flush']();
 					}
@@ -150,7 +154,11 @@ export class NaniumHttpChannel implements Channel {
 				res.setHeader('Content-Type', config.serializer.mimeType);
 				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
-					res.write(config.serializer.serialize(result));
+					if (result instanceof ArrayBuffer) {
+						res.write(new Uint8Array(result));
+					} else {
+						res.write(config.serializer.serialize(result));
+					}
 				}
 				res.statusCode = 200;
 			} catch (e) {

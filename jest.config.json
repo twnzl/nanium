@@ -11,6 +11,7 @@
     "node"
   ],
   "modulePathIgnorePatterns": [
+    "_src/tests/browser-client/*"
   ],
   "forceExit": true,
   "detectOpenHandles": true,

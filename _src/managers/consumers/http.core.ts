@@ -30,7 +30,7 @@ export class HttpCore {
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => Promise<string>
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => Promise<ArrayBuffer>
 	) {
 	}
 
@@ -38,20 +38,30 @@ export class HttpCore {
 		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
 		const body: string | ArrayBuffer = this.config.serializer.serialize({ serviceName, request });
 		try {
-			const str: string = await this.httpRequest('POST', uri, body);
-			if (str === undefined || str === null) {
-				return str;
-			} else if (str === '') {
-				return request.constructor[responseTypeSymbol] !== String ? undefined : str;
+			const data: ArrayBuffer = await this.httpRequest('POST', uri, body);
+			if (data === undefined || data === null) {
+				return data;
+			} else if (data.byteLength === 0) {
+				return request.constructor[responseTypeSymbol] !== String ? undefined : data;
 			}
-			const r: any = NaniumObject.plainToClass(
-				this.config.serializer.deserialize(str),
-				request.constructor[responseTypeSymbol],
-				request.constructor[genericTypesSymbol]
-			);
-			return r;
+			if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
+				return data;
+			} else {
+				const r: any = NaniumObject.plainToClass(
+					this.config.serializer.deserialize(data),
+					request.constructor[responseTypeSymbol],
+					request.constructor[genericTypesSymbol]
+				);
+				return r;
+			}
 		} catch (e) {
-			if (typeof e === 'string') {
+			let error: any;
+			if (e instanceof ArrayBuffer) {
+				error = new TextDecoder().decode(e);
+			} else {
+				error = e;
+			}
+			if (typeof error === 'string') {
 				const deserialized: any = this.config.serializer.deserialize(e);
 				// todo: make an Error class configurable so that plainToClass can also be used for Error Objects.
 				if (this.config.handleError) {
@@ -143,8 +153,8 @@ export class HttpCore {
 				additionalData: {}
 			});
 			delete this.eventSubscriptions[eventName];
-			const error: string = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
-			if (error) {
+			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
+			if (error.byteLength) {
 				Nanium.logger.error(this.config.serializer.deserialize(error));
 				return;
 			}

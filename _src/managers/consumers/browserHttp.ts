@@ -7,7 +7,7 @@ import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, responseTypeSymbol } from '../../objects';
+import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -50,8 +50,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 	}
 
 	async terminate(): Promise<void> {
-		for (const xhr of this.activeRequests) {
-			xhr.abort();
+		for (const ar of this.activeRequests) {
+			ar.abort();
 		}
 		this.activeRequests = [];
 		this.httpCore.id = undefined;
@@ -116,7 +116,6 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 								const push: () => void = () => {
 									reader.read().then(({ done, value }) => {
 										if (done) {
-											console.log('done', done);
 											controller.close();
 											observer.complete();
 											this.activeRequests = this.activeRequests.filter(r => r !== abortController);
@@ -126,15 +125,14 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 											if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
 												observer.next(value);
 											} else {
-												deserialized = this.config.serializer.deserializePartial(
-													value,
-													request.constructor[responseTypeSymbol],
-													request.constructor[genericTypesSymbol],
-													restFromLastTime
-												);
+												deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 												if (deserialized.data?.length) {
 													for (const data of deserialized.data) {
-														observer.next(data);
+														observer.next(NaniumObject.plainToClass(
+															data,
+															request.constructor[responseTypeSymbol],
+															request.constructor[genericTypesSymbol]
+														));
 													}
 												}
 												restFromLastTime = deserialized.rest;
@@ -184,7 +182,36 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		throw new Error('not implemented');
 	}
 
-	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any): Promise<string> {
+	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any): Promise<ArrayBuffer> {
+		return new Promise<ArrayBuffer>((resolve: Function, reject: Function) => {
+			// transmission
+			const abortController: AbortController = new AbortController();
+			this.activeRequests.push(abortController);
+			const req: Request = new Request(url, {
+				method: method,
+				body: body,
+				headers: headers,
+				signal: abortController.signal // make the request abortable
+			});
+			fetch(req)
+				.then(async (response) => {
+					if (response.ok) {
+						const data: ArrayBuffer = await response.arrayBuffer();
+						resolve(data);
+					} else {
+						reject(await response.arrayBuffer());
+					}
+				})
+				.catch((error) => {
+					reject(error);
+				})
+				.finally(() => {
+					this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+				});
+		});
+	}
+
+	async httpRequest_old(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any): Promise<string> {
 		return new Promise<string>((resolve: Function, reject: Function) => {
 			let xhr: XMLHttpRequest;
 			try {

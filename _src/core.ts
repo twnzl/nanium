@@ -9,6 +9,8 @@ import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
 import { EventSubscription } from './interfaces/eventSubscription';
 import { Logger, LogLevel } from './interfaces/logger';
 
+declare var global: any;
+
 class ConsoleLogger implements Logger {
 	loglevel: LogLevel = LogLevel.none;
 	includeTimestamp: boolean = true;
@@ -269,11 +271,11 @@ export class CNanium {
 			entry.endDate = new Date();
 			entry.state = 'canceled';
 			await requestQueue.updateEntry(entry);
-			return;
+			return false;
 		}
 		entry = await requestQueue.tryTake(entry);
 		if (!entry) {
-			return;
+			return false;
 		}
 		let lastRun: Date;
 		try {
