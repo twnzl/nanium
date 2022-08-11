@@ -9,10 +9,10 @@ many problems of traditional ways of building client-server applications.
 
 * seamlessly type-save even across API borders
 * full-featured objects (instead of plain data transfer objects) on both sides of the API
+* code completion for API calls and easy API-refactoring
 * maximum reusable logic for server and client
 * easily exchangeable transfer protocols (http, websockets, tcp, etc.) and formats (json, xml, etc.).
 * automatic generation of SDKs for the services you offer
-* decide at build time how to host your services (microservices, monolith, etc.) and which services should be included
 * faster, cleaner and more flexible way to develop software
 
 ## Short and sweet
@@ -52,13 +52,14 @@ if (response.isGoodStuff()) {
         - [Create a service](#Create-a-service)
         - [Execute a service](#Execute-a-service)
         - [Prepare the contracts](#Prepare-the-contracts)
-    - [Streaming](#Streaming)
     - [Interceptors](#Interceptors)
+    - [Serializers](#Serializers)
+    - [Streaming](#Streaming)
     - [Queues](#Queues)
     - [Events](#Events)
     - [SDKs](#SDKs)
     - [Tests](#Tests)
-    - [REST](#REST)
+    - [REST, GraphQL & Co](#REST,-GraphQL-&-Co)
     - [Extensibility](#Extensibility)
 
 ## Installation
@@ -323,70 +324,6 @@ created in the new instance, that are decorated with the Type decorator. This is
 data structures and external data structures and to ensure no internal data leave the server and no invalid external
 data are stored to the database.
 
-## Streaming
-
-If you want a service executor to provide the possibility to return partial results, you can create a streamed service
-by:
-
-```bash
-nanium gs stuff/query public
-```
-
-The generated service will have a stream function that must return an Observable. The base class will automatically add
-the execute function that returns a promise, so the caller is free to use both.
-
-```ts
-export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
-	static serviceName: string = 'NaniumTest:test/query';
-	intervalHandle: any;
-
-	stream(request: TestQueryRequest, executionContext: ServiceRequestContext): Observable<TestDto> {
-		let i: number = 1;
-		return new Observable((observer: Observer<TestDto>): void => {
-			this.interval = setInterval(() => {
-				observer.next({ aNumber: i++ });
-			}, 1000);
-			if (i >= 11) {
-				clearInterval(intervalHandle);
-				observer.complete();
-			}
-		});
-	}
-}
-```
-
-Now, you can start streaming by subscribing to the observable of the *stream* function.
-Within the *next* function, you can do some work, whenever an item of the overall result array arrives.
-
-```ts
-const result: TestDto[] = [];
-new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
-	next: (value: TestDto): void => {
-		result.push(value);
-		// todo: maybe calculate some progress or something else
-	},
-	complete: (): void => resolve(),
-	error: (err: Error) => {
-		console.log(err.message);
-	}
-});
-```
-
-Or if you want the server to stream the result, but want the client to just wait for the whole result, use the
-*execute* function.
-
-```ts
-const result: TestDto[] = await new TestQueryRequest(
-	{ input: 1 }, { token: '1234' }
-).execute();
-```
-
-The overall result of this example service is a List of instances of class TestDto. But it will return only one per
-second until 10. So the client can, for example, show the result list immediately and subscribe to the Observable to add
-each new record as soon as it arrives. It is not recommended using this to implement a sort of event mechanism. Events
-will be supported directly by nanium shortly. It is meant so that clients do not have to wait for the whole response of
-an expensive operation but can start to use parts of it as soon as they are available.
-
 ## Exception/Error handling
 
 If a service executor throws an Error, it can be caught as usual when using promises. Again, it does not matter whether
@@ -472,7 +409,9 @@ export class RequestInterceptor implements ServiceRequestInterceptor<ServiceRequ
 			request.head.userName === 'jack' && request.head.password === '1234' ||
 			request.head.userName === 'jenny' && request.head.password === '4321'
 		) {
-			executionContext.user = Database.get<User>('request.head.userName'); // pseudo code           
+			// pseudo code: Load the user entity from your database to the execution context, so it will be easily 
+			// available in each executor
+			executionContext.user = Database.get<User>(request.head.userName);
 		} else {
 			throw new Error('not authorized');
 		}
@@ -512,6 +451,176 @@ depending on the execution scope, you can use an object with the scope as proper
 export class AnonymousRequest extends ServiceRequestBase<void, string> {
 	static serviceName: string = 'NaniumTest:test/anonymous';
 }
+```
+
+## Serializers
+
+By default, objects are transported over the network as JSON. However, you can also use other serializers. For example,
+to transfer data via UBJSON, XML, or any own binary format. For this you just need to implement the interface
+**NaniumSerializer** and pass an instance of the serializer to the provider channels and consumers.
+
+```ts
+// server
+await Nanium.addManager(
+	new NaniumProviderNodejs({
+		channels: [
+			new NaniumHttpChannel({
+				apiPath: '/api',
+				eventPath: '/events',
+				server: httpServer,
+				serializer: new NaniumJsonSerializer(),
+			}),
+		]
+	})
+);
+
+// consumer
+const serializer = new NaniumJsonSerializer();
+serializer.packageSeparator = '\0';
+Nanium.addManager(
+	new NaniumConsumerBrowserHttp({
+		apiUrl: baseUrl + '/api',
+		apiEventUrl: baseUrl + '/events',
+		serializer: serializer,
+		handleError: async (err: any): Promise<any> => {
+			throw { handleError: err };
+		}
+	})
+);
+```
+
+### Binary data
+
+Regardless of which serializer you use, binary data is always treated specially. If you define the result type of a
+service as ArrayBuffer, the data is not serialized or deserialized, but transported to the client as it is.
+
+```ts
+// contract
+@RequestType({
+	responseType: ArrayBuffer,
+	scope: 'public'
+})
+export class TestGetBinaryRequest extends SimpleServiceRequestBase<void, ArrayBuffer> {
+	static serviceName: string = 'NaniumTest:test/getBinary';
+}
+
+// executor
+export class TestGetBinaryExecutor implements ServiceExecutor<TestGetBinaryRequest, ArrayBuffer> {
+	static serviceName: string = 'NaniumTest:test/getBinary';
+
+	async execute(request: TestGetBinaryRequest, executionContext: ServiceRequestContext): Promise<ArrayBuffer> {
+		const result = new TextEncoder().encode('this is a text that will be send as binary data');
+		return result.buffer;
+	}
+}
+```
+
+## Streaming
+
+If you want a service executor to provide the possibility to return partial results, you can create a streamed service
+by:
+
+```bash
+nanium gs stuff/query public
+```
+
+The generated service will have a stream function that must return an Observable. The base class will automatically add
+the execute function that returns a promise, so the caller is free to use both.
+
+```ts
+export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
+	static serviceName: string = 'NaniumTest:test/query';
+	intervalHandle: any;
+
+	stream(request: TestQueryRequest, executionContext: ServiceRequestContext): Observable<TestDto> {
+		let i: number = 1;
+		return new Observable((observer: Observer<TestDto>): void => {
+			this.interval = setInterval(() => {
+				observer.next({ aNumber: i++ });
+			}, 1000);
+			if (i >= 11) {
+				clearInterval(intervalHandle);
+				observer.complete();
+			}
+		});
+	}
+}
+```
+
+The overall result of this example service is a List of instances of class TestDto. But the server will return only one
+per
+second until 10. So the client can, for example, show a partial result list immediately by subscribing to the Observable
+to add
+each new record as soon as it arrives.
+
+On client side, you can subscribe to the observable the *stream* function returns.
+Within the *next* function, you can do some work, whenever an item of the overall result array arrives.
+Of course, you can also use the rxjs pipes.
+
+```ts
+const result: TestDto[] = [];
+new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
+	next: (value: TestDto): void => {
+		result.push(value);
+		// todo: maybe calculate some progress or something else
+	},
+	complete: (): void => resolve(),
+	error: (err: Error) => {
+		console.log(err.message);
+	}
+});
+```
+
+Or if you want the server to stream the result, but want the client to just wait for the whole result, use the
+*execute* function.
+
+```ts
+const result: TestDto[] = await new TestQueryRequest(
+	{ input: 1 }, { token: '1234' }
+).execute();
+```
+
+### Binary streaming
+
+For streaming the same applies as for the normal version. Regardless of which serializer you use, binary data is always
+treated specially. If you define the result type of a service as ArrayBuffer, the data is not serialized or
+deserialized, but transported to the client as it is.
+
+```ts
+// the contract
+@RequestType({
+	responseType: ArrayBuffer,
+	scope: 'public'
+})
+export class TestGetStreamedArrayBufferRequest extends ServiceRequestBase<void, ArrayBuffer> {
+	static serviceName: string = 'NaniumTest:test/getStreamedArrayBuffer';
+}
+
+// the executor
+export class TestGetStreamedArrayBufferExecutor implements StreamServiceExecutor<TestGetStreamedArrayBufferRequest, ArrayBuffer> {
+	static serviceName: string = 'NaniumTest:test/getStreamedArrayBuffer';
+
+	stream(request: TestGetStreamedArrayBufferRequest, executionContext: ServiceRequestContext): Observable<ArrayBuffer> {
+		return new Observable((observer: Observer<ArrayBuffer>): void => {
+			const enc: TextEncoder = new TextEncoder();
+			const buf: ArrayBuffer = enc.encode('This is a string converted to a Uint8Array');
+			observer.next(buf.slice(0, 4));
+			setTimeout(() => observer.next(buf.slice(4, 20)), 500);
+			setTimeout(() => observer.next(buf.slice(20, buf.byteLength)), 1000);
+			setTimeout(() => observer.complete(), 1500);
+		});
+	}
+}
+
+// the client call
+new TestGetStreamedArrayBufferRequest(undefined, { token: '1234' }).stream().subscribe({
+	next: (part: ArrayBuffer): void => {
+		console.log(new TextDecoder().decode(part));
+		// output:
+		// This is a string con
+		// verted to a Uint8Array
+	}
+});
 ```
 
 ## Queues
@@ -576,37 +685,11 @@ db.requestQueue.insert([
   }])
 ```
 
-## Tests
-
-Due to the loosely coupled nature of nanium, it is easy to swap implementations. So in your server unit tests you should
-just leave the servicePath-Property of the NaniumNodejsProvider empty, so no services will be registered. And in the
-second step, add the original service you want to test. And add mock implementations for services that are used by this
-test unit.
-
-```ts
-// init nanium
-beforeEach(async () => {
-	const provider: NaniumNodejsProvider = new NaniumNodejsProvider({/* servicePath: '' */ });
-	await Nanium.addManager(provider);
-	provider.addService(StuffCalculateRequest, SuffCalculateExecutor);
-	provider.addService(MockStuffStoreRequest, MockStuffQueryExecutor);
-	provider.addService(MockStuffQueryRequest, class {
-		async execute(_request: MockStuffQueryRequest, _executionContext: ServiceRequestContext): Promise<StuffDto[]> {
-			return [];
-		}
-	});
-});
-
-beforeEach(async () => {
-	await Nanium.shutdown();
-});
-```
-
 ## Events
 
 **(experimental)** Currently, the NaniumHttpChannel has basic support for this feature, but it is still experimental.
 
-A provider can emit Events:
+A provider can emit events:
 
 ```ts
 new StuffAddedEvent(stuff).emit(executionContext);
@@ -701,27 +784,79 @@ sdkTsConfig" property in the nanium.json.
 The sdk functions will surely be completed one day, so that alternatively to the SDK a standard API documentation can be
 generated as an alternative to the SDK, but for Typescript users the SDK is far better than just documentation.
 
-## REST
+## Tests
 
-When RESTful webservices became current, they felt really cool. Mainly because they released us from things like soap
-services, which had been far more stressful. They also made us feel like we were using the HTTP protocol correctly.
+Due to the loosely coupled nature of nanium, it is easy to swap implementations. So in your server unit tests you should
+just leave the servicePath-Property of the NaniumNodejsProvider empty, so no services will be registered. And in the
+second step, add the original service you want to test. And add mock implementations for services that are used by this
+test unit.
 
-But let's be honest: If you had a choice, would you really use it for web services?
+```ts
+// init nanium
+beforeEach(async () => {
+	const provider: NaniumNodejsProvider = new NaniumNodejsProvider({/* servicePath: '' */ });
+	await Nanium.addManager(provider);
+	provider.addService(StuffCalculateRequest, SuffCalculateExecutor);
+	provider.addService(MockStuffStoreRequest, MockStuffQueryExecutor);
+	provider.addService(MockStuffQueryRequest, class {
+		async execute(_request: MockStuffQueryRequest, _executionContext: ServiceRequestContext): Promise<StuffDto[]> {
+			return [];
+		}
+	});
+});
 
-It is the protocol that governs the internet. Every browser speaks it, many tools are based on it and nearly every
-device can deal with it out of the box. Therefore, it is the best choice. But what favor do we do ourselves, when we
-force ourselves to decode the input for services into a URI - always struggling with the correct form. It is much less
-than only untyped. Why should we try to map the responses of our services to ancient HTTP-Codes that have been designed
-for something completely different? And yes, it may be a kind of sporting challenge trying to transform a service
-oriented thinking to a resource oriented thinking, but does this really help?
+afterEach(async () => {
+	await Nanium.shutdown();
+});
+```
 
-Yes, we should use HTTP, but we should not hardwire our service logic to this ancient protocol, so that we can change it
-if something better appears on the horizon. And we should not feel guilty, if we for example just always use a post to
-send data, because even if REST appears to be more correct, it is also just abuse of a protocol designed for something
-different.
+## REST, GraphQL & Co
 
-Nevertheless, if you don't want to do without nanium features yourself but still feel better if you can offer a REST
-service, then nanium makes it possible.
+Nanoservices, especially Nanium services, are not hardwired to a protocol or any kind of API. The backend programmer can
+just focus on implementing the logic and the frontend/client developer, while consuming the API, doesn't have to mess
+around with protocols like HTTP or with code generators or special query languages and tether his logic to them.
+
+If you are using typescript as an API consumer, you will usually want to use Nanium for calling the service to take
+advantage of all the benefits of Nanium (e.g. IntelliSense, type safety or easy refactoring across API boundaries).
+However, you can also call Nanium services via traditional ways.
+
+On the one hand, the **NaniumHttpChannel** automatically provides a single-endpoint HTTP POST API:
+
+```ts
+const req: Request = new Request(
+	'http://localhost:3001/api',
+	{
+		method: 'post',
+		body: JSON.stringify({
+			serviceName: "NaniumTest:Stuff/query",
+			request: {
+				body: {
+					type: 'goodStuff'
+				},
+				head: {
+					token: 'rmufas9i6fsfq2x32w38fdbs3sviv7frs54wldfuy3s7udfmheg1jz1owix9s8nv6hni',
+					language: 'de-DE',
+					timezone: 'Europe/Berlin'
+				}
+			}
+		})
+	}
+);
+fetch(req)
+	.then(async (response) => {
+		if (response.ok) {
+			const data: Stuff[] = await response.json();
+			console.log(data.length + ' items of good stuff received');
+		} else {
+			throw await response.json();
+		}
+	})    
+```
+
+In addition, other Nanium channels, in combination with other serializers, can present services to the outside world in
+completely different ways (even in parallel). For example, the **NaniumRestChannel** makes the services available in the
+usual REST manner using service contract files to create the endpoint and the name of the contract file to choose the
+HTTP method. Of course, this could be realized even better - but it is only an example channel to show the principle.
 
 ```bash
 npm i nanium-channel-rest
@@ -739,12 +874,34 @@ await Nanium.addManager(new NaniumProviderNodejs({
 }));
 ```
 
-This provides a REST-style API using the paths of service contract files to create the endpoint and the name of the
-contract file to choose the HTTP method. If you want a different algorithm, just use this as a starting point and
-implement your own channel.
+```ts
+const req: Request = new Request(
+	'http://localhost:3001/api/stuff',
+	{
+		method: 'get',
+		body: JSON.stringify({ // the body
+			type: 'goodStuff'
+		}),
+		headers: { // the head
+			token: 'rmufas9i6fsfq2x32w38fdbs3sviv7frs54wldfuy3s7udfmheg1jz1owix9s8nv6hni',
+			language: 'de-DE',
+			timezone: 'Europe/Berlin'
+		}
+	}
+);
+fetch(req)
+	.then(async (response) => {
+		if (response.ok) {
+			const data: Stuff[] = await response.json();
+			console.log(data.length + ' items of good stuff received');
+		} else {
+			throw await response.json();
+		}
+	})
+```
 
 ## Extensibility
 
 Nanium defines interfaces for all its basic parts and each of these building blocks is interchangeable. So you can
 create your own managers (provider or consumer), channels, interceptors, serializers and queues.   
-Just write your own component that implements the corresponding interface.
+Just write a class that implements the corresponding interface.
