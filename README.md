@@ -324,6 +324,17 @@ created in the new instance, that are decorated with the Type decorator. This is
 data structures and external data structures and to ensure no internal data leave the server and no invalid external
 data are stored to the database.
 
+#### ORM
+
+When your business entities derive from **NaniumObject**, they automatically get basic ORM functionality that is
+independent of the data source. Just load a record/object from any database and put it into the constructor of your
+business entity class. Or if you get data via the API, do the same and only valid properties with correct type, reach
+the entity and the database. If you do not want to use NaniumObject as a base class you can achieve the same with the
+static functions of **NaniumObject** like **init**.
+
+Maybe this will be extended in the future to provide additional features like property renaming or conditional property
+mapping or extended validation.
+
 ## Exception/Error handling
 
 If a service executor throws an Error, it can be caught as usual when using promises. Again, it does not matter whether
