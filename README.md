@@ -104,7 +104,7 @@ For now, leave them as they are. Later you can adapt this to meet your needs.
 In the 'nanium.json' enter a namespace.
 
 Next create a node script, initiate a default Http Server and add a ServiceProvider with an HTTP channel. Channels are
-ways to through which public services can be executed from outside the server (e.g. a web client using http/websockets
+ways through which public services can be executed from outside the server (e.g. a web client using http/websockets
 or another server using tcp).
 
 ```ts
@@ -802,6 +802,8 @@ just leave the servicePath-Property of the NaniumNodejsProvider empty, so no ser
 second step, add the original service you want to test. And add mock implementations for services that are used by this
 test unit.
 
+### server tests
+
 ```ts
 // init nanium
 beforeEach(async () => {
@@ -814,6 +816,43 @@ beforeEach(async () => {
 			return [];
 		}
 	});
+});
+
+afterEach(async () => {
+	await Nanium.shutdown();
+});
+```
+
+### client tests
+
+To test webclients you can add a (or an additional) **NaniumProviderBrowser** to the list of managers. The isResponsible
+function should return a value higher than the one of the Consumer that normally handles server requests. So all server
+requests can be mocked.
+
+```ts
+// init nanium
+beforeEach(async () => {
+	const mockServerProvider = new NaniumProviderBrowser({
+		isResponsible: async (request, serviceName) => {
+			return serviceName.startsWith('NaniumTest:') ? 2 : 0;
+		},
+		isResponsibleForEvent: async (eventName) => {
+			return eventName.startsWith('NaniumTest:') ? 2 : 0;
+		},
+	});
+	Nanium.addManager(mockServerProvider);
+	mockServerProvider.addService(
+		TestGetRequest,
+		class {
+			async execute(request: TestGetRequest): Promise<TestGetResponse> {
+				return new TestGetResponse({
+					output1: 'mock1',
+					output2: 2222,
+				});
+			}
+		}
+	);
+	// now all calls to new TestGetRequest(...).execute() will be handled by the mock implementation 
 });
 
 afterEach(async () => {
@@ -916,3 +955,21 @@ fetch(req)
 Nanium defines interfaces for all its basic parts and each of these building blocks is interchangeable. So you can
 create your own managers (provider or consumer), channels, interceptors, serializers and queues.   
 Just write a class that implements the corresponding interface.
+
+### Plugins
+
+Services written by third parties can be published as npm packages and easily be added to your app. The third party
+should implement an init function that takes database connections or other configuration values and should return an
+initialized Nanium service provider. Or it returns a list of pairs of request and executor class constructors, so you
+can care for the service registration and the wanted channels yourself.
+
+Since this enables plug-ins with well-defined API functions, suitable frontend components can also be implemented and
+made available. In this way, complete parts of client-server applications can be provided - reusable in multiple
+applications. Just think of a complete login and user management or an admin frontend for managing entries in nanium
+queues. You can host this as a separate application or add it to an existing application. Or do the one today and the
+other tomorrow or even both at the same time.
+
+## Version info
+
+Information about new features, breaking and non breaking changes and upgrade steps can be found
+in [RELEASES](./RELEASES.md)

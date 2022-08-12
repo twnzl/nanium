@@ -1,6 +1,5 @@
 import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from '../../interfaces/serviceManager';
-import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { NaniumJsonSerializer } from '../../serializers/json';
 import * as http from 'http';
@@ -41,8 +40,8 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					Nanium.logger.error(response);
 					return Promise.resolve();
 				},
-				isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
-				isResponsibleForEvent: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+				isResponsible: async (): Promise<number> => Promise.resolve(1),
+				isResponsibleForEvent: async (): Promise<number> => Promise.resolve(1),
 			},
 			...(config || {})
 		};
@@ -65,7 +64,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
-	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
+	async isResponsible(request: any, serviceName: string): Promise<number> {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
@@ -213,7 +212,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	emit(eventName: string, event: any, context: ExecutionContext): void {
 	}
 
-	async isResponsibleForEvent(eventName: string, context?: any): Promise<KindOfResponsibility> {
+	async isResponsibleForEvent(eventName: string, context?: any): Promise<number> {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 

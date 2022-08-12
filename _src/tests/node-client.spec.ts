@@ -119,7 +119,10 @@ describe('host services via http \n', function (): void {
 				fullBuffer.set(new Uint8Array(b), currentIndex);
 				currentIndex += b.byteLength;
 			});
-			expect(new TextDecoder().decode(fullBuffer.buffer)).toBe('This is a string converted to a Uint8Array');
+			const float32Array = new Float32Array(fullBuffer.buffer);
+			expect(float32Array[0]).toBe(1);
+			expect(float32Array[1]).toBe(2);
+			expect(float32Array[4]).toBe(5);
 		});
 	});
 

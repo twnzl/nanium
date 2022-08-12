@@ -8,11 +8,9 @@ export class TestGetStreamedArrayBufferExecutor implements StreamServiceExecutor
 
 	stream(request: TestGetStreamedArrayBufferRequest, executionContext: ServiceRequestContext): Observable<ArrayBuffer> {
 		return new Observable((observer: Observer<ArrayBuffer>): void => {
-			const enc: TextEncoder = new TextEncoder();
-			const buf: ArrayBuffer = enc.encode('This is a string converted to a Uint8Array');
-			observer.next(buf.slice(0, 4));
-			setTimeout(() => observer.next(buf.slice(4, 20)), 500);
-			setTimeout(() => observer.next(buf.slice(20, buf.byteLength)), 1000);
+			observer.next(Float32Array.of(1, 2, 3));
+			setTimeout(() => observer.next(Float32Array.of(4, 5)), 500);
+			setTimeout(() => observer.next(Float32Array.of(6, 7, 8, 9, 10)), 1000);
 			setTimeout(() => observer.complete(), 1500);
 		});
 	}

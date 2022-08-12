@@ -1,5 +1,4 @@
 import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
-import { KindOfResponsibility } from './kindOfResponsibility';
 import { NaniumSerializer } from './serializer';
 import { EventSubscriptionSendInterceptor } from './eventSubscriptionInterceptor';
 
@@ -28,18 +27,18 @@ export interface ServiceConsumerConfig {
 	handleError?: (e: any) => Promise<void>;
 
 	/**
-	 * function that returns, if this consumer is responsible for a specific request
-	 * @param request
-	 * @param serviceName
+	 * returns if the Manager is responsible for the given Service
+	 * 0 means not responsible and >0 means responsible, with the rule that the one with the highest number wins
 	 */
-	isResponsible?: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsible?: (request: any, serviceName: string) => Promise<number>;
 
 	/**
-	 * function that returns, if this consumer is responsible for a specific event
+	 * returns if the Manager is responsible for the given eventName
+	 * manager with the highest values above 0 wins
 	 * @param eventName
 	 * @param context
 	 */
-	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<KindOfResponsibility>;
+	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<number>;
 
 	/**
 	 * the serializer that shall be used to serialize data before they are sent to the provider,

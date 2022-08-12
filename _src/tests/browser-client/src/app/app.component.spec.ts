@@ -1,4 +1,4 @@
-import { TestGetRequest, TestGetResponseBody } from '../../../services/test/get.contract';
+import { TestGetRequest, TestGetResponse, TestGetResponseBody } from '../../../services/test/get.contract';
 import { ServiceResponseBase } from '../../../services/serviceResponseBase';
 import { NaniumJsonSerializer } from '../../../../serializers/json';
 import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
@@ -10,6 +10,8 @@ import { TestDto, TestQueryRequest } from '../../../services/test/query.contract
 import { TestNoIORequest } from '../../../services/test/noIO.contract';
 import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
 import { TimeRequest } from '../../../services/test/time.contract';
+import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
+import { StuffCreatedEvent } from '../../../events/test/stuffCreated.event';
 
 function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 	const serializer = new NaniumJsonSerializer();
@@ -114,7 +116,10 @@ describe('basic browser client tests', () => {
 				fullBuffer.set(new Uint8Array(b), currentIndex);
 				currentIndex += b.byteLength;
 			});
-			expect(new TextDecoder().decode(fullBuffer.buffer)).toBe('This is a string converted to a Uint8Array');
+			const float32Array = new Float32Array(fullBuffer.buffer);
+			expect(float32Array[0]).toBe(1);
+			expect(float32Array[1]).toBe(2);
+			expect(float32Array[4]).toBe(5);
 		});
 
 
@@ -143,7 +148,7 @@ describe('basic browser client tests', () => {
 });
 
 describe('test browser client with wrong api url', () => {
-	jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+	jasmine.DEFAULT_TIMEOUT_INTERVAL = 100000;
 
 	beforeEach(async () => {
 		initNanium('https://not.available');
@@ -160,5 +165,49 @@ describe('test browser client with wrong api url', () => {
 		} catch (e) {
 			expect(e).withContext('an exception should be thrown').toBeDefined();
 		}
+	});
+});
+
+describe('test browser client with mocked server', () => {
+	const mockServerProvider = new NaniumProviderBrowser({
+		isResponsible: async (request, serviceName) => {
+			return serviceName.startsWith('NaniumTest:') ? 2 : 0;
+		},
+		isResponsibleForEvent: async (eventName) => {
+			return eventName.startsWith('NaniumTest:') ? 2 : 0;
+		},
+	});
+
+	beforeEach(async () => {
+		initNanium();
+		Nanium.addManager(mockServerProvider).then();
+	});
+
+	afterEach(async () => {
+		await Nanium.shutdown();
+	});
+
+	it('normal execution via request.execute() should choose the mock implementation', async function (): Promise<void> {
+		mockServerProvider.addService(
+			TestGetRequest,
+			class {
+				async execute(_request: TestGetRequest): Promise<TestGetResponse> {
+					return new TestGetResponse({
+						output1: 'mock1',
+						output2: 2222,
+					});
+				}
+			}
+		);
+		const result = await new TestGetRequest().execute();
+		expect(result.body.output1).toBe('mock1');
+		expect(result.body.output2).toBe(2222);
+	});
+
+	it('normal event subscription and emission should choose the Mock implementation', async function (): Promise<void> {
+		await StuffCreatedEvent.subscribe((evt: StuffCreatedEvent) => {
+			expect(evt.aString).toBe(':-)');
+		});
+		new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6)).emit();
 	});
 });

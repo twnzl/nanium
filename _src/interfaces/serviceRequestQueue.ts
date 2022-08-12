@@ -1,4 +1,3 @@
-import { KindOfResponsibility } from './kindOfResponsibility';
 import { ServiceRequestQueueEntry, ServiceRequestQueueEntryQueryConditions } from './serviceRequestQueueEntry';
 import { ExecutionContext } from './executionContext';
 
@@ -17,10 +16,11 @@ export interface ServiceRequestQueue {
 	init(): Promise<void>;
 
 	/**
-	 * must return 'yes' if this queue is responsible for requests with the given name
+	 * must return 0 if this queue is not responsible for requests with the given name or a value above 0 as the rank if
+	 * multiple queues are defined (the highest wins)
 	 * @param entry
 	 */
-	isResponsible(entry: ServiceRequestQueueEntry): Promise<KindOfResponsibility>;
+	isResponsible(entry: ServiceRequestQueueEntry): Promise<number>;
 
 	/**
 	 * enqueue a new entry into the queue

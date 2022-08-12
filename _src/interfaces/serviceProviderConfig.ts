@@ -1,5 +1,4 @@
 import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
-import { KindOfResponsibility } from './kindOfResponsibility';
 import { Channel } from './channel';
 import { ExecutionContext } from './executionContext';
 import { EventEmissionSendInterceptor, EventSubscriptionReceiveInterceptor } from './eventSubscriptionInterceptor';
@@ -32,8 +31,9 @@ export interface ServiceProviderConfig {
 
 	/**
 	 * returns if the Manager is responsible for the given Service
+	 * 0 means not responsible and >0 means responsible, with the rule that the one with the highest number wins
 	 */
-	isResponsible?: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsible?: (request: any, serviceName: string) => Promise<number>;
 
 	/**
 	 * event subscription interceptors

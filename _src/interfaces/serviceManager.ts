@@ -1,6 +1,5 @@
 import { Observable } from 'rxjs';
 import { ExecutionContext } from './executionContext';
-import { KindOfResponsibility } from './kindOfResponsibility';
 import { EventHandler } from './eventHandler';
 import { EventSubscription } from './eventSubscription';
 
@@ -35,20 +34,18 @@ export interface ServiceManager {
 	stream?(serviceName: string, request: any, context?: ExecutionContext): Observable<any>;
 
 	/**
-	 * must return 'yes' if this manager is responsible for the given request or all requests with the given name
-	 * @param request
-	 * @param serviceName
+	 * returns if the Manager is responsible for the given Service
+	 * 0 means not responsible and >0 means responsible, with the rule that the one with the highest number wins
 	 */
-	isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility>;
+	isResponsible(request: any, serviceName: string): Promise<number>;
 
 	/**
-	 * initialize the manager.
-	 * Nanium will call this when the manager (provider or consumer) is added to the nanium service managers via Nanium.addManager
-	 * must return 'yes' if this manager is responsible for events with the given name
-	 * @param eventName name of the event
-	 * @param context additional information that can be passed to the subscribe function of event classes, to use them to find the right manager for the subscription
+	 * returns if the Manager is responsible for the given eventName
+	 * manager with the highest values above 0 wins
+	 * @param eventName
+	 * @param context
 	 */
-	isResponsibleForEvent(eventName: string, context?: any): Promise<KindOfResponsibility>;
+	isResponsibleForEvent(eventName: string, context?: any): Promise<number>;
 
 	/**
 	 * emit an event

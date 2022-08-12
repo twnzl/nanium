@@ -133,7 +133,11 @@ export class NaniumHttpChannel implements Channel {
 			result.subscribe({
 				next: async (value: any): Promise<void> => {
 					if (serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer) {
-						res.write(value);
+						if (value instanceof Buffer || value instanceof Uint8Array) {
+							res.write(value);
+						} else {
+							res.write(new Uint8Array(value instanceof ArrayBuffer ? value : value.buffer));
+						}
 					} else {
 						res.write(config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
 					}
@@ -154,8 +158,12 @@ export class NaniumHttpChannel implements Channel {
 				res.setHeader('Content-Type', config.serializer.mimeType);
 				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
-					if (result instanceof ArrayBuffer) {
-						res.write(new Uint8Array(result));
+					if (serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer) {
+						if (result instanceof Buffer || result instanceof Uint8Array) {
+							res.write(result);
+						} else {
+							res.write(new Uint8Array(result instanceof ArrayBuffer ? result : result.buffer));
+						}
 					} else {
 						res.write(config.serializer.serialize(result));
 					}

@@ -8,7 +8,6 @@ import { Nanium } from '../../core';
 import { ServiceExecutor } from '../../interfaces/serviceExecutor';
 import { StreamServiceExecutor } from '../../interfaces/streamServiceExecutor';
 import { ExecutionContext } from '../../interfaces/executionContext';
-import { KindOfResponsibility } from '../../interfaces/kindOfResponsibility';
 import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
@@ -18,6 +17,7 @@ import {
 	EventSubscriptionReceiveInterceptor
 } from '../../interfaces/eventSubscriptionInterceptor';
 import { EventSubscription } from '../../interfaces/eventSubscription';
+import { genericTypesSymbol, NaniumObject } from '../../objects';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -45,15 +45,17 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 
 	/**
 	 * returns if the Manager is responsible for the given Service
+	 * 0 means not responsible and >0 means responsible, with the rule that the one with the highest number wins
 	 */
-	isResponsible?: (request: any, serviceName: string) => Promise<KindOfResponsibility>;
+	isResponsible?: (request: any, serviceName: string) => Promise<number>;
 
 	/**
 	 * returns if the Manager is responsible for the given eventName
+	 * manager with the highest values above 0 wins
 	 * @param eventName
 	 * @param context
 	 */
-	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<KindOfResponsibility>;
+	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<number>;
 
 	/**
 	 * event subscription interceptors
@@ -76,8 +78,8 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 	config: NaniumNodejsProviderConfig = {
 		servicePath: 'services',
 		requestInterceptors: [],
-		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
-		isResponsibleForEvent: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+		isResponsible: async (): Promise<number> => Promise.resolve(1),
+		isResponsibleForEvent: async (): Promise<number> => Promise.resolve(1),
 		handleError: async (err: any): Promise<any> => {
 			throw err;
 		}
@@ -152,7 +154,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		}
 	}
 
-	async isResponsible(request: any, serviceName: string): Promise<KindOfResponsibility> {
+	async isResponsible(request: any, serviceName: string): Promise<number> {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
@@ -165,11 +167,11 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			if (this.repository === undefined) {
 				return await this.config.handleError(new Error('nanium server is not initialized'), serviceName, request, context);
 			}
-			if (!this.repository.hasOwnProperty(serviceName)) {
+			if (!Object.prototype.hasOwnProperty.call(this.repository, serviceName)) {
 				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, request, context);
 			}
+			const requestConstructor: any = this.repository[serviceName].Request;
 			if (context?.scope === 'public') {  // private is the default, all adaptors have to set the scope explicitly
-				const requestConstructor: any = this.repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 					return await this.config.handleError(new Error('unauthorized'), serviceName, request, context);
 				}
@@ -177,8 +179,10 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 
 			// if the request comes from a communication channel it is normally a deserialized object,
 			// but we need real object that is constructed via the request constructor
-			realRequest = new this.repository[serviceName].Request();
-			Object.assign(realRequest, request);
+			realRequest = NaniumObject.plainToClass(
+				request,
+				requestConstructor,
+				requestConstructor[genericTypesSymbol]);
 
 			// execution
 			if (context?.scope === 'public') {
@@ -197,17 +201,21 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		if (this.repository === undefined) {
 			return this.createErrorObservable(new Error('nanium server is not initialized'));
 		}
-		if (!this.repository.hasOwnProperty(serviceName)) {
+		if (!Object.prototype.hasOwnProperty.call(this.repository, serviceName)) {
 			return this.createErrorObservable(new Error('unknown service ' + serviceName));
 		}
 		const requestConstructor: any = this.repository[serviceName].Request;
-		const realRequest: any = new requestConstructor();
-		Object.assign(realRequest, request);
 		if (context && context.scope === 'public') { // private is the default, all adaptors have to set the scope explicitly
 			if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 				return this.createErrorObservable(new Error('unauthorized'));
 			}
 		}
+
+		const realRequest: any = NaniumObject.plainToClass(
+			request,
+			requestConstructor,
+			requestConstructor[genericTypesSymbol]);
+
 
 		return new Observable<any>((observer: Observer<any>): void => {
 			this.executeRequestInterceptors(realRequest, context, this.repository[serviceName].Request).then(() => {
@@ -296,7 +304,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		}
 	}
 
-	async isResponsibleForEvent(eventName: string, context?: any): Promise<KindOfResponsibility> {
+	async isResponsibleForEvent(eventName: string, context?: any): Promise<number> {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 

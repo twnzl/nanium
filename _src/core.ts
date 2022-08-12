@@ -5,7 +5,6 @@ import { ExecutionContext } from './interfaces/executionContext';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { AsyncHelper, DateHelper } from './helper';
-import { KindOfResponsibility } from './interfaces/kindOfResponsibility';
 import { EventSubscription } from './interfaces/eventSubscription';
 import { Logger, LogLevel } from './interfaces/logger';
 
@@ -187,28 +186,25 @@ export class CNanium {
 		if (this.managers.length === 0) {
 			throw new Error('nanium: no managers registered - call Nanium.addManager().');
 		}
-		const irResults: KindOfResponsibility[] = await Promise.all(
+		const priorities: number[] = await Promise.all(
 			this.managers.map((manager: ServiceManager) => manager.isResponsible(request, serviceName)));
-		let idx: number = irResults.indexOf('yes');
-		if (idx >= 0) {
-			return this.managers[idx];
-		}
-		idx = irResults.indexOf('fallback');
-		if (idx >= 0) {
+		const maxPriority = Math.max(...priorities);
+		let idx: number = priorities.findIndex(p => p === maxPriority);
+		if (idx >= 0 && priorities[idx] > 0) {
 			return this.managers[idx];
 		}
 		return undefined;
 	}
 
 	async getResponsibleManagerForEvent(eventName: string, context: any): Promise<ServiceManager> {
-		const irResults: KindOfResponsibility[] = await Promise.all(
-			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, context)));
-		let idx: number = irResults.indexOf('yes');
-		if (idx >= 0) {
-			return this.managers[idx];
+		if (this.managers.length === 0) {
+			throw new Error('nanium: no managers registered - call Nanium.addManager().');
 		}
-		idx = irResults.indexOf('fallback');
-		if (idx >= 0) {
+		const priorities: number[] = await Promise.all(
+			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, context)));
+		const maxPriority = Math.max(...priorities);
+		let idx: number = priorities.findIndex(p => p === maxPriority);
+		if (idx >= 0 && priorities[idx] > 0) {
 			return this.managers[idx];
 		}
 		return undefined;
@@ -217,11 +213,14 @@ export class CNanium {
 
 	//#region queue
 	async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
-		const result: ServiceRequestQueue = this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'yes');
-		if (result) {
-			return result;
+		const priorities: number[] = await Promise.all(
+			this.queues.map((queue: ServiceRequestQueue) => queue.isResponsible(entry)));
+		const maxPriority = Math.max(...priorities);
+		let idx: number = priorities.findIndex(p => p === maxPriority);
+		if (idx >= 0 && priorities[idx] > 0) {
+			return this.queues[idx];
 		}
-		return this.queues.find(async (queue: ServiceRequestQueue) => (await queue.isResponsible(entry)) === 'fallback');
+		return undefined;
 	}
 
 	async onReadyQueueEntry(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {

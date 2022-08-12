@@ -5,7 +5,6 @@ import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
-import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TimeRequest } from './services/test/time.contract';
 import { TestLogger } from './testLogger';
@@ -18,7 +17,7 @@ describe('execute TestRequest on server \n', function (): void {
 	const testProvider: NaniumProviderNodejs = new NaniumProviderNodejs({
 		servicePath: 'tests/services',
 		requestInterceptors: [TestServerRequestInterceptor],
-		isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('yes'),
+		isResponsible: async (): Promise<number> => Promise.resolve(1),
 		handleError: async (err: any): Promise<any> => {
 			if (err.hasOwnProperty('code')) {
 				return new ServiceResponseBase({}, { errors: [err] });

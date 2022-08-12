@@ -9,7 +9,6 @@ import { NaniumProviderNodejs } from '../managers/providers/nodejs';
 import { NaniumHttpChannel } from '../managers/providers/channels/http';
 import { ServiceRequestContext } from './services/serviceRequestContext';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { KindOfResponsibility } from '../interfaces/kindOfResponsibility';
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
 import { TestEventSubscriptionSendInterceptor } from './events/test.interceptor';
@@ -78,19 +77,19 @@ export class TestHelper {
 			],
 			requestInterceptors: [TestServerRequestInterceptor],
 			// todo: events: eventInterceptors: [TestServerEventInterceptor],
-			isResponsible: async (): Promise<KindOfResponsibility> => {
+			isResponsible: async (): Promise<number> => {
 				if (!this.hasServerBeenCalled) {
 					// the first Nanium.Execute will choose the consumer as the responsible manager, the second call from the
 					// httpServer will say it is responsible. This is a workaround because server and client run in the same tread
 					this.hasServerBeenCalled = true;
-					return 'no';
+					return 0;
 				} else {
 					this.hasServerBeenCalled = false;
-					return 'yes';
+					return 2;
 				}
 			},
-			isResponsibleForEvent: async (): Promise<KindOfResponsibility> => {
-				return providerIsSubscriber ? 'yes' : 'no';
+			isResponsibleForEvent: async (): Promise<number> => {
+				return providerIsSubscriber ? 1 : 0;
 			},
 			handleError: async (err: any): Promise<any> => {
 				throw err;
@@ -105,9 +104,9 @@ export class TestHelper {
 			requestInterceptors: [TestClientRequestInterceptor],
 			options: protocol === 'https' ? { rejectUnauthorized: false } : {},
 			eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
-			isResponsible: async (): Promise<KindOfResponsibility> => Promise.resolve('fallback'),
-			isResponsibleForEvent: async (): Promise<KindOfResponsibility> => {
-				return providerIsSubscriber ? 'no' : 'yes';
+			isResponsible: async (): Promise<number> => Promise.resolve(1),
+			isResponsibleForEvent: async (): Promise<number> => {
+				return providerIsSubscriber ? 0 : 1;
 			},
 			handleError: async (err: any): Promise<any> => {
 				throw { handleError: err };
