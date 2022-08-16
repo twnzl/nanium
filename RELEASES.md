@@ -1,3 +1,7 @@
+# 1.18.1 (current)
+
+- more general type definitions for interceptors
+
 # 1.18.0 (current)
 
 - added basic implementation of NaniumProviderBrowser. This enables you to implement and use services and events within

@@ -1,6 +1,7 @@
 import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
 import { NaniumSerializer } from './serializer';
 import { EventSubscriptionSendInterceptor } from './eventSubscriptionInterceptor';
+import { ConstructorType } from '../objects';
 
 export interface ServiceConsumerConfig {
 	/**
@@ -8,14 +9,14 @@ export interface ServiceConsumerConfig {
 	 * code that runs before a request will be sent to the provider
 	 * (e.g. to add authorization information)
 	 */
-	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
+	requestInterceptors?: (ServiceRequestInterceptor<any> | ConstructorType<ServiceRequestInterceptor<any>>)[];
 
 	/**
 	 * event Submission interceptors
 	 * code that runs before an event subscription will be sent to the provider
 	 * (e.g. to add authorization information)
 	 */
-	eventSubscriptionSendInterceptors?: (EventSubscriptionSendInterceptor<any, any> | (new() => EventSubscriptionSendInterceptor<any, any>))[];
+	eventSubscriptionSendInterceptors?: (EventSubscriptionSendInterceptor<any, any> | ConstructorType<EventSubscriptionSendInterceptor<any, any>>)[];
 
 	/**
 	 * if the provider finished the request execution with an error, this function will be called on consumer side

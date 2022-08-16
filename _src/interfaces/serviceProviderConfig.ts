@@ -2,6 +2,7 @@ import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
 import { Channel } from './channel';
 import { ExecutionContext } from './executionContext';
 import { EventEmissionSendInterceptor, EventSubscriptionReceiveInterceptor } from './eventSubscriptionInterceptor';
+import { ConstructorType } from '../objects';
 
 export interface ServiceProviderConfig {
 	/**
@@ -22,7 +23,7 @@ export interface ServiceProviderConfig {
 	 * code that runs if a request has been received, and before it is executed.
 	 * can execute (finish) the request just before the special request executor will run
 	 */
-	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
+	requestInterceptors?: (ServiceRequestInterceptor<any> | ConstructorType<ServiceRequestInterceptor<any>>)[];
 
 	/**
 	 * exception handling function
@@ -40,7 +41,7 @@ export interface ServiceProviderConfig {
 	 * code that runs if a subscription request has been received, to check acceptance
 	 * and add data to the subscription context
 	 */
-	eventSubscriptionReceiveInterceptors?: (EventSubscriptionReceiveInterceptor<any> | (new() => EventSubscriptionReceiveInterceptor<any>))[];
+	eventSubscriptionReceiveInterceptors?: (EventSubscriptionReceiveInterceptor<any> | ConstructorType<EventSubscriptionReceiveInterceptor<any>>)[];
 
 	/**
 	 * event emission interceptors

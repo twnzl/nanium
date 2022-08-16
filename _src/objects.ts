@@ -222,7 +222,7 @@ export function EventType(info: NaniumEventInfo): Function {
 	};
 }
 
-export type ConstructorType = (new (...data: any[]) => any);
+export type ConstructorType<T = any> = (new (...data: any[]) => T);
 
 export type ConstructorOrGenericTypeId = (ConstructorType | string);
 
