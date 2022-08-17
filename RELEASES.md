@@ -2,6 +2,10 @@
 
 - more general type definitions for interceptors
 
+## breaking changes
+
+- added parameter *genericTypes* to *NaniumObject.create*
+
 # 1.18.0 (current)
 
 - added basic implementation of NaniumProviderBrowser. This enables you to implement and use services and events within

@@ -134,14 +134,15 @@ export class NaniumObject<T> {
 	static create<T>(
 		src: Partial<T>,
 		ctor: ConstructorOrGenericTypeId,
-		parentCtor?: ConstructorType,
+		parentCtor: ConstructorType,
+		genericTypes?: NaniumGenericTypeInfo,
 		strict?: boolean
 	): T {
 		if (typeof ctor === 'string') {
 			return this.initObjectCore<T>(
 				src,
 				parentCtor[genericTypesSymbol] ? parentCtor[genericTypesSymbol][ctor] : undefined,
-				parentCtor ? parentCtor[genericTypesSymbol] : undefined,
+				genericTypes ?? (parentCtor ? parentCtor[genericTypesSymbol] : undefined),
 				undefined,
 				strict);
 		} else {
