@@ -15,7 +15,7 @@ import { Nanium } from '../core';
 import { TestGetStreamedArrayBufferRequest } from './services/test/getStreamedArrayBuffer.contract';
 import { TestGetBinaryRequest } from './services/test/getBinary.contract';
 
-const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
+let request: TestGetRequest;
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 let response: TestGetResponse;
 
@@ -23,6 +23,7 @@ describe('host services via http \n', function (): void {
 
 	beforeAll(async () => {
 		await TestHelper.initClientServerScenario('http');
+		request = new TestGetRequest({ input1: 'hello world' });
 	});
 
 	afterAll(async () => {
@@ -148,6 +149,7 @@ describe('host services via http \n', function (): void {
 describe('host services via https \n', function (): void {
 	beforeAll(async () => {
 		await TestHelper.initClientServerScenario('https');
+		request = new TestGetRequest({ input1: 'hello world' });
 	});
 
 	afterAll(async () => {

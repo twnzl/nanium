@@ -1,4 +1,14 @@
-# 1.18.1 (current)
+# 1.18.2
+
+- cleanup of NaniumObject function signatures
+- NaniumObject fix: strict option had been ignored for sub objects
+- new global default value for strict option (NaniumObject.strictDefault)
+
+## breaking changes
+
+- removed NaniumObject.plainToClass NaniumObject.initObjectCore. Use NaniumObject.Create and NaniumObject.Init instead.
+
+# 1.18.1
 
 - more general type definitions for interceptors
 
@@ -6,7 +16,7 @@
 
 - added parameter *genericTypes* to *NaniumObject.create*
 
-# 1.18.0 (current)
+# 1.18.0
 
 - added basic implementation of NaniumProviderBrowser. This enables you to implement and use services and events within
   the scope of a web client. There are no channels and no api calls behind service executions, but you can structure

@@ -1,6 +1,7 @@
 import { Nanium } from '../core';
 import { EventHandler } from './eventHandler';
 import { ServiceManager } from './serviceManager';
+import { Type } from '../objects';
 
 export class EventSubscription<TData = any> {
 	private static nextId: number = 0;
@@ -8,9 +9,9 @@ export class EventSubscription<TData = any> {
 	id: number;
 	clientId: string;
 	manager: ServiceManager;
-	eventName?: string;
-	handler?: EventHandler;
-	additionalData?: TData;
+	@Type(String) eventName?: string;
+	@Type(Object) handler?: EventHandler;
+	@Type('TData') additionalData?: TData;
 
 	constructor(
 		clientId: string,

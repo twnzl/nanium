@@ -5,17 +5,17 @@ import {
 	StuffNumberEnum,
 	StuffRequest,
 	StuffStringEnum
-} from './services/test/stuff.contract';
-import { ServiceRequestContext } from './services/serviceRequestContext';
-import { TestHelper } from './testHelper';
-import { ServiceResponseBase } from './services/serviceResponseBase';
+} from '../tests/services/test/stuff.contract';
+import { ServiceRequestContext } from '../tests/services/serviceRequestContext';
+import { TestHelper } from '../tests/testHelper';
+import { ServiceResponseBase } from '../tests/services/serviceResponseBase';
 import { NaniumObject } from '../objects';
 
 let request: StuffRequest = null;
 let response: ServiceResponseBase<Stuff<Date>[]>;
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 
-describe('JsonToClassSerializer \n', function (): void {
+describe('JsonSerializer: execution via client server szenario \n', function (): void {
 	beforeAll(async () => {
 		await TestHelper.initClientServerScenario('http');
 	});
@@ -71,48 +71,46 @@ describe('JsonToClassSerializer \n', function (): void {
 	});
 });
 
-describe('plainToClass \n', function (): void {
-	describe('object not deserialized from json (e.g. from querystring)\n', function (): void {
-		let request2: StuffRequest;
-		beforeEach(async () => {
-			request = getRequest();
-			const strangeRequest: any = await JSON.parse(JSON.stringify(request));
-			strangeRequest.body.aBoolean = request.body.aBoolean.toString();
-			strangeRequest.body.aDate = request.body.aDate.toString();
-			strangeRequest.body.aStringEnum = request.body.aStringEnum.toString();
-			strangeRequest.body.aNumberEnum = request.body.aNumberEnum.toString();
-			strangeRequest.body.aStringEnumArray = request.body.aStringEnumArray[0].toString();
-			strangeRequest.body.aNumberEnumArray = request.body.aNumberEnumArray[0].toString();
-			strangeRequest.body.aNumber = request.body.aNumber.toString();
-			strangeRequest.body.aNumberArray = request.body.aNumberArray.map(v => v.toString());
-			strangeRequest.body.anotherNumberArray = strangeRequest.body.anotherNumberArray[0].toString();
-			strangeRequest.body.aNumberDictionary = {
-				a: request.body.aNumberDictionary.a.toString(),
-				b: request.body.aNumberDictionary.b.toString()
-			};
-			strangeRequest.body.aBooleanDictionary = {
-				a: request.body.aBooleanDictionary.a.toString(),
-				b: request.body.aBooleanDictionary.b.toString()
-			};
-			request2 = NaniumObject.plainToClass(strangeRequest, StuffRequest);
-		});
+describe('JsonSerializer: not deserialized from json (e.g. from querystring)\n', function (): void {
+	let request2: StuffRequest;
+	beforeEach(async () => {
+		request = getRequest();
+		const strangeRequest: any = await JSON.parse(JSON.stringify(request));
+		strangeRequest.body.aBoolean = request.body.aBoolean.toString();
+		strangeRequest.body.aDate = request.body.aDate.toString();
+		strangeRequest.body.aStringEnum = request.body.aStringEnum.toString();
+		strangeRequest.body.aNumberEnum = request.body.aNumberEnum.toString();
+		strangeRequest.body.aStringEnumArray = request.body.aStringEnumArray[0].toString();
+		strangeRequest.body.aNumberEnumArray = request.body.aNumberEnumArray[0].toString();
+		strangeRequest.body.aNumber = request.body.aNumber.toString();
+		strangeRequest.body.aNumberArray = request.body.aNumberArray.map(v => v.toString());
+		strangeRequest.body.anotherNumberArray = strangeRequest.body.anotherNumberArray[0].toString();
+		strangeRequest.body.aNumberDictionary = {
+			a: request.body.aNumberDictionary.a.toString(),
+			b: request.body.aNumberDictionary.b.toString()
+		};
+		strangeRequest.body.aBooleanDictionary = {
+			a: request.body.aBooleanDictionary.a.toString(),
+			b: request.body.aBooleanDictionary.b.toString()
+		};
+		request2 = NaniumObject.create(strangeRequest, StuffRequest);
+	});
 
-		it('-->  \n', async function (): Promise<void> {
-			expect(request2.body.aNumber).toBe(request.body.aNumber);
-			expect(request2.body.aBoolean).toBe(request.body.aBoolean);
-			expect(request2.body.aDate.toString()).toBe(request.body.aDate.toString());
-			expect(request2.body.aStringEnum).toBe(request.body.aStringEnum);
-			expect(request2.body.aNumberEnum).toBe(request.body.aNumberEnum);
-			expect(request2.body.aStringEnumArray[0]).toBe(request.body.aStringEnumArray[0]);
-			expect(request2.body.aNumberEnumArray[0]).toBe(request.body.aNumberEnumArray[0]);
-			expect(request2.body.aNumberArray[0]).toBe(request.body.aNumberArray[0]);
-			expect(request2.body.aNumberArray[1]).toBe(request.body.aNumberArray[1]);
-			expect(request2.body.anotherNumberArray[0]).toBe(request.body.anotherNumberArray[0]);
-			expect(request2.body.aNumberDictionary.a).toBe(request.body.aNumberDictionary.a);
-			expect(request2.body.aNumberDictionary.b).toBe(request.body.aNumberDictionary.b);
-			expect(request2.body.aBooleanDictionary.a).toBe(request.body.aBooleanDictionary.a);
-			expect(request2.body.aBooleanDictionary.b).toBe(request.body.aBooleanDictionary.b);
-		});
+	it('-->  \n', async function (): Promise<void> {
+		expect(request2.body.aNumber).toBe(request.body.aNumber);
+		expect(request2.body.aBoolean).toBe(request.body.aBoolean);
+		expect(request2.body.aDate.toString()).toBe(request.body.aDate.toString());
+		expect(request2.body.aStringEnum).toBe(request.body.aStringEnum);
+		expect(request2.body.aNumberEnum).toBe(request.body.aNumberEnum);
+		expect(request2.body.aStringEnumArray[0]).toBe(request.body.aStringEnumArray[0]);
+		expect(request2.body.aNumberEnumArray[0]).toBe(request.body.aNumberEnumArray[0]);
+		expect(request2.body.aNumberArray[0]).toBe(request.body.aNumberArray[0]);
+		expect(request2.body.aNumberArray[1]).toBe(request.body.aNumberArray[1]);
+		expect(request2.body.anotherNumberArray[0]).toBe(request.body.anotherNumberArray[0]);
+		expect(request2.body.aNumberDictionary.a).toBe(request.body.aNumberDictionary.a);
+		expect(request2.body.aNumberDictionary.b).toBe(request.body.aNumberDictionary.b);
+		expect(request2.body.aBooleanDictionary.a).toBe(request.body.aBooleanDictionary.a);
+		expect(request2.body.aBooleanDictionary.b).toBe(request.body.aBooleanDictionary.b);
 	});
 });
 

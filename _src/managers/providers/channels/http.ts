@@ -117,7 +117,7 @@ export class NaniumHttpChannel implements Channel {
 		if (!serviceRepository[serviceName]) {
 			throw new Error(`nanium: unknown service ${serviceName}`);
 		}
-		const request: any = NaniumObject.plainToClass(deserialized.request, serviceRepository[serviceName].Request);
+		const request: any = NaniumObject.create(deserialized.request, serviceRepository[serviceName].Request);
 		if (deserialized.streamed) {
 			if (!request.stream) {
 				res.statusCode = 500;
@@ -208,7 +208,13 @@ export class NaniumHttpChannel implements Channel {
 					try {
 						// deserialize subscription info
 						const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
-						// todo: events: subscriptionData = NaniumSerializerCore.plainToClass(subscriptionData, this.config.subscriptionDataConstructor);
+
+						//todo: create real instances of EventSubscription and additionalData  e.g:
+						// const subscriptionData: EventSubscription = NaniumObject.create(
+						// 	this.config.serializer.deserialize(Buffer.concat(data).toString()),
+						// 	EventSubscription,
+						// 	{'TData': this.config.subscriptionDataConstructor}
+						// );
 
 						// store subscription information
 						if (subscriptionData.eventName) {
@@ -264,7 +270,12 @@ export class NaniumHttpChannel implements Channel {
 				try {
 					// deserialize subscription info
 					const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
-					// todo: events: subscriptionData = NaniumSerializerCore.plainToClass(subscriptionData, this.config.subscriptionDataConstructor);
+					//todo: create real instances of EventSubscription and additionalData  e.g:
+					// const subscriptionData: EventSubscription = NaniumObject.create(
+					// 	this.config.serializer.deserialize(Buffer.concat(data).toString()),
+					// 	EventSubscription,
+					// 	{'TData': this.config.subscriptionDataConstructor}
+					// );
 
 					if (!this.eventSubscriptions[subscriptionData.eventName]) {
 						resolve();

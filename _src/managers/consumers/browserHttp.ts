@@ -127,7 +127,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 												deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 												if (deserialized.data?.length) {
 													for (const data of deserialized.data) {
-														observer.next(NaniumObject.plainToClass(
+														observer.next(NaniumObject.create(
 															data,
 															request.constructor[responseTypeSymbol],
 															request.constructor[genericTypesSymbol]

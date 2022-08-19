@@ -179,7 +179,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 
 			// if the request comes from a communication channel it is normally a deserialized object,
 			// but we need real object that is constructed via the request constructor
-			realRequest = NaniumObject.plainToClass(
+			realRequest = NaniumObject.create(
 				request,
 				requestConstructor,
 				requestConstructor[genericTypesSymbol]);
@@ -211,7 +211,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			}
 		}
 
-		const realRequest: any = NaniumObject.plainToClass(
+		const realRequest: any = NaniumObject.create(
 			request,
 			requestConstructor,
 			requestConstructor[genericTypesSymbol]);

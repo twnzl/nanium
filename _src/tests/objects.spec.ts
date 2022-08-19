@@ -1,4 +1,7 @@
 import { NaniumObject, Type } from '../objects';
+import { Nanium } from '../core';
+import { TestLogger } from './testLogger';
+import { LogLevel } from '../interfaces/logger';
 
 class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(Number) aNumber?: number;
@@ -11,9 +14,16 @@ class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(MyTestClass, { 'T': Date }) sub2?: MyTestClass<Date>;
 }
 
-describe('nanium objects \n', function (): void {
+class MyTestClass2 extends NaniumObject<MyTestClass2> {
+	@Type(Number) aNumber?: number;
+	@Type(String) aString?: string;
+	@Type(Boolean) aBoolean?: boolean;
+	@Type(Date) aDate?: Date;
+}
 
-	describe('initObject\n', function (): void {
+describe('nanium objects', function (): void {
+
+	describe('constructor', function (): void {
 
 		it('--> basics should work \n', async function (): Promise<void> {
 			const obj: MyTestClass<number> = new MyTestClass({
@@ -75,6 +85,44 @@ describe('nanium objects \n', function (): void {
 			expect(Object.keys(obj).length).toBe(1);
 		});
 	});
+
+	describe('create', function (): void {
+		let obj: MyTestClass<MyTestClass2>;
+		let testLogger = new TestLogger(LogLevel.info);
+
+		beforeEach(() => {
+			Nanium.logger = testLogger;
+			obj = new MyTestClass();
+			obj.aBoolean = true;
+			obj.theGeneric = new MyTestClass2();
+			obj.theGeneric.aDate = new Date(2022, 8, 19);
+			obj.theGeneric.aNumber = 42;
+		});
+
+		it('strict = true', async function (): Promise<void> {
+			obj['unknownProp'] = ':-)';
+			obj.theGeneric['unknownProp2'] = ':-o';
+			const created = NaniumObject.create<MyTestClass<MyTestClass2>>(obj, MyTestClass, { 'T': MyTestClass2 }, true);
+			expect(created['unknownProp'], 'unknown property from source should not be at the result object').toBeUndefined();
+			expect(created.theGeneric['unknownProp2'], 'unknown property from sources sub object should not be at the result object').toBeUndefined();
+		});
+
+		it('strict = false ', async function (): Promise<void> {
+			obj['unknownProp'] = ':-)';
+			obj.theGeneric['unknownProp2'] = { answer: 42 };
+			const created = NaniumObject.create<MyTestClass<MyTestClass2>>(obj, MyTestClass, { 'T': MyTestClass2 }, false);
+			expect(created['unknownProp'], 'unknown property from source should be at the result object with type and value of source').toBe(':-)');
+			expect(created.theGeneric['unknownProp2'].answer, 'unknown property from sources sub object should be at the result object with type and value of source').toBe(42);
+			expect(testLogger.warnings.length, 'in loose mode - warnings should have logged regarding unknown properties').toBe(2);
+			expect(testLogger.warnings[0][0].includes('unknownProp2'), 'in loose mode - warnings should have logged regarding unknown properties').toBeTruthy();
+			expect(testLogger.warnings[1][0].includes('unknownProp'), 'in loose mode - warnings should have logged regarding unknown properties').toBeTruthy();
+		});
+
+		it('generic subtypes should work, when specified', async function (): Promise<void> {
+			const created = NaniumObject.create(obj, MyTestClass, { 'T': MyTestClass2 }, true);
+			expect(created.theGeneric instanceof MyTestClass2, 'theGeneric should have the type MyTestClass2').toBeTruthy();
+			expect(created.theGeneric.aDate.toISOString(), 'sub properties of theGeneric should have the right types and values').toBe(obj.theGeneric.aDate.toISOString());
+			expect(created.theGeneric.aNumber, 'sub properties of theGeneric should have the right types an values').toBe(42);
+		});
+	});
 });
-
-

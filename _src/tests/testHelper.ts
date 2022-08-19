@@ -12,8 +12,27 @@ import { TestServerRequestInterceptor } from './interceptors/server/test.request
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
 import { TestEventSubscriptionSendInterceptor } from './events/test.interceptor';
-import { TestLogger } from './testLogger';
 import { LogLevel } from '../interfaces/logger';
+import { TestLogger } from './testLogger';
+
+// export class TestLogger implements Logger {
+// 	loglevel: LogLevel;
+// 	errors: any[][] = [];
+// 	warnings: any[][] = [];
+// 	infos: any[][] = [];
+//
+// 	error(...args: any[]): void {
+// 		this.errors.push(args);
+// 	}
+//
+// 	warn(...args: any[]): void {
+// 		this.warnings.push(args);
+// 	}
+//
+// 	info(...args: any[]): void {
+// 		this.infos.push(args);
+// 	}
+// }
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;

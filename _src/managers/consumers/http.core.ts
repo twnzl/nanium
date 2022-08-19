@@ -47,7 +47,7 @@ export class HttpCore {
 			if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
 				return data;
 			} else {
-				const r: any = NaniumObject.plainToClass(
+				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),
 					request.constructor[responseTypeSymbol],
 					request.constructor[genericTypesSymbol]
@@ -63,7 +63,7 @@ export class HttpCore {
 			}
 			if (typeof error === 'string') {
 				const deserialized: any = this.config.serializer.deserialize(e);
-				// todo: make an Error class configurable so that plainToClass can also be used for Error Objects.
+				// todo: make an Error class configurable so that NaniumObject.create can also be used for Error Objects.
 				if (this.config.handleError) {
 					await this.config.handleError(deserialized);
 				} else {
@@ -223,7 +223,7 @@ export class HttpCore {
 			setTimeout(async () => {
 				const eventConstructor: any = this.eventSubscriptions[eventResponse.eventName].eventConstructor;
 				// type-save deserialization
-				const event: any = NaniumObject.plainToClass(
+				const event: any = NaniumObject.create(
 					eventResponse.event,
 					eventConstructor,
 					eventConstructor[genericTypesSymbol]

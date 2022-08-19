@@ -11,8 +11,8 @@ import { TestLogger } from './testLogger';
 import { LogLevel } from '../interfaces/logger';
 
 describe('execute TestRequest on server \n', function (): void {
-	const request: TestGetRequest = new TestGetRequest({ input1: 'hello world' });
-	const privateRequest: PrivateStuffRequest = new PrivateStuffRequest(1);
+	let request: TestGetRequest;
+	let privateRequest: PrivateStuffRequest;
 	const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
 	const testProvider: NaniumProviderNodejs = new NaniumProviderNodejs({
 		servicePath: 'tests/services',
@@ -34,13 +34,13 @@ describe('execute TestRequest on server \n', function (): void {
 
 	beforeEach(async function (): Promise<void> {
 		Nanium.logger = new TestLogger(LogLevel.info);
+		request = new TestGetRequest({ input1: 'hello world' });
+		privateRequest = new PrivateStuffRequest(1);
 		await Nanium.addManager(testProvider);
 	});
 
 	it('--> Services should have been initialized and info should have been logged \n', async function (): Promise<void> {
 		expect((Nanium.logger as TestLogger).infos.length > 0).toBeTruthy();
-		expect((Nanium.logger as TestLogger).errors.length).toBe(0);
-		expect((Nanium.logger as TestLogger).warnings.length).toBe(0);
 		expect((Nanium.logger as TestLogger).infos[0].toString().startsWith('service ready: NaniumTest:')).toBeTruthy();
 	});
 

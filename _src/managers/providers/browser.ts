@@ -91,7 +91,7 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 
 			// if the request comes from a communication channel it is normally a deserialized object,
 			// but we need real object that is constructed via the request constructor
-			realRequest = NaniumObject.plainToClass(
+			realRequest = NaniumObject.create(
 				request,
 				this.repository[serviceName].Request,
 				this.repository[serviceName].Request[genericTypesSymbol]);

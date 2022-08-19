@@ -59,7 +59,7 @@ describe('events \n', function (): void {
 			it('--> subscribed handler should have been executed and the event must be received as real event instance with correct property values and value types \n', async () => {
 				expect(receivedEvent.aNumber).toBe(sendEvent.aNumber);
 				expect(receivedEvent.aString).toBe(sendEvent.aString);
-				expect(receivedEvent.aDate.toISOString()).toBe(sendEvent.aDate.toISOString()); // plainToClass not yet implemented für events
+				expect(receivedEvent.aDate.toISOString()).toBe(sendEvent.aDate.toISOString());
 			});
 		});
 
@@ -81,7 +81,7 @@ describe('events \n', function (): void {
 				it('--> subscribed handler should have been executed and the event must be received as real event instance with correct property values and value types \n', async () => {
 					expect(receivedEvent.aNumber).toBe(sendEvent.aNumber);
 					expect(receivedEvent.aString).toBe(sendEvent.aString);
-					expect(receivedEvent.aDate.toISOString()).toBe(sendEvent.aDate.toISOString()); // plainToClass not yet implemented für events
+					expect(receivedEvent.aDate.toISOString()).toBe(sendEvent.aDate.toISOString());
 				});
 			});
 		});

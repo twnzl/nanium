@@ -9,11 +9,13 @@ export const scopeProperty: string = 'scope';
 export const skipInterceptorsProperty: string = 'skipInterceptors';
 
 export class NaniumObject<T> {
+	static strictDefault: boolean = false;
+
 	constructor(data?: Partial<T>, genericTypes?: NaniumGenericTypeInfo, strict?: boolean) {
 		NaniumObject.init(this, data, genericTypes, strict);
 	}
 
-	static initObjectCore<T = any>(
+	private static initObjectCore<T = any>(
 		plain: any,
 		constructorOrObject: (new (data?: Partial<T>) => any) | T,
 		globalGenericTypes?: NaniumGenericTypeInfo,
@@ -47,7 +49,7 @@ export class NaniumObject<T> {
 
 		// array
 		if (Array.isArray(plain)) {
-			return plain.map(item => this.plainToClass(item, constructor, globalGenericTypes));
+			return plain.map(item => this.initObjectCore(item, constructor, globalGenericTypes, undefined, strict));
 		}
 
 		// simple Type or Date
@@ -85,25 +87,29 @@ export class NaniumObject<T> {
 					}
 					if (c === Array) {
 						if (!Array.isArray(plain[property])) {
-							result[property] = [this.plainToClass(plain[property], pi.localGenerics as ConstructorType, globalGenericTypes, pi.localGenerics)];
+							result[property] = [this.initObjectCore(plain[property], pi.localGenerics as ConstructorType, globalGenericTypes, pi.localGenerics, strict)];
 						} else {
-							result[property] = this.plainToClass(plain[property], pi.localGenerics as ConstructorType, globalGenericTypes, pi.localGenerics);
+							result[property] = this.initObjectCore(plain[property], pi.localGenerics as ConstructorType, globalGenericTypes, pi.localGenerics, strict);
 						}
 					} else {
-						result[property] = this.plainToClass(plain[property], c as ConstructorType, globalGenericTypes, pi.localGenerics);
+						result[property] = this.initObjectCore(plain[property], c as ConstructorType, globalGenericTypes, pi.localGenerics, strict);
 					}
 				} else {
 					if (typeof localGenericTypes === 'function') { // indexer Properties
 						if (Object.prototype.hasOwnProperty.call(plain, property)) {
-							result[property] = this.plainToClass(plain[property], localGenericTypes as ConstructorType, globalGenericTypes);
+							result[property] = this.initObjectCore(plain[property], localGenericTypes as ConstructorType, globalGenericTypes, undefined, strict);
 						}
-					} else if (typeof plain[property] === 'object' && plain[property] !== null) {
-						if (!Array.isArray(plain[property]) || (plain[property].length && typeof plain[property][0] === 'object')) {
-							Nanium.logger.warn(`NaniumSerializerCore.plainToClass: no type given for property ${property} of class ${constructor.name}`);
-						}
+						// } else if (typeof plain[property] === 'object' && plain[property] !== null) {
+						// 	if (!Array.isArray(plain[property]) || (plain[property].length && typeof plain[property][0] === 'object')) {
+						// 		if (!strict) {
+						// 			result[property] = plain[property];
+						// 			Nanium.logger.warn(`NaniumObject: no type given for property ${property} of class ${constructor.name}`);
+						// 		}
+						// 	}
 					} else {
 						if (!strict) {
 							result[property] = plain[property];
+							Nanium.logger.warn(`NaniumObject: no type given for property ${property} of class ${constructor.name}`);
 						}
 					}
 				}
@@ -112,45 +118,58 @@ export class NaniumObject<T> {
 		return result;
 	}
 
-	static plainToClass<T = any>(
-		plain: any,
-		constructor: ConstructorType,
-		globalGenericTypes?: NaniumGenericTypeInfo,
-		localGenericTypes?: LocalGenerics | ConstructorType,
-		strict?: boolean
-	): T {
-		return NaniumObject.initObjectCore<T>(plain, constructor, globalGenericTypes, localGenericTypes, strict);
-	}
-
+	static init<T>(dst: T, src: object): void;
+	static init<T>(dst: T, src: object, strict: boolean): void;
+	static init<T>(dst: T, src: object, genericTypes: NaniumGenericTypeInfo): void;
+	static init<T>(dst: T, src: object, genericTypes: NaniumGenericTypeInfo, strict: boolean): void;
 	static init<T>(
 		dst: T,
 		src: object,
-		genericTypes?: NaniumGenericTypeInfo,
+		genericTypesOrStrict?: NaniumGenericTypeInfo | boolean,
 		strict?: boolean
 	): void {
+		let genericTypes: NaniumGenericTypeInfo;
+		if (typeof genericTypesOrStrict === 'boolean') {
+			strict = genericTypesOrStrict;
+		} else {
+			strict = strict !== undefined ? strict : this.strictDefault;
+			genericTypes = genericTypesOrStrict;
+		}
 		NaniumObject.initObjectCore<T>(src, dst, genericTypes, undefined, strict);
 	}
 
+	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeId): T;
+	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeId, strict: boolean): T;
+	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeId, parentCtor: ConstructorType, strict?: boolean): T;
+	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeId, genericTypes: NaniumGenericTypeInfo, strict?: boolean): T;
 	static create<T>(
 		src: Partial<T>,
 		ctor: ConstructorOrGenericTypeId,
-		parentCtor: ConstructorType,
-		genericTypes?: NaniumGenericTypeInfo,
-		strict?: boolean
+		parentConstructorOrGenericTypesInfoOrStrict?: ConstructorType | NaniumGenericTypeInfo | boolean,
+		strict?: boolean,
 	): T {
 		if (typeof ctor === 'string') {
 			return this.initObjectCore<T>(
 				src,
-				parentCtor[genericTypesSymbol] ? parentCtor[genericTypesSymbol][ctor] : undefined,
-				genericTypes ?? (parentCtor ? parentCtor[genericTypesSymbol] : undefined),
+				parentConstructorOrGenericTypesInfoOrStrict[genericTypesSymbol] ? parentConstructorOrGenericTypesInfoOrStrict[genericTypesSymbol][ctor] : undefined,
+				parentConstructorOrGenericTypesInfoOrStrict[genericTypesSymbol],
 				undefined,
 				strict);
 		} else {
+			strict = typeof parentConstructorOrGenericTypesInfoOrStrict === 'boolean'
+				? parentConstructorOrGenericTypesInfoOrStrict
+				: strict !== undefined ? strict : this.strictDefault;
+			let globalGenericTypes: NaniumGenericTypeInfo;
+			if (typeof parentConstructorOrGenericTypesInfoOrStrict !== 'boolean') {
+				globalGenericTypes = typeof parentConstructorOrGenericTypesInfoOrStrict === 'function'
+					? parentConstructorOrGenericTypesInfoOrStrict[genericTypesSymbol] ? parentConstructorOrGenericTypesInfoOrStrict[genericTypesSymbol][ctor] : undefined
+					: parentConstructorOrGenericTypesInfoOrStrict;
+			}
 			return this.initObjectCore<T>(
 				src,
 				ctor,
+				globalGenericTypes,
 				undefined,
-				parentCtor ? parentCtor[genericTypesSymbol] : undefined,
 				strict);
 		}
 	}
