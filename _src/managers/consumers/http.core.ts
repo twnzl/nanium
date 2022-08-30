@@ -204,7 +204,7 @@ export class HttpCore {
 		} catch (e) {
 			if (typeof e === 'string') {
 				throw new Error(e);
-			} else {
+			} else if (!this.terminated) {
 				// the server is not reachable or something like this so retry at some later time and resend subscriptions (true)
 				setTimeout(() => this.startLongPolling(true), 5000);
 				return;

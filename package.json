@@ -1,6 +1,6 @@
 {
   "name": "nanium",
-  "version": "1.18.2",
+  "version": "1.18.3",
   "description": "nanoservice based fullstack software architecture framework",
   "author": "twnzl",
   "license": "MIT",
@@ -31,7 +31,7 @@
     "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates",
     "test": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest && cd _src/tests/browser-client; npm test",
     "prepare": "",
-    "publishlist": "npm pack && tar -xvzf *.tgz && ts-node _src/tools/nanium.ts rm nanium-*.tgz",
+    "publishlist": "npm publish --dry-run",
     "bundle": "npm run build && npm test && npm publish",
     "cleanup": "rm -rf interfaces && rm -rf managers && rm -rf serializers && rm -rf tests && rm -rf tools"
   },

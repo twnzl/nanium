@@ -1,3 +1,7 @@
+# 1.18.3
+
+- prevent restart waiting for events, when Http-Consumer has been terminated
+
 # 1.18.2
 
 - cleanup of NaniumObject function signatures
