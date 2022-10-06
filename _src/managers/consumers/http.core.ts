@@ -4,6 +4,7 @@ import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../obje
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { Nanium } from '../../core';
+import { NaniumStream } from '../../interfaces/naniumStream';
 
 interface NaniumEventResponse {
 	eventName: string;
@@ -30,15 +31,20 @@ export class HttpCore {
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => Promise<ArrayBuffer>
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => Promise<ArrayBuffer>,
+		private httpRequestStreaming: (url: string, requestStream: NaniumStream) => void,
+		private httpResponseStreaming: (url: string, responseStream: NaniumStream) => void,
 	) {
 	}
 
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
 		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
-		const body: string | ArrayBuffer = this.config.serializer.serialize({ serviceName, request });
 		try {
+			const body: string | ArrayBuffer = this.config.serializer.serialize({ serviceName, request });
+
+			// send the base request data
 			const data: ArrayBuffer = await this.httpRequest('POST', uri, body);
+
 			if (data === undefined || data === null) {
 				return data;
 			} else if (data.byteLength === 0) {
@@ -52,6 +58,7 @@ export class HttpCore {
 					request.constructor[responseTypeSymbol],
 					request.constructor[genericTypesSymbol]
 				);
+				this.careForStreams(request, r);
 				return r;
 			}
 		} catch (e) {
@@ -237,4 +244,32 @@ export class HttpCore {
 			});
 		}
 	}
+
+	private careForStreams(request: Object, response: Object): void {
+		NaniumStream.forEachStream(request, stream => {
+			this.httpRequestStreaming(this.getStreamUrl(stream), stream);
+		});
+		NaniumStream.forEachStream(response, stream => {
+			this.httpResponseStreaming(this.getStreamUrl(stream), stream);
+		});
+	}
+
+	private getStreamUrl(stream: NaniumStream) {
+		return this.config.apiUrl + (this.config.apiUrl.endsWith('/') ? +'/stream/' : '/stream/') + stream.id;
+	}
+
+	// the fetch implementation causes an ERR_QUIC_PROTOCOL_ERROR in chrome
+	// private careForStream(id: string, requestStream: NaniumStream, responseStream: NaniumStream) {
+	// const streamUrl: string = this.config.apiUrl + (this.config.apiUrl.endsWith('/') ? +'/stream/' : '/stream/') + id;
+	// const fromSourceToHttpRequest = new TransformStream();
+	// fetch(streamUrl, {
+	// 	method: 'POST',
+	// 	body: fromSourceToHttpRequest.readable,
+	// 	duplex: 'half',
+	// } as unknown as RequestInit).then();
+	// requestStream.pipeTo(fromSourceToHttpRequest.writable);
+	//
+	// fetch(streamUrl)
+	// 	.then((response) => responseStream.pipeFrom(response.body));
+	// }
 }

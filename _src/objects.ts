@@ -21,7 +21,7 @@ export class NaniumObject<T> {
 		globalGenericTypes?: NaniumGenericTypeInfo,
 		localGenericTypes?: LocalGenerics | ConstructorType,
 		strict?: boolean
-	): any {
+	): T {
 		let constructor: ConstructorType;
 		let result: T;
 		if (typeof constructorOrObject === 'function') {
@@ -49,19 +49,19 @@ export class NaniumObject<T> {
 
 		// array
 		if (Array.isArray(plain)) {
-			return plain.map(item => this.initObjectCore(item, constructor, globalGenericTypes, undefined, strict));
+			return plain.map(item => this.initObjectCore(item, constructor, globalGenericTypes, undefined, strict)) as unknown as T;
 		}
 
 		// simple Type or Date
 		switch (constructor) {
 			case Date:
-				return new Date(plain);
+				return new Date(plain) as unknown as T;
 			case Number:
-				return parseFloat(plain);
+				return parseFloat(plain) as unknown as T;
 			case Boolean:
-				return plain === 'false' ? false : Boolean(plain).valueOf();
+				return (plain === 'false' ? false : Boolean(plain).valueOf()) as unknown as T;
 			case String:
-				return plain;
+				return plain as unknown as T;
 		}
 
 		// object
@@ -174,8 +174,90 @@ export class NaniumObject<T> {
 		}
 	}
 
-	// init(src: Partial<T>, globalGenericTypes?: NaniumGenericTypeInfo): void {
-	// 	NaniumObject.initObjectCore<T>(src, this as unknown as T, globalGenericTypes);
+	static forEachProperty(obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void) {
+		const core = (obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void, name: string[]) => {
+			if (!obj) {
+				return;
+			}
+			for (const prop of Object.keys(obj)) {
+				if (Object.prototype.hasOwnProperty.call(obj, prop)) {
+					fn([...name, prop], obj, obj.constructor[propertyInfoSymbol] ? obj.constructor[propertyInfoSymbol][prop] : undefined);
+					if (!['string', 'function', 'number', 'boolean'].includes(typeof obj[prop])) {
+						core(obj[prop], fn, [...name, prop]);
+					}
+				}
+			}
+		};
+
+		core(obj, fn, []);
+	}
+
+	// /**
+	//  *
+	//  * @param obj the object
+	//  * @param name the name of the property - if it is a property of a sub object use a string array (obj[name[0]][name[1]][...])
+	//  * @param value the value to set
+	//  * @param force if property does not already exist then create it if force = true or leave if force = false (default = false)
+	//  * @param ignoreType if any parent property has no type information defined or the value does not match the type of the target property,
+	//  * than use Object to create the parent property and set the value anyway if ignoreType = true (default = false)
+	//  */
+	// static setProperty(obj: object, name: string | string[], value: any, force: boolean = false, ignoreType: boolean = false) {
+	// 	let tmp: any;
+	// 	let ctor: ConstructorType | undefined;
+	// 	let pInfo: NaniumPropertyInfoCore;
+	// 	if (typeof name === 'string') {
+	// 		name = [name];
+	// 	}
+	// 	// todo: get global generics from property info of base object constructor
+	//
+	// 	for (const prop of name) {
+	// 		tmp = obj[prop];
+	// 		if (tmp === undefined) {
+	// 			if (!force) {
+	// 				return;
+	// 			}
+	// 			if (!ctor) {
+	// 				if (!ignoreType) {
+	// 					return;
+	// 				}
+	// 				ctor = Object;
+	// 			}
+	//
+	// 			pInfo = this.getPropertyTypeInfo(obj, prop);
+	// 			ctor = pInfo?.ctor;
+	// 			if (!Object.prototype.hasOwnProperty.call(tmp, )) {
+	//
+	// 			}
+	// 			if (!ctor) {
+	// 				if (!ignoreType) {
+	// 					return;
+	// 				}
+	// 				obj[prop] = value;
+	// 			} else {
+	// 				obj[prop] = this.create(ctor, pInfo.genericTypeId, pInfo.localGenerics as LocalGenerics);
+	// 			}
+	// 		}
+	// 	}
+	// }
+	//
+	// private static getPropertyTypeInfo(obj: object, name: string | string[]): NaniumPropertyInfoCore {
+	// 	if (!obj?.constructor) {
+	// 		return undefined;
+	// 	}
+	// 	if (typeof name === 'string') {
+	// 		name = [name];
+	// 	}
+	// 	let tmp: any = obj;
+	// 	for (let i = 0; i < name.length - 1; i++) {
+	// 		tmp = obj[name[i]];
+	// 		if (!tmp?.constructor || !tmp.constructor[propertyInfoSymbol]) {
+	// 			return undefined;
+	// 		}
+	// 	}
+	// 	if (!tmp?.constructor || !tmp.constructor[propertyInfoSymbol]) {
+	// 		return undefined;
+	// 	}
+	// 	return tmp.constructor[propertyInfoSymbol][name[name.length - 1]];
 	// }
 }
 

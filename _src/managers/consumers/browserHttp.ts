@@ -7,11 +7,16 @@ import { EventHandler } from '../../interfaces/eventHandler';
 import { HttpCore } from './http.core';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { NaniumStream } from '../../interfaces/naniumStream';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+
+const requestStreamingBufferSymbol: symbol = Symbol.for('__Nanium__requestStreamingBufferSymbol__');
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
 	apiEventUrl?: string;
 	onServerConnectionRestored?: () => void;
+	requestStreamingBufferSize?: number;
 }
 
 export class NaniumConsumerBrowserHttp implements ServiceManager {
@@ -34,11 +39,15 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				},
 				isResponsible: async (): Promise<number> => Promise.resolve(1),
 				isResponsibleForEvent: async (): Promise<number> => Promise.resolve(1),
+				requestStreamingBufferSize: 1024 * 1024
 			},
 			...(config || {})
 		};
 		this.httpCore = new HttpCore(this.config,
-			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers),
+			(url, stream) => this.httpRequestStreaming(url, stream),
+			(url, stream) => this.httpResponseStreaming(url, stream)
+		);
 	}
 
 	async init(): Promise<void> {
@@ -56,7 +65,10 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		this.httpCore.id = undefined;
 		this.httpCore.terminated = true;
 		this.httpCore = new HttpCore(this.config,
-			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers),
+			(url, stream) => this.httpRequestStreaming(url, stream),
+			(url, stream) => this.httpResponseStreaming(url, stream),
+		);
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<number> {
@@ -209,53 +221,122 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		});
 	}
 
-	async httpRequest_old(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any): Promise<string> {
-		return new Promise<string>((resolve: Function, reject: Function) => {
-			let xhr: XMLHttpRequest;
-			try {
-				xhr = new XMLHttpRequest();
-				this.activeRequests.push(xhr);
-				xhr.onabort = (e) => {
-					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-					reject(e);
-				};
-				xhr.onerror = (e) => {
-					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-					reject(e);
-				};
-				xhr.onload = async (): Promise<void> => {
-					if (xhr.status === 200) {
-						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-						if (xhr.response !== undefined && xhr.response !== '') {
-							resolve(xhr.response);
-						} else {
-							resolve();
-						}
-					} else {
-						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-						if (xhr.response !== undefined && xhr.response !== '') {
-							reject(xhr.response);
-						} else {
-							reject();
-						}
-					}
-				};
-				xhr.open(method, url);
-				for (const key in headers ?? {}) {
-					if (headers.hasOwnProperty(key)) {
-						xhr.setRequestHeader(key, headers[key]);
-					}
+	httpRequestStreaming(url: string, requestStream: NaniumStream) {
+		let partIdx = 0; // to make sure that the order of the parts is kept - multiple http requests might overtake each other
+		const observer = {
+			next: async (part) => {
+				if (!requestStream[requestStreamingBufferSymbol]) {
+					requestStream[requestStreamingBufferSymbol] = new NaniumBuffer();
 				}
-				xhr.setRequestHeader('Content-Type', this.config.serializer.mimeType);
-				if (method === 'GET') {
-					xhr.send();
+				// sending multiple http requests is at the moment the most secure way. (e.g. using fetch body streaming can end with ERR_QUIC_PROTOCOL_ERROR in Chrome)
+				if (part instanceof NaniumBuffer || part instanceof Blob || part instanceof ArrayBuffer || part.buffer) {
+					(requestStream[requestStreamingBufferSymbol] as NaniumBuffer).write(part);
+					// 	this.httpRequest('POST', url + '/' + (++partIdx), part.asUint8Array()).then();
+					// } else if (part instanceof Blob) {
+					// 	this.httpRequest('POST', url + '/' + (++partIdx), await (part as Blob).arrayBuffer()).then();
+					// } else if (part instanceof ArrayBuffer) {
+					// 	this.httpRequest('POST', url + '/' + (++partIdx), part).then();
 				} else {
-					xhr.send(body);
+					// todo: streams: !!! if part is not binary serialize it
 				}
-			} catch (e) {
-				this.activeRequests = this.activeRequests.filter(r => r !== xhr);
-				reject(e);
+				// collect multiple parts if they are small and send bigger but fewer packages (important for streaming non-binary data)
+				if (requestStream[requestStreamingBufferSymbol].length >= this.config.requestStreamingBufferSize) {
+					this.httpRequest('POST', url + '/' + (++partIdx), (requestStream[requestStreamingBufferSymbol] as NaniumBuffer).asUint8Array()).then();
+					(requestStream[requestStreamingBufferSymbol] as NaniumBuffer).clear();
+				}
+			},
+			error: () => {
+				// todo: streams: something to do?
+			},
+			complete: () => {
+				// if there are collected parts left that have not yet been sent, send it.
+				if (requestStream[requestStreamingBufferSymbol].length) {
+					this.httpRequest('POST', url + '/' + (++partIdx), (requestStream[requestStreamingBufferSymbol] as NaniumBuffer).asUint8Array()).then();
+				}
+				this.httpRequest('POST', url + '/' + (++partIdx), null).then();
+				requestStream.unsubscribe(observer);
 			}
-		});
+		};
+		requestStream.subscribe(observer);
+	}
+
+	httpResponseStreaming(url: string, responseStream: NaniumStream) {
+		const core: Function = async (): Promise<void> => {
+			// // interceptors
+			// for (const interceptor of this.config.requestInterceptors) {
+			// 	await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
+			// }
+
+			// transmission
+			const abortController: AbortController = new AbortController();
+			this.activeRequests.push(abortController);
+			const req: Request = new Request(url, {
+				method: 'get',
+				mode: 'cors',
+				redirect: 'follow',
+				signal: abortController.signal // make the request abortable
+			});
+
+			fetch(req)
+				.then((response) => response.body)
+				.then((rb) => {
+					const reader: ReadableStreamDefaultReader<Uint8Array> = rb.getReader();
+
+					// let restFromLastTime: any;
+					// let deserialized: {
+					// 	data: any;
+					// 	rest: any;
+					// };
+
+					return new ReadableStream({
+						cancel: (reason?: any): void => {
+							responseStream.error(reason);
+							this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+						},
+						start: (controller: ReadableStreamDefaultController<any>): void => {
+							const push: () => void = () => {
+								reader.read().then(({ done, value }) => {
+									if (done) {
+										controller.close();
+										responseStream.complete();
+										this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+										return;
+									}
+									try {
+										// todo: streams: if not binary data then deserialize
+										// if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
+										responseStream.next(value);
+										// } else {
+										// 	deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
+										// 	if (deserialized.data?.length) {
+										// 		for (const data of deserialized.data) {
+										// 			responseStream.next(NaniumObject.create(
+										// 				data,
+										// 				request.constructor[responseTypeSymbol],
+										// 				request.constructor[genericTypesSymbol]
+										// 			));
+										// 		}
+										// 	}
+										// 	restFromLastTime = deserialized.rest;
+										// }
+									} catch (e) {
+										this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+										controller.close();
+										responseStream.error(e);
+									}
+
+									// read next portion from stream
+									push();
+								});
+							};
+
+							// start reading from stream
+							push();
+						},
+					});
+				});
+		};
+
+		core();
 	}
 }

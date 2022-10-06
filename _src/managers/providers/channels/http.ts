@@ -9,7 +9,9 @@ import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { NaniumObject, responseTypeSymbol } from '../../../objects';
+import { ConstructorType, genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../../objects';
+import { NaniumStream } from '../../../interfaces/naniumStream';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -21,7 +23,17 @@ export interface NaniumHttpChannelConfig extends ChannelConfig {
 export class NaniumHttpChannel implements Channel {
 	private serviceRepository: NaniumRepository;
 	private readonly config: NaniumHttpChannelConfig;
-	private longPollingResponses: { [clientId: string]: ServerResponse } = {};
+	private readonly streamPath: string;
+	private readonly longPollingResponses: { [clientId: string]: ServerResponse } = {};
+	private readonly requestStreams: {
+		[id: string]: {
+			stream: NaniumStream,
+			type: ConstructorType,
+			lastPartIdx?: number,
+			receivedParts?: { [id: string]: any }
+		}
+	} = {}; // todo: streams: cleanup to remove streams of finished/canceled requests
+	private readonly responseStreams: { [id: string]: { s: NaniumStream, t: ConstructorType } } = {}; // todo: streams: cleanup to remove streams of finished/canceled requests
 
 	public eventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
 
@@ -37,6 +49,7 @@ export class NaniumHttpChannel implements Channel {
 			},
 			...(config || {})
 		};
+		this.streamPath = this.config.apiPath + (this.config.apiPath.endsWith('/') ? +'/stream/' : '/stream/');
 	}
 
 	async init(serviceRepository: NaniumRepository): Promise<void> {
@@ -65,6 +78,16 @@ export class NaniumHttpChannel implements Channel {
 				// service requests
 				else if (req.method.toLowerCase() === 'post' && url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
 					await this.handleIncomingServiceRequest(req, res);
+				}
+
+				// streams
+				else if (url.split('?')[0].split('#')[0]?.toLowerCase().startsWith(this.streamPath)) {
+					// Todo: streams: this only works in single thread/process szenarios, but if request + multiple stream http posts go to different threads (e.g. when using the cluster module) this will not work
+					if (req.method.toLowerCase() === 'post') { // request streams
+						await this.handleServiceRequestStream(req, res);
+					} else if (req.method.toLowerCase() === 'get') { // response streams
+						await this.handleServiceResponseStream(req, res);
+					}
 				}
 
 				// something different
@@ -109,15 +132,20 @@ export class NaniumHttpChannel implements Channel {
 	}
 
 	async process(deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
-		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, deserialized, res);
+		return await this.processCore(this.config, this.serviceRepository, deserialized, res);
 	}
 
-	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
+	async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
 		const serviceName: string = deserialized.serviceName;
 		if (!serviceRepository[serviceName]) {
 			throw new Error(`nanium: unknown service ${serviceName}`);
 		}
-		const request: any = NaniumObject.create(deserialized.request, serviceRepository[serviceName].Request);
+		const request: any = NaniumObject.create(
+			deserialized.request,
+			serviceRepository[serviceName].Request,
+			serviceRepository[serviceName].Request[genericTypesSymbol]
+		);
+		NaniumStream.forEachStream(request, (s, t) => this.requestStreams[s.id] = { stream: s, type: t });
 		if (deserialized.streamed) {
 			if (!request.stream) {
 				res.statusCode = 500;
@@ -165,6 +193,7 @@ export class NaniumHttpChannel implements Channel {
 							res.write(new Uint8Array(result instanceof ArrayBuffer ? result : result.buffer));
 						}
 					} else {
+						NaniumStream.forEachStream(result, (s, t) => this.responseStreams[s.id] = { s, t });
 						res.write(config.serializer.serialize(result));
 					}
 				}
@@ -341,6 +370,73 @@ export class NaniumHttpChannel implements Channel {
 	}
 
 	//#endregion event handling
+	private async handleServiceRequestStream(req: IncomingMessage, res: ServerResponse) {
+		let [streamId, partIdx] = req.url.substring(this.streamPath.length).split('/');
+		let dataReceived: boolean = false;
+
+		const next = (stream, chunk) => {
+			if (stream.type === NaniumBuffer) {
+				stream.stream.next(new NaniumBuffer(chunk));
+			} else {
+				// ...
+				// deserialized = this.config.serializer.deserialize(...)
+				// part = NaniumObject.create(...)
+				// stream.stream.next(part);
+			}
+		};
+
+		req.on('data', chunk => {
+			dataReceived = true;
+			const stream = this.requestStreams[streamId];
+			// binary stream
+			if (stream.type === NaniumBuffer) {
+				console.log(stream.type);
+				stream.lastPartIdx = stream.lastPartIdx
+					? stream.lastPartIdx : 1;
+				stream.receivedParts = stream.receivedParts ?? {};
+				if (partIdx === stream.lastPartIdx.toString()) {
+					next(stream, chunk);
+					stream.lastPartIdx++;
+					while (stream.receivedParts[stream.lastPartIdx]) {
+						next(stream, chunk);
+						stream.lastPartIdx++;
+					}
+				} else {
+					stream.receivedParts[partIdx] = chunk;
+				}
+			}
+			// object stream
+			else {
+
+			}
+		});
+		req.on('end', () => {
+			// with empty body there is no onData, we have to call complete here if no data have been received.
+			if (!dataReceived) {
+				this.requestStreams[streamId].stream.complete();
+			}
+			res.end();
+		});
+		req.on('error', (e) => {
+			this.requestStreams[streamId].stream.error(e);
+		});
+	}
+
+	private async handleServiceResponseStream(req: IncomingMessage, res: ServerResponse) {
+		const streamId: string = req.url.substring(this.streamPath.length);
+		this.responseStreams[streamId]?.s?.subscribe({
+			next: (part) => {
+				// todo: streams: if not NaniumBuffer than deserialize;
+				res.write(part.asUint8Array ? part.asUint8Array() : part);
+			},
+			error: () => {
+				// todo: streams: what to do in error case?
+			},
+			complete: () => {
+				res.end();
+			}
+		});
+	}
 }
 
 interface NaniumHttpChannelBody {

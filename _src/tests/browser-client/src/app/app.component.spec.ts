@@ -12,6 +12,9 @@ import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract'
 import { TimeRequest } from '../../../services/test/time.contract';
 import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
 import { StuffCreatedEvent } from '../../../events/test/stuffCreated.event';
+import { TestMeasurementDataConvertRequest } from '../../../services/test/measurement/data/convert.contract';
+import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
+import { NaniumStream } from '../../../../interfaces/naniumStream';
 
 function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 	const serializer = new NaniumJsonSerializer();
@@ -143,6 +146,112 @@ describe('basic browser client tests', () => {
 		it('-->body = Date\n', async function (): Promise<void> {
 			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute();
 			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
+		});
+
+		// it('--> stream response buffer from server to client \n', async function (): Promise<void> {
+		// 	new MeasurementDataQueryRequest({ measurementId: '1' }).stream({  // piping to an output stream: .stream(outStream)
+		// 		next: (responsePart) => { /* process part of the streamed response */
+		// 		},
+		// 		error: (e) => {
+		// 		},
+		// 		complete: (info) => {
+		// 			// info is the not streamed part e.g. an id of the stored stream
+		// 		}
+		// 	});
+		// });
+		//
+		// it('--> stream request from client to server \n', async function (): Promise<void> {
+		// 	const parts = ['First', 'Second', 'Third']; // in real world examples this data would come from another stream like from camera or a file
+		// 	const vRequestStream = new MeasurementDataStoreRequest({ mimeType: 'video/webm' }, undefined);
+		// 	vRequestStream.start(); // piping from an input stream: vRequestStream.start(inStream)
+		// 	let progress;
+		// 	for (let i = 0; i < parts.length; i++) {
+		// 		vRequestStream.next(parts[i]);
+		// 		progress = i / parts.length * 100;
+		// 	}
+		// 	const response = await vRequestStream.end();
+		// 	expect(response.id).toBe('1');
+		// });
+		//
+		//
+		// it('--> stream request from client to server and response from server to client \n', async function (): Promise<void> {
+		// 	const vRequestStream = new MeasurementDataConvertRequest({ from: 'video/webm', to: 'video/avi' });
+		// 	vRequestStream.stream({ // piping to an output stream: .stream(outStream)
+		// 		next: (responsePart) => { /* process part of data the server has received, converted and sent back */
+		// 		},
+		// 		error: (e) => {
+		// 		},
+		// 		complete: (response) => {
+		// 			// response is the not streamed part e.g. an id of the stored stream
+		// 			expect(response.id).toBe('1');
+		// 		}
+		// 	});
+		// 	const parts = ['First', 'Second', 'Third']; // in real world examples this data would come from another stream like from camera or a file
+		// 	let progress;
+		// 	vRequestStream.start(); // piping from an input stream: vRequestStream.start(inStream)
+		// 	for (let i = 0; i < parts.length; i++) {
+		// 		vRequestStream.next(parts[i]);
+		// 		progress = i / parts.length * 100;
+		// 	}
+		// 	await vRequestStream.end();
+		// });
+
+		it('--> stream request from client to server and response from server to client \n', async function (): Promise<void> {
+			try {
+				await new Promise<void>(async (resolve: Function) => {
+					// send request
+					const request = new TestMeasurementDataConvertRequest({
+						measurementId: '42',
+						// values: new NaniumStream<Number>(),
+						video: new NaniumStream<NaniumBuffer>()
+					});
+					// receive response with id and the two response streams
+					const response = await request.execute();
+					expect(response.measurementId).toBe('42*');
+
+					// stream data of the two streams
+					// request.body.values.next(1);
+					request.body.video.next(new NaniumBuffer('123'));
+					// request.body.values.next(2);
+					request.body.video.next(new NaniumBuffer(['45', '6']));
+					// request.body.values.next(3);
+					request.body.video.next(new NaniumBuffer('789'));
+					request.body.video.complete();
+
+					// receive data of the two response streams and when ready test the result
+					const resultVideo: NaniumBuffer = new NaniumBuffer();
+					// const resultValues: number[] = [];
+					let resultValuesReady: boolean;
+					// let resultVideoReady: boolean;
+					// response.convertedValues.subscribe({
+					// 	next: (part) => {
+					// 		resultValues.push(part);
+					// 	},
+					// 	complete: () => {
+					// 		expect(resultValues.length).toBe(3);
+					// 		expect(resultValues[0]).toBe(2);
+					// 		expect(resultValues[1]).toBe(4);
+					// 		expect(resultValues[2]).toBe(6);
+					//
+					// 	}
+					// });
+					response.convertedVideo.subscribe({
+						next: (part) => {
+							resultVideo.write(part);
+						},
+						complete: () => {
+							expect(resultVideo.length).toBe(10);
+							expect(new TextDecoder().decode(resultVideo.asUint8Array())).toBe('2345678910');
+							if (resultValuesReady) {
+								resolve();
+							}
+						}
+					});
+				});
+
+			} catch (e) {
+				this.error = e;
+			}
 		});
 	});
 });

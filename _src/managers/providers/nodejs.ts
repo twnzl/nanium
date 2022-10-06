@@ -177,12 +177,15 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				}
 			}
 
-			// if the request comes from a communication channel it is normally a deserialized object,
-			// but we need real object that is constructed via the request constructor
-			realRequest = NaniumObject.create(
-				request,
-				requestConstructor,
-				requestConstructor[genericTypesSymbol]);
+			// if the request comes from a communication channel. If the channel has not already called NaniumObject.create
+			// for the deserialized object, we should do it here, to get a real object that is constructed via the request constructor
+			realRequest = request;
+			if (realRequest.constructor.name !== requestConstructor.name) {
+				realRequest = NaniumObject.create(
+					request,
+					requestConstructor,
+					requestConstructor[genericTypesSymbol]);
+			}
 
 			// execution
 			if (context?.scope === 'public') {

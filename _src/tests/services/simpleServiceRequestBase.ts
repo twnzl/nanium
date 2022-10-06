@@ -7,11 +7,8 @@ import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEn
 
 export class SimpleServiceRequestBase<TRequestBody, TResponse> {
 
-	@Type(ServiceRequestHead)
-	head?: ServiceRequestHead;
-
-	@Type('TRequestBody')
-	body: TRequestBody;
+	@Type(ServiceRequestHead) head?: ServiceRequestHead;
+	@Type('TRequestBody') body: TRequestBody;
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
 		this.body = body ? NaniumObject.create(body, 'TRequestBody', this.constructor as ConstructorType) : undefined;

@@ -13,6 +13,7 @@ import { URL } from 'url';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { Nanium } from '../../core';
+import { NaniumStream } from '../../interfaces/naniumStream';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -46,7 +47,9 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			...(config || {})
 		};
 		this.httpCore = new HttpCore(this.config,
-			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers),
+			(url, stream) => this.httpRequestStreaming(url, stream),
+			(url, stream) => this.httpResponseStreaming(url, stream));
 	}
 
 
@@ -61,7 +64,10 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		this.httpCore.id = undefined;
 		this.httpCore.terminated = true;
 		this.httpCore = new HttpCore(this.config,
-			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers),
+			(url, stream) => this.httpRequestStreaming(url, stream),
+			(url, stream) => this.httpResponseStreaming(url, stream)
+		);
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<number> {
@@ -225,5 +231,13 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	}
 
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+	}
+
+	httpRequestStreaming(_url: string, _requestStream: NaniumStream) {
+		throw new Error('not yet implemented');
+	}
+
+	httpResponseStreaming(_url: string, _responseStream: NaniumStream) {
+		throw new Error('not yet implemented');
 	}
 }
