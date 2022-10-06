@@ -4,7 +4,7 @@ import { ServiceRequestBase } from '${relativeToRoot}serviceRequestBase';
 export class ${coreClassName}RequestBody extends NaniumObject<${coreClassName}RequestBody> {
 }
 
-export class ${coreClassName}Response extends NaniumObject<${coreClassName}RequestBody> {
+export class ${coreClassName}Response extends NaniumObject<${coreClassName}Response> {
 }
 
 @RequestType({
