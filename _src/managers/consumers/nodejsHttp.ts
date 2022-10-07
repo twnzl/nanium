@@ -13,6 +13,7 @@ import { URL } from 'url';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { Nanium } from '../../core';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -172,6 +173,9 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 							if (chunk.length > 0) {
 								if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
 									observer.next(chunk);
+								}
+								if (request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name) {
+									observer.next(new NaniumBuffer(chunk));
 								} else {
 									deserialized = this.config.serializer.deserializePartial(chunk.toString(), restFromLastTime);
 									if (deserialized.data?.length) {

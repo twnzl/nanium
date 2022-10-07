@@ -1,6 +1,7 @@
 import { ExecutionScope } from './interfaces/executionScope';
 import { ServiceRequestInterceptor } from './interfaces/serviceRequestInterceptor';
 import { Nanium } from './core';
+import { NaniumSymbols } from './interfaces/symbols';
 
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
 export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');
@@ -9,6 +10,7 @@ export const scopeProperty: string = 'scope';
 export const skipInterceptorsProperty: string = 'skipInterceptors';
 
 export class NaniumObject<T> {
+	static NaniumBufferInternalValueSymbol: symbol = Symbol.for('__Nanium__BufferInternalValueSymbol__');
 	static strictDefault: boolean = false;
 
 	constructor(data?: Partial<T>, genericTypes?: NaniumGenericTypeInfo, strict?: boolean) {
@@ -65,7 +67,13 @@ export class NaniumObject<T> {
 		}
 
 		// object
-		result = result ?? new constructor();
+		if (constructor.name === 'NaniumBuffer') {
+			// special case NaniumBuffer, if we copy from a real instance of NaniumBuffer the internal values must stay
+			result = new constructor(plain[NaniumSymbols.bufferInternalValueSymbol]);
+		} else {
+			result = result ?? new constructor();
+		}
+		
 		const propertyInfo: NaniumPropertyInfo = constructor[propertyInfoSymbol];
 		let pi: NaniumPropertyInfoCore;
 		let c: ConstructorOrGenericTypeId;
@@ -174,9 +182,23 @@ export class NaniumObject<T> {
 		}
 	}
 
-	// init(src: Partial<T>, globalGenericTypes?: NaniumGenericTypeInfo): void {
-	// 	NaniumObject.initObjectCore<T>(src, this as unknown as T, globalGenericTypes);
-	// }
+	static forEachProperty(obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void) {
+		const core = (obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void, name: string[]) => {
+			if (!obj) {
+				return;
+			}
+			for (const prop of Object.keys(obj)) {
+				if (Object.prototype.hasOwnProperty.call(obj, prop)) {
+					fn([...name, prop], obj, obj.constructor[propertyInfoSymbol] ? obj.constructor[propertyInfoSymbol][prop] : undefined);
+					if (!['string', 'function', 'number', 'boolean'].includes(typeof obj[prop])) {
+						core(obj[prop], fn, [...name, prop]);
+					}
+				}
+			}
+		};
+
+		core(obj, fn, []);
+	}
 }
 
 export class NaniumPropertyInfo {

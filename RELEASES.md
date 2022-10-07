@@ -1,3 +1,13 @@
+# 1.19.0
+
+- class NaniumBuffer
+    - works on both nodejs and browser and can work with all Buffer formats from both worlds
+    - you can write multiple times to the buffer and do not need to specify a size first. Data written to the buffer is
+      not copied internally on write but on calling asUInt8Array() or asString()
+    - can be used as Type for properties in requests to send big data together with other data but without serializing
+      it (e.g. for uploading files as binaries).
+- fixed naming of response type of generated contracts
+
 # 1.18.3
 
 - prevent restart waiting for events, when Http-Consumer has been terminated

@@ -12,6 +12,10 @@ import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract'
 import { TimeRequest } from '../../../services/test/time.contract';
 import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
 import { StuffCreatedEvent } from '../../../events/test/stuffCreated.event';
+import { TestBufferRequest } from '../../../services/test/buffer.contract';
+import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
+import { TestGetStreamedNaniumBufferRequest } from '../../../services/test/getStreamedNaniumBuffer.contract';
+import { TestGetNaniumBufferRequest } from '../../../services/test/getNaniumBuffer.contract';
 
 function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 	const serializer = new NaniumJsonSerializer();
@@ -69,9 +73,14 @@ describe('basic browser client tests', () => {
 			expect(true).toBeTruthy();
 		});
 
-		it('execute service with Binary response', async () => {
+		it('execute service with Binary (ArrayBuffer) response', async () => {
 			const result = await new TestGetBinaryRequest().execute();
 			expect(new TextDecoder().decode(result)).toBe('this is a text that will be send as binary data');
+		});
+
+		it('execute service with Binary (NaniumBuffer) response', async () => {
+			const result: NaniumBuffer = await new TestGetNaniumBufferRequest().execute();
+			expect(await result.asString()).toBe('this is a text that will be send as NaniumBuffer');
 		});
 
 		it('response as json stream', async () => {
@@ -94,7 +103,7 @@ describe('basic browser client tests', () => {
 			expect(dtoList[0].formatted()).toBe('1:1');
 		});
 
-		it('response as binary stream', async () => {
+		it('response as ArrayBuffer stream', async () => {
 			const bufferPieces: ArrayBuffer[] = [];
 			await new Promise((resolve: Function): void => {
 				new TestGetStreamedArrayBufferRequest(undefined, { token: '1234' }).stream().subscribe({
@@ -122,6 +131,25 @@ describe('basic browser client tests', () => {
 			expect(float32Array[4]).toBe(5);
 		});
 
+		it('response as NaniumBuffer stream', async () => {
+			const buffer: NaniumBuffer = new NaniumBuffer();
+			await new Promise((resolve: Function): void => {
+				new TestGetStreamedNaniumBufferRequest(undefined, { token: '1234' }).stream().subscribe({
+					next: (value: NaniumBuffer): void => {
+						buffer.write(value);
+					},
+					complete: (): void => resolve(),
+					error: (err: Error) => {
+						Nanium.logger.error(err.message, err.stack);
+					}
+				});
+			});
+			expect(buffer.length).withContext('length of result list should be correct').toBe(40);
+			const float32View = new DataView((await buffer.asUint8Array()).buffer);
+			expect(float32View.getFloat32(0, true)).toBe(1);
+			expect(float32View.getFloat32(1 * 4, true)).toBe(2);
+			expect(float32View.getFloat32(4 * 4, true)).toBe(5);
+		});
 
 		it('call an url of the http server that is not managed by nanium', async () => {
 			const result: any = await new Promise<any>(resolve => {
@@ -144,6 +172,65 @@ describe('basic browser client tests', () => {
 			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute();
 			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 		});
+
+		it('--> NaniumBuffers in request \n', async function (): Promise<void> {
+			const request = new TestBufferRequest({
+				id: '1',
+				buffer1: new NaniumBuffer('123'),
+				buffer2: new NaniumBuffer('456')
+			});
+			const response = await request.execute();
+			expect(response.id).toBe('1');
+			expect(response.text1).toBe('123*');
+			expect(response.text2).toBe('456*');
+		});
+	});
+
+	describe('NaniumBuffer \n', function (): void {
+		const arrayBuffer: ArrayBuffer = new TextEncoder().encode('abc').buffer;
+		const blob: Blob = new Blob(['def']);
+		const str: string = 'gh😄';
+		const uint8Array: ArrayBuffer = new TextEncoder().encode('jkl');
+
+		describe('asString', function (): void {
+			it('with different types in constructor', async function (): Promise<void> {
+				const buf = new NaniumBuffer([
+					arrayBuffer, blob, str, uint8Array
+				]);
+				expect(buf.id?.length > 0).toBeTruthy();
+				expect(await buf.asString()).toBe('abcdefgh😄jkl');
+			});
+
+			it('asString with a single arrayBuffer', async function (): Promise<void> {
+				const buf = new NaniumBuffer([arrayBuffer]);
+				expect(await buf.asString()).toBe('abc');
+			});
+
+			it('asString write multiple different types', async function (): Promise<void> {
+				const buf = new NaniumBuffer(undefined, '1');
+				expect(buf.id).toBe('1');
+				buf.write(arrayBuffer);
+				buf.write(blob);
+				buf.write(str);
+				buf.write(uint8Array);
+				expect(await buf.asString()).toBe('abcdefgh😄jkl');
+			});
+		});
+
+		describe('asUInt8Array', function (): void {
+			it('asUInt8Array with different types in constructor \n', async function (): Promise<void> {
+				const buf = new NaniumBuffer([
+					arrayBuffer, blob, str, uint8Array
+				]);
+				expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefgh😄jkl');
+			});
+
+			it('asUInt8Array with a single arrayBuffer', async function (): Promise<void> {
+				const buf = new NaniumBuffer([arrayBuffer]);
+				expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abc');
+			});
+		});
+
 	});
 });
 

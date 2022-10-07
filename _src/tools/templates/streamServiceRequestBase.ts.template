@@ -5,11 +5,9 @@ import { NaniumObject, Type, ConstructorType} from 'nanium/objects';
 
 export class StreamServiceRequestBase<TRequestBody, TResult> {
 
-	@Type(ServiceRequestHead)
-	head?: ServiceRequestHead;
+	@Type(ServiceRequestHead)	head?: ServiceRequestHead;
 
-	@Type('TRequestBody')
-	body: TRequestBody;
+	@Type('TRequestBody')	body: TRequestBody;
 
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {

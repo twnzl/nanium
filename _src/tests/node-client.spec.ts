@@ -14,6 +14,9 @@ import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { Nanium } from '../core';
 import { TestGetStreamedArrayBufferRequest } from './services/test/getStreamedArrayBuffer.contract';
 import { TestGetBinaryRequest } from './services/test/getBinary.contract';
+import { NaniumBuffer } from '../interfaces/naniumBuffer';
+import { TestGetStreamedNaniumBufferRequest } from './services/test/getStreamedNaniumBuffer.contract';
+import { TestGetNaniumBufferRequest } from './services/test/getNaniumBuffer.contract';
 
 let request: TestGetRequest;
 const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
@@ -78,6 +81,11 @@ describe('host services via http \n', function (): void {
 			expect(new TextDecoder().decode(result)).toBe('this is a text that will be send as binary data');
 		});
 
+		it('execute service with Binary (NaniumBuffer) response', async () => {
+			const result: NaniumBuffer = await new TestGetNaniumBufferRequest().execute();
+			expect(await result.asString()).toBe('this is a text that will be send as NaniumBuffer');
+		});
+
 		it('response as json stream', async () => {
 			const dtoList: TestDto[] = [];
 			let portions = 0;
@@ -125,6 +133,27 @@ describe('host services via http \n', function (): void {
 			expect(float32Array[1]).toBe(2);
 			expect(float32Array[4]).toBe(5);
 		});
+
+		it('response as NaniumBuffer stream', async () => {
+			const buffer: NaniumBuffer = new NaniumBuffer();
+			await new Promise((resolve: Function): void => {
+				new TestGetStreamedNaniumBufferRequest(undefined, { token: '1234' }).stream().subscribe({
+					next: (value: NaniumBuffer): void => {
+						buffer.write(value);
+					},
+					complete: (): void => resolve(),
+					error: (err: Error) => {
+						Nanium.logger.error(err.message, err.stack);
+					}
+				});
+			});
+			expect(buffer.length, 'length of result list should be correct').toBe(40);
+			const float32View = new DataView((await buffer.asUint8Array()).buffer);
+			expect(float32View.getFloat32(0, true)).toBe(1);
+			expect(float32View.getFloat32(1 * 4, true)).toBe(2);
+			expect(float32View.getFloat32(4 * 4, true)).toBe(5);
+		});
+
 	});
 
 

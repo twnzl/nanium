@@ -6,11 +6,8 @@ import { ExecutionContext } from 'nanium/interfaces/executionContext';
 
 export class ServiceRequestBase<TRequestBody, TResponse> {
 
-	@Type(ServiceRequestHead)
-	head?: ServiceRequestHead;
-
-	@Type('TRequestBody')
-	body: TRequestBody;
+	@Type(ServiceRequestHead)	head?: ServiceRequestHead;
+	@Type('TRequestBody')	body: TRequestBody;
 
 	constructor(body?: TRequestBody, head?: ServiceRequestHead) {
 		this.body = NaniumObject.create(body ? body : {}, 'TRequestBody', this.constructor as ConstructorType);

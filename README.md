@@ -503,7 +503,8 @@ Nanium.addManager(
 ### Binary data
 
 Regardless of which serializer you use, binary data is always treated specially. If you define the result type of a
-service as ArrayBuffer, the data is not serialized or deserialized, but transported to the client as it is.
+service as ArrayBuffer or NaniumBuffer, the data is not serialized or deserialized, but transported to the client as it
+is.
 
 ```ts
 // contract
@@ -522,6 +523,37 @@ export class TestGetBinaryExecutor implements ServiceExecutor<TestGetBinaryReque
 	async execute(request: TestGetBinaryRequest, executionContext: ServiceRequestContext): Promise<ArrayBuffer> {
 		const result = new TextEncoder().encode('this is a text that will be send as binary data');
 		return result.buffer;
+	}
+}
+```
+
+NaniumBuffers can also be included as Properties of Requests. E.g. to send Files or other binary or large data together
+with other information like IDs or file names etc.
+
+```ts
+// contract
+import { NaniumBuffer } from './naniumBuffer';
+
+@RequestType({ responseType: String, scope: 'public' })
+export class TestMeasurementStoreRequest extends SimpleServiceRequestBase<void, string> {
+	static serviceName: string = 'NaniumTest:test/bigData/Store';
+
+	@Type(Date) startTime: Date;
+	@Type(Date) endTime: Date;
+	@Type(Array, String) enabledSensors: string[];
+	@Type(NaniumBuffer) sensorValues: NaniumBuffer;
+	@Type(NaniumBuffer) video: NaniumBuffer;
+}
+
+// executor
+export class TestMeasurementStoreExecutor implements ServiceExecutor<TestMeasurementStoreRequest, string> {
+	static serviceName: string = 'NaniumTest:test/bigData/Store';
+
+	async execute(request: TestMeasurementStoreRequest, executionContext: ServiceRequestContext): Promise<string> {
+		const id: string = randomUUID();
+		await fs.promises.writeFile(id + '.mp4', request.body.video.asUint8Array());
+		// ...
+		return id;
 	}
 }
 ```
@@ -559,10 +591,8 @@ export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest
 ```
 
 The overall result of this example service is a List of instances of class TestDto. But the server will return only one
-per
-second until 10. So the client can, for example, show a partial result list immediately by subscribing to the Observable
-to add
-each new record as soon as it arrives.
+per second until 10. So the client can, for example, show a partial result list immediately by subscribing to the
+Observable to add each new record as soon as it arrives.
 
 On client side, you can subscribe to the observable the *stream* function returns.
 Within the *next* function, you can do some work, whenever an item of the overall result array arrives.
@@ -593,9 +623,9 @@ const result: TestDto[] = await new TestQueryRequest(
 
 ### Binary streaming
 
-For streaming the same applies as for the normal version. Regardless of which serializer you use, binary data is always
-treated specially. If you define the result type of a service as ArrayBuffer, the data is not serialized or
-deserialized, but transported to the client as it is.
+For streaming of binary data the same applies as for the normal version. Regardless of which serializer you use, binary
+data is always treated specially. If you define the result type of a service as ArrayBuffer or NaniumBuffer, the data
+is not serialized or deserialized, but transported to the client as it is.
 
 ```ts
 // the contract
@@ -628,8 +658,9 @@ new TestGetStreamedArrayBufferRequest(undefined, { token: '1234' }).stream().sub
 	next: (part: ArrayBuffer): void => {
 		console.log(new TextDecoder().decode(part));
 		// output:
-		// This is a string con
-		// verted to a Uint8Array
+		// This
+		//  is a string convert
+		// ed to a Uint8Array
 	}
 });
 ```

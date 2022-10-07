@@ -1,9 +1,10 @@
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
-import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../objects';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { Nanium } from '../../core';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 
 interface NaniumEventResponse {
 	eventName: string;
@@ -30,14 +31,33 @@ export class HttpCore {
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => Promise<ArrayBuffer>
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => Promise<ArrayBuffer>
 	) {
 	}
 
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
 		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
-		const body: string | ArrayBuffer = this.config.serializer.serialize({ serviceName, request });
+		const buffers: NaniumBuffer[] = [];
+		let body: string | ArrayBuffer | FormData = this.config.serializer.serialize({ serviceName, request });
+		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
+			if (typeInfo?.ctor?.name === NaniumBuffer.name) {
+				const buffer = parent[name[name.length - 1]];
+				buffers.push(buffer);
+			}
+		});
 		try {
+			// handle binary data included in the request
+			if (buffers.length) {
+				const tmp = body as string;
+				body = new FormData();
+				body.append('request', tmp);
+
+				for (const buffer of buffers) {
+					body.append(buffer.id, new Blob([await buffer.asUint8Array()]));
+				}
+			}
+
+			// send the request
 			const data: ArrayBuffer = await this.httpRequest('POST', uri, body);
 			if (data === undefined || data === null) {
 				return data;
@@ -46,6 +66,8 @@ export class HttpCore {
 			}
 			if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
 				return data;
+			} else if (request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name) {
+				return new NaniumBuffer(data);
 			} else {
 				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),

@@ -10,6 +10,10 @@ import { NaniumJsonSerializer } from '../../../serializers/json';
 import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
 import { NaniumObject, responseTypeSymbol } from '../../../objects';
+import * as formidable from 'formidable';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import * as fs from 'fs';
+
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -90,35 +94,72 @@ export class NaniumHttpChannel implements Channel {
 	private async handleIncomingServiceRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
 		const data: any[] = [];
 		await new Promise<void>((resolve: Function, reject: Function) => {
-			req.on('data', (chunk: any) => {
-				data.push(chunk);
-			}).on('end', async () => {
+			let deserialized: NaniumHttpChannelBody;
+			let request: any;
+			if (req.headers['content-type']?.startsWith('multipart/form-data')) {
 				try {
-					const body: string = Buffer.concat(data).toString();
-					const deserialized: NaniumHttpChannelBody = this.config.serializer.deserialize(body);
-					await this.process(deserialized, res);
-					if (!deserialized.streamed) {
-						res.end();
-						resolve();
-					}
+					// todo: remove formidable and use own algorithm to extract the data from the incoming buffer
+					formidable().parse(req, async (err, fields, files) => {
+						if (err) {
+							throw new Error(err);
+						}
+						deserialized = this.config.serializer.deserialize(fields.request);
+						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
+						// add NaniumBuffers with file content to the properties of des
+						const promises = [];
+						NaniumObject.forEachProperty(request, async (name, parent, typeInfo) => {
+							if (typeInfo?.ctor?.name === NaniumBuffer.name) {
+								promises.push(new Promise<void>(async (resolve: Function) => {
+									const buffer = parent[name[name.length - 1]];
+									if (Object.prototype.hasOwnProperty.call(files, buffer.id)) {
+										buffer.write(await fs.promises.readFile(files[buffer.id].filepath));
+										fs.promises.unlink(files[buffer.id].filepath).then();
+										resolve();
+									}
+								}));
+							}
+						});
+						await Promise.all(promises);
+						await this.process(request, res, deserialized.streamed);
+						if (!deserialized.streamed) {
+							res.end();
+							resolve();
+						}
+					});
 				} catch (e) {
 					reject(e);
 				}
-			});
+			} else {
+				req.on('data', (chunk: any) => {
+					data.push(chunk);
+				}).on('end', async () => {
+					try {
+						const body: string = Buffer.concat(data).toString();
+						deserialized = this.config.serializer.deserialize(body);
+						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
+						await this.process(request, res, deserialized.streamed);
+						if (!deserialized.streamed) {
+							res.end();
+							resolve();
+						}
+					} catch (e) {
+						reject(e);
+					}
+				});
+			}
 		});
 	}
 
-	async process(deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
-		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, deserialized, res);
+	async process(request: any, res: ServerResponse, isStreamed?: boolean): Promise<any> {
+		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, request, res, isStreamed);
 	}
 
-	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
-		const serviceName: string = deserialized.serviceName;
+	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, res: ServerResponse, isStreamed?: boolean): Promise<any> {
+		const serviceName: string = request.constructor.serviceName;
 		if (!serviceRepository[serviceName]) {
 			throw new Error(`nanium: unknown service ${serviceName}`);
 		}
-		const request: any = NaniumObject.create(deserialized.request, serviceRepository[serviceName].Request);
-		if (deserialized.streamed) {
+		if (isStreamed) {
 			if (!request.stream) {
 				res.statusCode = 500;
 				res.write(config.serializer.serialize('the service does not support result streaming'));
@@ -132,9 +173,15 @@ export class NaniumHttpChannel implements Channel {
 			res.statusCode = 200;
 			result.subscribe({
 				next: async (value: any): Promise<void> => {
-					if (serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer) {
+					if (
+						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
+						serviceRepository[serviceName].Request[responseTypeSymbol].name === NaniumBuffer.name
+					) {
 						if (value instanceof Buffer || value instanceof Uint8Array) {
 							res.write(value);
+						}
+						if (value?.constructor?.name === NaniumBuffer.name) {
+							res.write(await value.asUint8Array());
 						} else {
 							res.write(new Uint8Array(value instanceof ArrayBuffer ? value : value.buffer));
 						}
@@ -158,9 +205,15 @@ export class NaniumHttpChannel implements Channel {
 				res.setHeader('Content-Type', config.serializer.mimeType);
 				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
-					if (serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer) {
+					if (
+						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
+						serviceRepository[serviceName].Request[responseTypeSymbol]?.name === NaniumBuffer.name
+					) {
 						if (result instanceof Buffer || result instanceof Uint8Array) {
 							res.write(result);
+						}
+						if (result.constructor.name === NaniumBuffer.name) {
+							res.write(await result.asUint8Array());
 						} else {
 							res.write(new Uint8Array(result instanceof ArrayBuffer ? result : result.buffer));
 						}
