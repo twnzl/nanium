@@ -188,7 +188,7 @@ describe('basic browser client tests', () => {
 
 	describe('NaniumBuffer \n', function (): void {
 		const arrayBuffer: ArrayBuffer = new TextEncoder().encode('abc').buffer;
-		const blob: Blob = new Blob(['def']);
+		const blob = new Blob(['def']);
 		const str: string = 'gh😄';
 		const uint8Array: ArrayBuffer = new TextEncoder().encode('jkl');
 

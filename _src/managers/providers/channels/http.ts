@@ -9,10 +9,8 @@ import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { NaniumObject, responseTypeSymbol } from '../../../objects';
-import * as formidable from 'formidable';
+import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import * as fs from 'fs';
 
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
@@ -96,57 +94,33 @@ export class NaniumHttpChannel implements Channel {
 		await new Promise<void>((resolve: Function, reject: Function) => {
 			let deserialized: NaniumHttpChannelBody;
 			let request: any;
-			if (req.headers['content-type']?.startsWith('multipart/form-data')) {
+			let parser: MultipartParser;
+
+			const isMultipart = req.headers['content-type']?.startsWith('multipart/form-data');
+			if (isMultipart) {
+				parser = new MultipartParser(req.headers['content-type'], this.config, this.serviceRepository);
+			}
+			req.on('data', (chunk: Buffer) => {
+				isMultipart ? parser.parsePart(chunk) : data.push(chunk);
+			}).on('end', async () => {
 				try {
-					// todo: remove formidable and use own algorithm to extract the data from the incoming buffer
-					formidable().parse(req, async (err, fields, files) => {
-						if (err) {
-							throw new Error(err);
-						}
-						deserialized = this.config.serializer.deserialize(fields.request);
-						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
-						// add NaniumBuffers with file content to the properties of des
-						const promises = [];
-						NaniumObject.forEachProperty(request, async (name, parent, typeInfo) => {
-							if (typeInfo?.ctor?.name === NaniumBuffer.name) {
-								promises.push(new Promise<void>(async (resolve: Function) => {
-									const buffer = parent[name[name.length - 1]];
-									if (Object.prototype.hasOwnProperty.call(files, buffer.id)) {
-										buffer.write(await fs.promises.readFile(files[buffer.id].filepath));
-										fs.promises.unlink(files[buffer.id].filepath).then();
-										resolve();
-									}
-								}));
-							}
-						});
-						await Promise.all(promises);
-						await this.process(request, res, deserialized.streamed);
-						if (!deserialized.streamed) {
-							res.end();
-							resolve();
-						}
-					});
-				} catch (e) {
-					reject(e);
-				}
-			} else {
-				req.on('data', (chunk: any) => {
-					data.push(chunk);
-				}).on('end', async () => {
-					try {
+					if (isMultipart) {
+						[request, deserialized] = await parser.getResult();
+					} else {
 						const body: string = Buffer.concat(data).toString();
 						deserialized = this.config.serializer.deserialize(body);
 						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
-						await this.process(request, res, deserialized.streamed);
-						if (!deserialized.streamed) {
-							res.end();
-							resolve();
-						}
-					} catch (e) {
-						reject(e);
 					}
-				});
-			}
+					await this.process(request, res, deserialized.streamed);
+					if (!deserialized.streamed) {
+						res.end();
+						resolve();
+					}
+				} catch (e) {
+					reject(e);
+				}
+			});
+			// }
 		});
 	}
 
@@ -400,4 +374,110 @@ interface NaniumHttpChannelBody {
 	serviceName: string;
 	request: any;
 	streamed?: boolean;
+}
+
+export class MultipartParser {
+	private static fieldValueStart = Buffer.from('\r\n\r\n');
+	private static fieldValueEnd = Buffer.from('\r\n');
+	private static quote = 34;
+	private static space = 32;
+
+	private state: 'searchingBoundary' | 'readingFieldHeader' | 'readingRequest' | 'readingBinary' = 'searchingBoundary';
+	private boundary: Buffer;
+	private requestBuf: NaniumBuffer;
+	private currentBinary: NaniumBuffer;
+	private nameStart: number;
+	private fieldName: string;
+
+	private tmp: NaniumBuffer = new NaniumBuffer();
+	private binaries: { [id: string]: NaniumBuffer } = {};
+
+	constructor(
+		private contentType: string,
+		private channelConfig: NaniumHttpChannelConfig,
+		private serviceRepository: any,
+	) {
+		this.boundary = Buffer.from(new TextEncoder().encode(
+			'--' + contentType.split('multipart/form-data; boundary=')[1]
+		));
+	}
+
+	async parsePart(data: Buffer) {
+		this.tmp.write(data);
+		let buf: Buffer;
+		let i = 0;
+		let valueStart: number;
+		if (this.state === 'searchingBoundary' && this.tmp.length < this.boundary.length) {
+			return;
+		}
+		buf = Buffer.from(await this.tmp.asUint8Array());
+		while (i < buf.length) {
+			if (this.state === 'searchingBoundary') {
+				if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) {
+					i += this.boundary.length;
+					this.state = 'readingFieldHeader';
+					this.boundary = Buffer.concat([MultipartParser.fieldValueEnd, this.boundary]);
+				} else {
+					i++;
+				}
+			} else if (this.state === 'readingFieldHeader') {
+				if (buf.slice(i, i + 4).compare(MultipartParser.fieldValueStart) === 0) {
+					i += 4;
+					if (this.fieldName === 'request') {
+						this.requestBuf = new NaniumBuffer();
+						this.state = this.state = 'readingRequest';
+					} else {
+						this.state = 'readingBinary';
+						this.currentBinary = new NaniumBuffer();
+						this.binaries[this.fieldName] = this.currentBinary;
+					}
+					this.fieldName = undefined;
+				} else if (buf[i] === MultipartParser.space && buf.slice(i, i + 7).toString() === ' name="') { // name (names including " are currently nor allowed)
+					this.nameStart = i + 7;
+					i += 7;
+				} else if (this.nameStart && buf[i] === MultipartParser.quote) { // end of name
+					this.fieldName = buf.slice(this.nameStart, i).toString();
+					this.nameStart = undefined;
+					i++;
+				} else {
+					i++;
+				}
+			} else if (this.state === 'readingRequest' || this.state === 'readingBinary') {
+				valueStart = valueStart ?? i;
+				if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) { // next boundary
+					if (this.state === 'readingRequest') {
+						this.requestBuf.write(buf.slice(valueStart, i));
+					} else {
+						this.currentBinary.write(buf.slice(valueStart, i));
+					}
+					valueStart = undefined;
+					i += this.boundary.length;
+					this.state = 'readingFieldHeader';
+				} else {
+					i++;
+				}
+			}
+		}
+		if (this.nameStart) {
+			this.tmp = new NaniumBuffer(buf.slice(this.nameStart));
+		}
+		if (this.state === 'readingRequest' && valueStart) {
+			this.requestBuf.write(buf.slice(valueStart));
+		}
+		if (this.state === 'readingBinary' && valueStart) {
+			this.currentBinary.write(buf.slice(valueStart));
+		}
+	}
+
+	async getResult() {
+		const txt = await this.requestBuf.asString();
+		const deserialized = this.channelConfig.serializer.deserialize(txt);
+		const request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
+		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
+			if (typeInfo?.ctor?.name === NaniumBuffer.name) {
+				parent[name[name.length - 1]].write(this.binaries[parent[name[name.length - 1]].id]);
+			}
+		});
+		return [request, deserialized];
+	}
 }

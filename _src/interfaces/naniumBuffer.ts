@@ -112,27 +112,17 @@ export class NaniumBuffer {
 	}
 }
 
-export interface ReadableStream {
-	[Symbol.iterator](): IterableIterator<any>;
-
-	entries(): IterableIterator<[number, any]>;
-
-	keys(): IterableIterator<number>;
-
-	values(): IterableIterator<any>;
-}
-
-export interface Blob {
+export interface BlobLike {
 	readonly size: number;
 	readonly type: string;
 
 	arrayBuffer(): Promise<ArrayBuffer>;
 
-	slice(start?: number, end?: number, contentType?: string): Blob;
+	slice(start?: number, end?: number, contentType?: string): BlobLike;
 
-	stream(): ReadableStream;
+	stream(): any;
 
 	text(): Promise<string>;
 }
 
-export type DataSource = (ArrayBuffer | Uint8Array | Blob | string);
+export type DataSource = (ArrayBuffer | Uint8Array | BlobLike | string);

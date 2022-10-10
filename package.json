@@ -56,7 +56,6 @@
     "tools/**/*.template"
   ],
   "dependencies": {
-    "formidable": "^2.0.1",
     "recursive-readdir": "^2.2.2",
     "rxjs": "^6.6.7",
     "shelljs": "^0.8.5"
