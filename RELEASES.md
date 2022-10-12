@@ -3,10 +3,46 @@
 - class NaniumBuffer
     - works on both nodejs and browser and can work with all Buffer formats from both worlds
     - you can write multiple times to the buffer and do not need to specify a size first. Data written to the buffer is
-      not copied internally on write but on calling asUInt8Array() or asString()
+      not copied internally when calling write but may be (if necessary) when calling one of the as...() functions (e.g.
+      asArrayBuffer()).
     - can be used as Type for properties in requests to send big data together with other data but without serializing
       it (e.g. for uploading files as binaries).
 - fixed naming of response type of generated contracts
+
+## breaking changes
+
+- The request-contract of services that use ArrayBuffers as ResponseType, must now use NaniumBuffer as
+  ResponseType. The executers may stay as they are - the 'execute' or 'stream' function is allowed to return any kind of
+  buffer (NaniumBuffer | ArrayBuffer | BlobLike | string | Uint8Array | other typed arrays Float32Array etc.) only the
+  request must be changed. At the caller the result will always be of type NaniumBuffer and can so easily be converted
+  to any other kind of Buffer using the as function e.g.: result.as(Blob).
+
+```ts
+// the contract
+@RequestType({
+	responseType: NaniumBuffer,
+	scope: 'public'
+})
+export class TestGetStreamedArrayBufferRequest extends ServiceRequestBase<void, NaniumBuffer> {
+	static serviceName: string = 'NaniumTest:test/getStreamedArrayBuffer';
+}
+
+export class TestGetStreamedArrayBufferExecutor implements StreamServiceExecutor<TestGetStreamedArrayBufferRequest, ArrayBuffer> {
+	static serviceName: string = 'NaniumTest:test/getStreamedArrayBuffer';
+
+	stream(request: TestGetStreamedArrayBufferRequest, executionContext: ServiceRequestContext): Observable<ArrayBuffer> {
+		return new Observable((observer: Observer<ArrayBuffer>): void => {
+			const enc: TextEncoder = new TextEncoder();
+			const buf: ArrayBuffer = enc.encode('This is a string converted to a Uint8Array');
+			observer.next(buf.slice(0, 4));
+			setTimeout(() => observer.next(buf.slice(4, 20)), 500);
+			setTimeout(() => observer.next(buf.slice(20, buf.byteLength)), 1000);
+			setTimeout(() => observer.complete(), 1500);
+		});
+	}
+}
+
+```
 
 # 1.18.3
 
