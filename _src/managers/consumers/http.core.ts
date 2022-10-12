@@ -40,7 +40,7 @@ export class HttpCore {
 		const buffers: NaniumBuffer[] = [];
 		let body: string | ArrayBuffer | FormData = this.config.serializer.serialize({ serviceName, request });
 		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
-			if (typeInfo?.ctor?.name === NaniumBuffer.name) {
+			if (typeInfo?.ctor?.name === NaniumBuffer.name || parent[name[name.length - 1]]?.constructor.name === NaniumBuffer.name) {
 				const buffer = parent[name[name.length - 1]];
 				buffers.push(buffer);
 			}
@@ -66,8 +66,11 @@ export class HttpCore {
 			}
 			if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
 				return data;
-			} else if (request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name) {
-				return new NaniumBuffer(data);
+			} else if (
+				request.constructor[responseTypeSymbol] === ArrayBuffer ||
+				request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name
+			) {
+				return data.constructor.name === NaniumBuffer.name ? data : new NaniumBuffer(data);
 			} else {
 				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),

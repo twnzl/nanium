@@ -122,10 +122,11 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 											return;
 										}
 										try {
-											if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
-												observer.next(value);
-											} else if (request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name) {
-												observer.next(new NaniumBuffer(value));
+											if (
+												request.constructor[responseTypeSymbol] === ArrayBuffer ||
+												request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name
+											) {
+												observer.next(value.constructor.name === NaniumBuffer.name ? value : new NaniumBuffer(value));
 											} else {
 												deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 												if (deserialized.data?.length) {

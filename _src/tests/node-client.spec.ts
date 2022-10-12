@@ -77,8 +77,8 @@ describe('host services via http \n', function (): void {
 		});
 
 		it('--> execute service with Binary response', async () => {
-			const result = await new TestGetBinaryRequest().execute();
-			expect(new TextDecoder().decode(result)).toBe('this is a text that will be send as binary data');
+			const result: NaniumBuffer = await new TestGetBinaryRequest().execute();
+			expect(new TextDecoder().decode(await result.asUint8Array())).toBe('this is a text that will be send as binary data');
 		});
 
 		it('execute service with Binary (NaniumBuffer) response', async () => {
@@ -120,15 +120,8 @@ describe('host services via http \n', function (): void {
 				});
 			});
 			expect(bufferPieces.length, 'length of result list should be correct').toBe(3);
-			let fullLength: number = 0;
-			bufferPieces.forEach(b => fullLength += b.byteLength);
-			const fullBuffer: Uint8Array = new Uint8Array(fullLength);
-			let currentIndex: number = 0;
-			bufferPieces.forEach(b => {
-				fullBuffer.set(new Uint8Array(b), currentIndex);
-				currentIndex += b.byteLength;
-			});
-			const float32Array = new Float32Array(fullBuffer.buffer);
+			const fullBuffer: NaniumBuffer = new NaniumBuffer(bufferPieces);
+			const float32Array = await fullBuffer.as(Float32Array);
 			expect(float32Array[0]).toBe(1);
 			expect(float32Array[1]).toBe(2);
 			expect(float32Array[4]).toBe(5);

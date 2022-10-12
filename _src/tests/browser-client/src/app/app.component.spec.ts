@@ -75,7 +75,7 @@ describe('basic browser client tests', () => {
 
 		it('execute service with Binary (ArrayBuffer) response', async () => {
 			const result = await new TestGetBinaryRequest().execute();
-			expect(new TextDecoder().decode(result)).toBe('this is a text that will be send as binary data');
+			expect(await result.asString()).toBe('this is a text that will be send as binary data');
 		});
 
 		it('execute service with Binary (NaniumBuffer) response', async () => {
@@ -117,15 +117,8 @@ describe('basic browser client tests', () => {
 				});
 			});
 			expect(bufferPieces.length).withContext('length of result list should be correct').toBe(3);
-			let fullLength: number = 0;
-			bufferPieces.forEach(b => fullLength += b.byteLength);
-			const fullBuffer: Uint8Array = new Uint8Array(fullLength);
-			let currentIndex: number = 0;
-			bufferPieces.forEach(b => {
-				fullBuffer.set(new Uint8Array(b), currentIndex);
-				currentIndex += b.byteLength;
-			});
-			const float32Array = new Float32Array(fullBuffer.buffer);
+			const fullBuffer: NaniumBuffer = new NaniumBuffer(bufferPieces);
+			const float32Array = await fullBuffer.as(Float32Array);
 			expect(float32Array[0]).toBe(1);
 			expect(float32Array[1]).toBe(2);
 			expect(float32Array[4]).toBe(5);
@@ -229,8 +222,23 @@ describe('basic browser client tests', () => {
 				const buf = new NaniumBuffer([arrayBuffer]);
 				expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abc');
 			});
+
+			it('asUInt8Array with a single Blob', async function (): Promise<void> {
+				const buf = new NaniumBuffer([blob]);
+				expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('def');
+			});
 		});
 
+		describe('as())', function (): void {
+			it('as(Buffer) with different types in constructor \n', async function (): Promise<void> {
+				const buf = new NaniumBuffer([
+					arrayBuffer, blob, str, uint8Array
+				]);
+				const b = await buf.as(Blob);
+				expect(b instanceof Blob).toBeTruthy();
+				expect(new TextDecoder().decode(new Uint8Array(await b.arrayBuffer()))).toBe('abcdefgh😄jkl');
+			});
+		});
 	});
 });
 

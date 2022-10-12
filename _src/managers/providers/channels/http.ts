@@ -149,16 +149,9 @@ export class NaniumHttpChannel implements Channel {
 				next: async (value: any): Promise<void> => {
 					if (
 						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
-						serviceRepository[serviceName].Request[responseTypeSymbol].name === NaniumBuffer.name
+						serviceRepository[serviceName].Request[responseTypeSymbol]?.name === NaniumBuffer.name
 					) {
-						if (value instanceof Buffer || value instanceof Uint8Array) {
-							res.write(value);
-						}
-						if (value?.constructor?.name === NaniumBuffer.name) {
-							res.write(await value.asUint8Array());
-						} else {
-							res.write(new Uint8Array(value instanceof ArrayBuffer ? value : value.buffer));
-						}
+						res.write(await NaniumBuffer.as(Uint8Array, value));
 					} else {
 						res.write(config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
 					}
@@ -183,14 +176,7 @@ export class NaniumHttpChannel implements Channel {
 						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
 						serviceRepository[serviceName].Request[responseTypeSymbol]?.name === NaniumBuffer.name
 					) {
-						if (result instanceof Buffer || result instanceof Uint8Array) {
-							res.write(result);
-						}
-						if (result.constructor.name === NaniumBuffer.name) {
-							res.write(await result.asUint8Array());
-						} else {
-							res.write(new Uint8Array(result instanceof ArrayBuffer ? result : result.buffer));
-						}
+						res.write(await NaniumBuffer.as(Uint8Array, result));
 					} else {
 						res.write(config.serializer.serialize(result));
 					}
@@ -410,7 +396,7 @@ export class MultipartParser {
 		if (this.state === 'searchingBoundary' && this.tmp.length < this.boundary.length) {
 			return;
 		}
-		buf = Buffer.from(await this.tmp.asUint8Array());
+		buf = Buffer.from((await this.tmp.asUint8Array()).buffer);
 		while (i < buf.length) {
 			if (this.state === 'searchingBoundary') {
 				if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) {
@@ -474,7 +460,7 @@ export class MultipartParser {
 		const deserialized = this.channelConfig.serializer.deserialize(txt);
 		const request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
 		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
-			if (typeInfo?.ctor?.name === NaniumBuffer.name) {
+			if (typeInfo?.ctor?.name === NaniumBuffer.name || parent[name[name.length - 1]]?.constructor?.name === NaniumBuffer.name) {
 				parent[name[name.length - 1]].write(this.binaries[parent[name[name.length - 1]].id]);
 			}
 		});

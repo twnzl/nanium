@@ -1,10 +1,11 @@
 import { RequestType } from '../../../objects';
 import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 
 @RequestType({
-	responseType: ArrayBuffer,
+	responseType: NaniumBuffer,
 	scope: 'public'
 })
-export class TestGetBinaryRequest extends SimpleServiceRequestBase<void, ArrayBuffer> {
+export class TestGetBinaryRequest extends SimpleServiceRequestBase<void, NaniumBuffer> {
 	static serviceName: string = 'NaniumTest:test/getBinary';
 }

@@ -51,6 +51,52 @@ describe('NaniumBuffer', function (): void {
 			const buf = new NaniumBuffer([arrayBuffer]);
 			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abc');
 		});
+
+		it('asUInt8Array with a single Buffer', async function (): Promise<void> {
+			const buf = new NaniumBuffer([buffer]);
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('def');
+		});
+
+		it('asUInt8Array with a single String', async function (): Promise<void> {
+			const buf = new NaniumBuffer([str]);
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('gh😄');
+		});
+
+		it('asUInt8Array with different types in constructor and additional NaniumBuffer written\n', async function (): Promise<void> {
+			const buf = new NaniumBuffer([
+				arrayBuffer, buffer, str, uint8Array, float32Array, buffer32,
+			]);
+			buf.write(new NaniumBuffer([
+				arrayBuffer, buffer, str, uint8Array, float32Array, buffer32,
+			]));
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefgh😄jklmnopqrstabcdefgh😄jklmnopqrst');
+		});
+
+		it('asUInt8Array with different types in constructor and same NaniumBuffer written again to itself\n', async function (): Promise<void> {
+			const buf = new NaniumBuffer([
+				arrayBuffer, buffer, str, uint8Array, float32Array, buffer32,
+			]);
+			buf.write(buf);
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefgh😄jklmnopqrstabcdefgh😄jklmnopqrst');
+		});
+	});
+
+	describe('as())', function (): void {
+		it('as(Buffer) with different types in constructor \n', async function (): Promise<void> {
+			const buf = new NaniumBuffer([
+				arrayBuffer, buffer, str, uint8Array, float32Array, buffer32
+			]);
+			const b = await buf.as(Buffer);
+			expect(b instanceof Buffer).toBeTruthy();
+			expect(new TextDecoder().decode(new Uint8Array(b, b.byteOffset, b.byteLength))).toBe('abcdefgh😄jklmnopqrst');
+		});
+
+		it('as(ArrayBuffer) with Buffer with smaller byteLength than the underlying ArrayBuffer \n', async function (): Promise<void> {
+			const b: Buffer = Buffer.from(new TextEncoder().encode('abcdefghijklmn').buffer, 5, 3);
+			const ab = await NaniumBuffer.as(ArrayBuffer, b);
+			expect(ab instanceof ArrayBuffer).toBeTruthy();
+			expect(new TextDecoder().decode(new Uint8Array(ab))).toBe('fgh');
+		});
 	});
 
 	it('clear & length=0', async function (): Promise<void> {
