@@ -1,14 +1,13 @@
 import { Type } from '../objects';
-import { NaniumSymbols } from './symbols';
 
 let uuidCounter: number = 0;
 
 export class NaniumBuffer {
 	@Type(String) id: string;
-	private static textEncoder: TextEncoder = new TextEncoder();
+	private static naniumBufferInternalValueSymbol: symbol = Symbol.for('__Nanium__BufferInternalValueSymbol__');
 
 	constructor(data?: DataSource | DataSource[], id?: string) {
-		this[NaniumSymbols.bufferInternalValueSymbol] = [];
+		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
 		this.id = id ?? Date.now() + '-' + Math.random().toFixed(20).substring(2) + (++uuidCounter);
 		if (data) {
 			if (Array.isArray(data)) {
@@ -23,9 +22,9 @@ export class NaniumBuffer {
 	}
 
 	get length(): number {
-		const lengths = this[NaniumSymbols.bufferInternalValueSymbol].map(part =>
+		const lengths = this[NaniumBuffer.naniumBufferInternalValueSymbol].map(part =>
 			part === undefined ? 0 : (
-				(typeof part === 'string') ? (NaniumBuffer.textEncoder.encode(part)).length : (
+				(typeof part === 'string') ? (new TextEncoder().encode(part)).length : (
 					(part as ArrayBuffer).byteLength ??
 					(part as any).length ??
 					(part as Blob).size
@@ -40,20 +39,20 @@ export class NaniumBuffer {
 	}
 
 	write(data: DataSource) {
-		if (data instanceof NaniumBuffer || data?.constructor?.name === NaniumBuffer.name) {
+		if (data?.constructor && data?.constructor['naniumBufferInternalValueSymbol']) {
 			let part: any;
-			const length = data[NaniumSymbols.bufferInternalValueSymbol].length;
+			const length = data[NaniumBuffer.naniumBufferInternalValueSymbol].length;
 			for (let i = 0; i < length; i++) {
-				part = data[NaniumSymbols.bufferInternalValueSymbol][i];
-				this[NaniumSymbols.bufferInternalValueSymbol].push(part);
+				part = data[NaniumBuffer.naniumBufferInternalValueSymbol][i];
+				this[NaniumBuffer.naniumBufferInternalValueSymbol].push(part);
 			}
 		} else {
-			this[NaniumSymbols.bufferInternalValueSymbol].push(data);
+			this[NaniumBuffer.naniumBufferInternalValueSymbol].push(data);
 		}
 	}
 
 	static async as<T>(targetType: new (first?: any, second?: any, third?: any) => T, data: DataSource): Promise<T> {
-		if (data.constructor.name === NaniumBuffer.name) {
+		if (data.constructor && data.constructor['naniumBufferInternalValueSymbol']) {
 			return (data as NaniumBuffer).as(targetType);
 		} else {
 			return new NaniumBuffer(data).as(targetType);
@@ -77,7 +76,7 @@ export class NaniumBuffer {
 	}
 
 	async asUint8Array(): Promise<Uint8Array> {
-		const internalValues = this[NaniumSymbols.bufferInternalValueSymbol];
+		const internalValues = this[NaniumBuffer.naniumBufferInternalValueSymbol];
 		// if there is only one buffer, we do not need to copy the data.
 		// For performance, we just wrap the original data with UInt8Array. But keep in mind that changing the original
 		// buffer changes the result of this function
@@ -109,7 +108,7 @@ export class NaniumBuffer {
 					result[j + i] = view[i];
 				}
 			} else if (typeof part === 'string') { // String
-				tmp = NaniumBuffer.textEncoder.encode(part);
+				tmp = new TextEncoder().encode(part);
 				for (i = 0; i < tmp.byteLength; ++i) {
 					result[j + i] = tmp[i];
 				}
@@ -148,12 +147,12 @@ export class NaniumBuffer {
 	}
 
 	clear() {
-		this[NaniumSymbols.bufferInternalValueSymbol] = [];
+		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
 	}
 
 	async asString(): Promise<string> {
 		const result: string[] = [];
-		for (const part of this[NaniumSymbols.bufferInternalValueSymbol]) {
+		for (const part of this[NaniumBuffer.naniumBufferInternalValueSymbol]) {
 			if (typeof part['text'] === 'function') { // Blob
 				result.push(await part['text']());
 			} else if (typeof part === 'string') { // String

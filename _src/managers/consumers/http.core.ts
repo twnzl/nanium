@@ -40,7 +40,10 @@ export class HttpCore {
 		const buffers: NaniumBuffer[] = [];
 		let body: string | ArrayBuffer | FormData = this.config.serializer.serialize({ serviceName, request });
 		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
-			if (typeInfo?.ctor?.name === NaniumBuffer.name || parent[name[name.length - 1]]?.constructor.name === NaniumBuffer.name) {
+			if (
+				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
+				(parent[name[name.length - 1]]?.constructor && parent[name[name.length - 1]]?.constructor['naniumBufferInternalValueSymbol'])
+			) {
 				const buffer = parent[name[name.length - 1]];
 				if (buffer) {
 					buffers.push(buffer);
@@ -70,9 +73,9 @@ export class HttpCore {
 				return data;
 			} else if (
 				request.constructor[responseTypeSymbol] === ArrayBuffer ||
-				request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name
+				(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
 			) {
-				return data.constructor.name === NaniumBuffer.name ? data : new NaniumBuffer(data);
+				return data.constructor['naniumBufferInternalValueSymbol'] ? data : new NaniumBuffer(data);
 			} else {
 				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),

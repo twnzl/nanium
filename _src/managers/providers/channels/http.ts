@@ -149,7 +149,7 @@ export class NaniumHttpChannel implements Channel {
 				next: async (value: any): Promise<void> => {
 					if (
 						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
-						serviceRepository[serviceName].Request[responseTypeSymbol]?.name === NaniumBuffer.name
+						(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
 					) {
 						res.write(await NaniumBuffer.as(Uint8Array, value));
 					} else {
@@ -174,7 +174,7 @@ export class NaniumHttpChannel implements Channel {
 				if (result !== undefined && result !== null) {
 					if (
 						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
-						serviceRepository[serviceName].Request[responseTypeSymbol]?.name === NaniumBuffer.name
+						(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
 					) {
 						res.write(await NaniumBuffer.as(Uint8Array, result));
 					} else {
@@ -472,7 +472,10 @@ export class MultipartParser {
 		const deserialized = this.channelConfig.serializer.deserialize(txt);
 		const request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
 		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
-			if (typeInfo?.ctor?.name === NaniumBuffer.name || parent[name[name.length - 1]]?.constructor?.name === NaniumBuffer.name) {
+			if (
+				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
+				(parent[name[name.length - 1]]?.constructor && parent[name[name.length - 1]]?.constructor['naniumBufferInternalValueSymbol'])
+			) {
 				parent[name[name.length - 1]].write(this.binaries[parent[name[name.length - 1]].id]);
 			}
 		});

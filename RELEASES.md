@@ -1,3 +1,7 @@
+# 1.19.2
+
+- fix problem with NaniumBuffers in obfuscated code
+
 # 1.19.1
 
 - make parsing of requests with NaniumBuffers save in case next portion of data from consumer arrives before the last

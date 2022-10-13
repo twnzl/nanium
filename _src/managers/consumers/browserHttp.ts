@@ -124,9 +124,9 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 										try {
 											if (
 												request.constructor[responseTypeSymbol] === ArrayBuffer ||
-												request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name
+												(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
 											) {
-												observer.next(value.constructor.name === NaniumBuffer.name ? value : new NaniumBuffer(value));
+												observer.next(value.constructor['naniumBufferInternalValueSymbol'] ? value : new NaniumBuffer(value));
 											} else {
 												deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 												if (deserialized.data?.length) {
@@ -210,6 +210,56 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				.finally(() => {
 					this.activeRequests = this.activeRequests.filter(r => r !== abortController);
 				});
+		});
+	}
+
+	async httpRequest_old(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any): Promise<ArrayBuffer> {
+		return new Promise<ArrayBuffer>((resolve: Function, reject: Function) => {
+			let xhr: XMLHttpRequest;
+			try {
+				xhr = new XMLHttpRequest();
+				this.activeRequests.push(xhr);
+				xhr.onabort = (e) => {
+					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
+					reject(e);
+				};
+				xhr.onerror = (e) => {
+					this.activeRequests = this.activeRequests.filter(r => r !== xhr);
+					reject(e);
+				};
+				xhr.onload = async (): Promise<void> => {
+					if (xhr.status === 200) {
+						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
+						if (xhr.response !== undefined && xhr.response !== '') {
+							resolve(xhr.response);
+						} else {
+							resolve();
+						}
+					} else {
+						this.activeRequests = this.activeRequests.filter(r => r !== xhr);
+						if (xhr.response !== undefined && xhr.response !== '') {
+							reject(xhr.response);
+						} else {
+							reject();
+						}
+					}
+				};
+				xhr.open(method, url);
+				for (const key in headers ?? {}) {
+					if (headers.hasOwnProperty(key)) {
+						xhr.setRequestHeader(key, headers[key]);
+					}
+				}
+				xhr.setRequestHeader('Content-Type', this.config.serializer.mimeType);
+				if (method === 'GET') {
+					xhr.send();
+				} else {
+					xhr.send(body);
+				}
+			} catch (e) {
+				this.activeRequests = this.activeRequests.filter(r => r !== xhr);
+				reject(e);
+			}
 		});
 	}
 }

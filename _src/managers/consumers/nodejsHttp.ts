@@ -173,9 +173,9 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 							if (chunk.length > 0) {
 								if (
 									request.constructor[responseTypeSymbol] === ArrayBuffer ||
-									request.constructor[responseTypeSymbol]?.name === NaniumBuffer.name
+									(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
 								) {
-									observer.next(chunk.constructor.name === NaniumBuffer.name ? chunk : new NaniumBuffer(chunk));
+									observer.next(chunk.constructor['naniumBufferInternalValueSymbol'] ? chunk : new NaniumBuffer(chunk));
 								} else {
 									deserialized = this.config.serializer.deserializePartial(chunk.toString(), restFromLastTime);
 									if (deserialized.data?.length) {

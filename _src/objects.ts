@@ -1,7 +1,6 @@
 import { ExecutionScope } from './interfaces/executionScope';
 import { ServiceRequestInterceptor } from './interfaces/serviceRequestInterceptor';
 import { Nanium } from './core';
-import { NaniumSymbols } from './interfaces/symbols';
 
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
 export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');
@@ -10,7 +9,6 @@ export const scopeProperty: string = 'scope';
 export const skipInterceptorsProperty: string = 'skipInterceptors';
 
 export class NaniumObject<T> {
-	static NaniumBufferInternalValueSymbol: symbol = Symbol.for('__Nanium__BufferInternalValueSymbol__');
 	static strictDefault: boolean = false;
 
 	constructor(data?: Partial<T>, genericTypes?: NaniumGenericTypeInfo, strict?: boolean) {
@@ -67,13 +65,13 @@ export class NaniumObject<T> {
 		}
 
 		// object
-		if (constructor.name === 'NaniumBuffer') {
+		if (constructor['naniumBufferInternalValueSymbol']) {
 			// special case NaniumBuffer, if we copy from a real instance of NaniumBuffer the internal values must stay
-			result = new constructor(plain[NaniumSymbols.bufferInternalValueSymbol]);
+			result = new constructor(plain[constructor['naniumBufferInternalValueSymbol']]);
 		} else {
 			result = result ?? new constructor();
 		}
-		
+
 		const propertyInfo: NaniumPropertyInfo = constructor[propertyInfoSymbol];
 		let pi: NaniumPropertyInfoCore;
 		let c: ConstructorOrGenericTypeId;
