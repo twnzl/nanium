@@ -1,3 +1,9 @@
+# 1.19.1
+
+- make parsing of requests with NaniumBuffers save in case next portion of data from consumer arrives before the last
+  portion has been parsed.
+- fix handling of requests with NaniumBuffers, in case buffer properties are undefined
+
 # 1.19.0
 
 - class NaniumBuffer

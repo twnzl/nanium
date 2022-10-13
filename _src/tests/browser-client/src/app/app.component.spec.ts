@@ -177,6 +177,18 @@ describe('basic browser client tests', () => {
 			expect(response.text1).toBe('123*');
 			expect(response.text2).toBe('456*');
 		});
+
+		it('--> NaniumBuffers in request but one is undefined \n', async function (): Promise<void> {
+			const request = new TestBufferRequest({
+				id: '1',
+				buffer1: new NaniumBuffer('123'),
+				buffer2: undefined
+			});
+			const response = await request.execute();
+			expect(response.id).toBe('1');
+			expect(response.text1).toBe('123*');
+			expect(response.text2).toBeUndefined('');
+		});
 	});
 
 	describe('NaniumBuffer \n', function (): void {

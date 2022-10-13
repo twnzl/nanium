@@ -84,4 +84,14 @@ describe('NaniumChannelHttp \n', function (): void {
 		await parser.parsePart(requestBody.slice(482));
 		await coreTest();
 	});
+
+	it('--> parallel calls to parsePart \n', async function (): Promise<void> {
+		await new Promise<void>((resolve: Function) => {
+			parser.parsePart(requestBody.slice(0, 482)).then();
+			parser.parsePart(requestBody.slice(482)).then(async () => {
+				await coreTest();
+				resolve();
+			});
+		});
+	});
 });

@@ -42,7 +42,9 @@ export class HttpCore {
 		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
 			if (typeInfo?.ctor?.name === NaniumBuffer.name || parent[name[name.length - 1]]?.constructor.name === NaniumBuffer.name) {
 				const buffer = parent[name[name.length - 1]];
-				buffers.push(buffer);
+				if (buffer) {
+					buffers.push(buffer);
+				}
 			}
 		});
 		try {

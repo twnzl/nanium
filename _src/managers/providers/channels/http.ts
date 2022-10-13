@@ -374,6 +374,7 @@ export class MultipartParser {
 	private currentBinary: NaniumBuffer;
 	private nameStart: number;
 	private fieldName: string;
+	private dataPortions: Buffer[] = [];
 
 	private tmp: NaniumBuffer = new NaniumBuffer();
 	private binaries: { [id: string]: NaniumBuffer } = {};
@@ -389,69 +390,81 @@ export class MultipartParser {
 	}
 
 	async parsePart(data: Buffer) {
-		this.tmp.write(data);
-		let buf: Buffer;
-		let i = 0;
-		let valueStart: number;
-		if (this.state === 'searchingBoundary' && this.tmp.length < this.boundary.length) {
+		// this.dataPortions prevents parallel parsing of multiple data portions if e.g. the second portion arrives
+		// and parsePart is called while the first call of parsePart is waiting of some async operation but is not yet ready
+		this.dataPortions.push(data);
+		if (this.dataPortions.length > 1) {
 			return;
 		}
-		buf = Buffer.from((await this.tmp.asUint8Array()).buffer);
-		while (i < buf.length) {
-			if (this.state === 'searchingBoundary') {
-				if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) {
-					i += this.boundary.length;
-					this.state = 'readingFieldHeader';
-					this.boundary = Buffer.concat([MultipartParser.fieldValueEnd, this.boundary]);
-				} else {
-					i++;
-				}
-			} else if (this.state === 'readingFieldHeader') {
-				if (buf.slice(i, i + 4).compare(MultipartParser.fieldValueStart) === 0) {
-					i += 4;
-					if (this.fieldName === 'request') {
-						this.requestBuf = new NaniumBuffer();
-						this.state = this.state = 'readingRequest';
+
+		while (this.dataPortions.length > 0) {
+			data = this.dataPortions[0];
+			this.tmp.write(data);
+			let buf: Buffer;
+			let i = 0;
+			let valueStart: number;
+			if (this.state === 'searchingBoundary' && this.tmp.length < this.boundary.length) {
+				return;
+			}
+			// todo: buf = await this.tmp.as(Buffer);
+			buf = Buffer.from((await this.tmp.asUint8Array()).buffer);
+			while (i < buf.length) {
+				if (this.state === 'searchingBoundary') {
+					if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) {
+						i += this.boundary.length;
+						this.state = 'readingFieldHeader';
+						this.boundary = Buffer.concat([MultipartParser.fieldValueEnd, this.boundary]);
 					} else {
-						this.state = 'readingBinary';
-						this.currentBinary = new NaniumBuffer();
-						this.binaries[this.fieldName] = this.currentBinary;
+						i++;
 					}
-					this.fieldName = undefined;
-				} else if (buf[i] === MultipartParser.space && buf.slice(i, i + 7).toString() === ' name="') { // name (names including " are currently nor allowed)
-					this.nameStart = i + 7;
-					i += 7;
-				} else if (this.nameStart && buf[i] === MultipartParser.quote) { // end of name
-					this.fieldName = buf.slice(this.nameStart, i).toString();
-					this.nameStart = undefined;
-					i++;
-				} else {
-					i++;
-				}
-			} else if (this.state === 'readingRequest' || this.state === 'readingBinary') {
-				valueStart = valueStart ?? i;
-				if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) { // next boundary
-					if (this.state === 'readingRequest') {
-						this.requestBuf.write(buf.slice(valueStart, i));
+				} else if (this.state === 'readingFieldHeader') {
+					if (buf.slice(i, i + 4).compare(MultipartParser.fieldValueStart) === 0) {
+						i += 4;
+						if (this.fieldName === 'request') {
+							this.requestBuf = new NaniumBuffer();
+							this.state = this.state = 'readingRequest';
+						} else {
+							this.state = 'readingBinary';
+							this.currentBinary = new NaniumBuffer();
+							this.binaries[this.fieldName] = this.currentBinary;
+						}
+						this.fieldName = undefined;
+					} else if (buf[i] === MultipartParser.space && buf.slice(i, i + 7).toString() === ' name="') { // name (names including " are currently nor allowed)
+						this.nameStart = i + 7;
+						i += 7;
+					} else if (this.nameStart && buf[i] === MultipartParser.quote) { // end of name
+						this.fieldName = buf.slice(this.nameStart, i).toString();
+						this.nameStart = undefined;
+						i++;
 					} else {
-						this.currentBinary.write(buf.slice(valueStart, i));
+						i++;
 					}
-					valueStart = undefined;
-					i += this.boundary.length;
-					this.state = 'readingFieldHeader';
-				} else {
-					i++;
+				} else if (this.state === 'readingRequest' || this.state === 'readingBinary') {
+					valueStart = valueStart ?? i;
+					if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) { // next boundary
+						if (this.state === 'readingRequest') {
+							this.requestBuf.write(buf.slice(valueStart, i));
+						} else {
+							this.currentBinary.write(buf.slice(valueStart, i));
+						}
+						valueStart = undefined;
+						i += this.boundary.length;
+						this.state = 'readingFieldHeader';
+					} else {
+						i++;
+					}
 				}
 			}
-		}
-		if (this.nameStart) {
-			this.tmp = new NaniumBuffer(buf.slice(this.nameStart));
-		}
-		if (this.state === 'readingRequest' && valueStart) {
-			this.requestBuf.write(buf.slice(valueStart));
-		}
-		if (this.state === 'readingBinary' && valueStart) {
-			this.currentBinary.write(buf.slice(valueStart));
+			if (this.nameStart) {
+				this.tmp = new NaniumBuffer(buf.slice(this.nameStart));
+			}
+			if (this.state === 'readingRequest' && valueStart) {
+				this.requestBuf.write(buf.slice(valueStart));
+			}
+			if (this.state === 'readingBinary' && valueStart) {
+				this.currentBinary.write(buf.slice(valueStart));
+			}
+			this.dataPortions.shift(); // remove current data portion, when all of it is parsed, so that the next portions can start
 		}
 	}
 
