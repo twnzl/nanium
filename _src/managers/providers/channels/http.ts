@@ -406,8 +406,7 @@ export class MultipartParser {
 			if (this.state === 'searchingBoundary' && this.tmp.length < this.boundary.length) {
 				return;
 			}
-			// todo: buf = await this.tmp.as(Buffer);
-			buf = Buffer.from((await this.tmp.asUint8Array()).buffer);
+			buf = await this.tmp.as(Buffer);
 			while (i < buf.length) {
 				if (this.state === 'searchingBoundary') {
 					if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) {

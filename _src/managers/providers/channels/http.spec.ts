@@ -86,12 +86,10 @@ describe('NaniumChannelHttp \n', function (): void {
 	});
 
 	it('--> parallel calls to parsePart \n', async function (): Promise<void> {
-		await new Promise<void>((resolve: Function) => {
-			parser.parsePart(requestBody.slice(0, 482)).then();
-			parser.parsePart(requestBody.slice(482)).then(async () => {
-				await coreTest();
-				resolve();
-			});
-		});
+		await Promise.all([
+			parser.parsePart(requestBody.slice(0, 482)),
+			parser.parsePart(requestBody.slice(482))
+		]);
+		await coreTest();
 	});
 });

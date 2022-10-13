@@ -69,7 +69,9 @@ export class NaniumBuffer {
 			return new targetType([data]);
 		} else if (targetType.name === 'String') {
 			return new TextDecoder().decode(data) as unknown as T;
-		} else { // Buffer or any typed Array
+		} else if (targetType.name === 'Buffer') {
+			return targetType['from'](data.buffer);
+		} else { // any typed Array
 			return new targetType(data.buffer, data.byteOffset, data.byteLength / targetType['BYTES_PER_ELEMENT'] ?? 1);
 		}
 	}
