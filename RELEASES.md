@@ -1,3 +1,13 @@
+# 1.19.3
+
+- Consumer request interceptor behaviour changed. If the interceptor returns undefined or the same request instance
+  execution will continue, but if something different is returned it is treated as the response for the request.
+
+## breaking changes
+
+This may be a breaking change if any of your interceptores returns something different from undefined or the request
+instance. But this should normally not be the case, because until now the return value of an interceptor had no effect.
+
 # 1.19.2
 
 - fix problem with NaniumBuffers in obfuscated code
