@@ -4,6 +4,9 @@
   execution will continue, but if something different is returned it is treated as the response for the request.
 - added possibility to define response interceptors for NaniumConsumerBrowserHttp. If the interceptor returns something
   different from undefined or the original response instance, the returned value will replace the original response.
+- no warnings for dictionary properties. If a property is marked with @Type(Object, SomeType), it means that the object
+  can have any properties but all must be of type SomeType. This is a typical dictionary and now nanium will no longer
+  display warnings about unknown properties for the keys of such Dictionaries.
 
 ## breaking changes
 

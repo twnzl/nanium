@@ -115,7 +115,9 @@ export class NaniumObject<T> {
 					} else {
 						if (!strict) {
 							result[property] = plain[property];
-							Nanium.logger.warn(`NaniumObject: no type given for property ${property} of class ${constructor.name}`);
+							if (constructor.name !== 'Object') {
+								Nanium.logger.warn(`NaniumObject: no type given for property ${property} of class ${constructor.name}`);
+							}
 						}
 					}
 				}
