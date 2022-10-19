@@ -16,6 +16,7 @@ import { TestBufferRequest } from '../../../services/test/buffer.contract';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { TestGetStreamedNaniumBufferRequest } from '../../../services/test/getStreamedNaniumBuffer.contract';
 import { TestGetNaniumBufferRequest } from '../../../services/test/getNaniumBuffer.contract';
+import { TestClientResponseInterceptor } from '../../../interceptors/client/test.response.interceptor';
 
 function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 	const serializer = new NaniumJsonSerializer();
@@ -25,6 +26,7 @@ function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 		apiEventUrl: baseUrl + '/events',
 		serializer: serializer,
 		requestInterceptors: [TestClientRequestInterceptor],
+		responseInterceptors: [TestClientResponseInterceptor],
 		handleError: async (err: any): Promise<any> => {
 			throw { handleError: err };
 		}
@@ -56,6 +58,26 @@ describe('basic browser client tests', () => {
 			const anonymousRequest: AnonymousRequest = new AnonymousRequest(undefined, {});
 			const anonymousResponse: ServiceResponseBase<string> = await anonymousRequest.execute();
 			expect(anonymousResponse.body).withContext('output should be correct').toBe(':-)');
+		});
+
+		it('--> test response interceptor\n', async function (): Promise<void> {
+			let response: ServiceResponseBase<TestGetResponseBody>;
+			TestClientResponseInterceptor.responseCnt = 0;
+			response = await new TestGetRequest({ input1: '111' }).execute();
+			expect(response?.body?.output1).withContext('output1 should be the original result from the service executor').toBe('111 :-)');
+			expect(TestClientResponseInterceptor.responseCnt).toBe(1);
+			response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnDifferentResponse' }).execute();
+			expect(response?.body?.output1).withContext('output1 should be the result that the interceptor returned').toBe('ResultFromInterceptor');
+			expect(TestClientResponseInterceptor.responseCnt).toBe(2);
+			response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnNull' }).execute();
+			expect(response).withContext('response should be null because interceptor returned null').toBeNull();
+			expect(TestClientResponseInterceptor.responseCnt).toBe(3);
+			response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnUndefined' }).execute();
+			expect(response.body.output1).withContext('output1 should be the original result from the service executor, because interceptor returned undefined').toBe('TestResponseInterceptor:ReturnUndefined :-)');
+			expect(TestClientResponseInterceptor.responseCnt).toBe(4);
+			response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnSameResponseInstance' }).execute();
+			expect(response.body.output1).withContext('output1 should be the original result from the service executor, because interceptor returned original response instance').toBe('TestResponseInterceptor:ReturnSameResponseInstance :-)');
+			expect(TestClientResponseInterceptor.responseCnt).toBe(5);
 		});
 
 		it('execute with error result (handling by errorHandle)', async () => {

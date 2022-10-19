@@ -73,14 +73,28 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
 				// if an interceptor returns an object other than the request it is a result and the execution shall be
 				// finished with this result
-				if (result && result !== request) {
+				if (result !== undefined && result !== request) {
 					return result;
 				}
 			}
 		}
 
 		// execute the request
-		return await this.httpCore.sendRequest(serviceName, request);
+		const response = await this.httpCore.sendRequest(serviceName, request);
+
+		// execute response interceptors
+		if (this.config.responseInterceptors?.length) {
+			let responseFromInterceptor: any;
+			for (const interceptor of this.config.responseInterceptors) {
+				responseFromInterceptor = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, response);
+				// if an interceptor returns an object other than the original response instance, the returned value will replace the original response;
+				if (responseFromInterceptor !== undefined && responseFromInterceptor !== response) {
+					return responseFromInterceptor;
+				}
+			}
+		}
+
+		return response;
 	}
 
 	stream(serviceName: string, request: any): Observable<any> {

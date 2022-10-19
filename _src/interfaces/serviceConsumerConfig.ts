@@ -2,14 +2,22 @@ import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
 import { NaniumSerializer } from './serializer';
 import { EventSubscriptionSendInterceptor } from './eventSubscriptionInterceptor';
 import { ConstructorType } from '../objects';
+import { ServiceResponseInterceptor } from './serviceResponseInterceptor';
 
 export interface ServiceConsumerConfig {
 	/**
-	 * request receive interceptors
+	 * request interceptors
 	 * code that runs before a request will be sent to the provider
 	 * (e.g. to add authorization information)
 	 */
 	requestInterceptors?: (ServiceRequestInterceptor<any> | ConstructorType<ServiceRequestInterceptor<any>>)[];
+
+	/**
+	 * response receive interceptors
+	 * code that runs after a response has arrived from the provider
+	 * (e.g. to update an object cache or modify the response)
+	 */
+	responseInterceptors?: (ServiceResponseInterceptor<any, any> | ConstructorType<ServiceResponseInterceptor<any, any>>)[];
 
 	/**
 	 * event Submission interceptors
