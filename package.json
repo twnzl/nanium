@@ -1,6 +1,6 @@
 {
   "name": "nanium",
-  "version": "1.19.3",
+  "version": "1.19.4",
   "description": "nanoservice based fullstack software architecture framework",
   "author": "twnzl",
   "license": "MIT",
@@ -53,7 +53,9 @@
     "queues/**/*.ts",
     "tools/**/*.js",
     "tools/**/*.ts",
-    "tools/**/*.template"
+    "tools/**/*.template",
+    "!**/*.spec.js",
+    "!**/*.spec.d.ts"
   ],
   "dependencies": {
     "recursive-readdir": "^2.2.2",

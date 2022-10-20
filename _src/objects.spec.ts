@@ -1,7 +1,7 @@
-import { NaniumObject, Type } from '../objects';
-import { Nanium } from '../core';
-import { TestLogger } from './testLogger';
-import { LogLevel } from '../interfaces/logger';
+import { NaniumObject, Type } from './objects';
+import { Nanium } from './core';
+import { TestLogger } from './tests/testLogger';
+import { LogLevel } from './interfaces/logger';
 
 class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(Number) aNumber?: number;
