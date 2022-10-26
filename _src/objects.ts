@@ -91,7 +91,9 @@ export class NaniumObject<T> {
 						}
 						continue;
 					}
-					if (c === Array) {
+					if (c === Object && !pi.localGenerics) { // @Type(Object) - takes the whole object as it is, even in strict mode, because it is explicitly marked as Object/any
+						result[property] = plain[property];
+					} else if (c === Array) {
 						if (!Array.isArray(plain[property])) {
 							result[property] = [this.initObjectCore(plain[property], pi.localGenerics as ConstructorType, globalGenericTypes, pi.localGenerics, strict)];
 						} else {

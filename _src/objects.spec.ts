@@ -19,6 +19,8 @@ class MyTestClass2 extends NaniumObject<MyTestClass2> {
 	@Type(String) aString?: string;
 	@Type(Boolean) aBoolean?: boolean;
 	@Type(Date) aDate?: Date;
+	@Type(Object) anObject?: any;
+	@Type(Object, MyTestClass2) aDictionary?: { [key: string]: MyTestClass2 };
 }
 
 describe('nanium objects', function (): void {
@@ -83,6 +85,18 @@ describe('nanium objects', function (): void {
 			expect(obj.aString).toBe('a');
 			expect(obj['aStranger']).toBeUndefined();
 			expect(Object.keys(obj).length).toBe(1);
+		});
+
+		it('--> properties of type Object and typed Dictionaries \n', async function (): Promise<void> {
+			const obj: MyTestClass2 = new MyTestClass2({
+				aNumber: 1,
+				anObject: { a: { aa: 1 } },
+				aDictionary: { b: { aNumber: 1, anyProp: 2 } } as any
+			}, undefined, true);
+			expect(obj.aNumber).toBe(1);
+			expect(obj.anObject.a.aa).toBe(1);
+			expect(obj.aDictionary.b.aNumber).toBe(1);
+			expect(obj.aDictionary.b['anyProp']).toBeUndefined();
 		});
 	});
 

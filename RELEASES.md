@@ -1,3 +1,9 @@
+# 1.19.4
+
+- exclude all tests from packed package
+- '@Type(Object)' now makes NaniumObjects methods to take the whole object as it is, even in strict mode, because it is
+  explicitly marked as type Object/any.
+
 # 1.19.3
 
 - Consumer request interceptor behaviour changed. If the interceptor returns undefined or the same request instance,
