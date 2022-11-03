@@ -18,19 +18,34 @@ export class NaniumBuffer {
 				this.write(data as DataSource);
 			}
 		}
+
 		return this;
+
+		// return proxy to implement the indexer Property
+		// let self = this;
+		// return new Proxy(this, {
+		// 	get(target, prop) {
+		// 		// @ts-ignore
+		// 		if (Number(prop) == prop && !(prop in target)) {
+		// 			...
+		// 		}
+		// 		return target[prop];
+		// 	}
+		// });
+	}
+
+
+	private getLength(part): number {
+		return part === undefined ? 0 : (
+			part.buffer?.length ??
+			(part as ArrayBuffer).byteLength ??
+			(part as any).length ??
+			(part as Blob).size
+		);
 	}
 
 	get length(): number {
-		const lengths = this[NaniumBuffer.naniumBufferInternalValueSymbol].map(part =>
-			part === undefined ? 0 : (
-				(typeof part === 'string') ? (new TextEncoder().encode(part)).length : (
-					(part as ArrayBuffer).byteLength ??
-					(part as any).length ??
-					(part as Blob).size
-				)
-			)
-		);
+		const lengths = this[NaniumBuffer.naniumBufferInternalValueSymbol].map(part => this.getLength(part));
 		if (lengths?.length) {
 			return lengths.reduce((whole, next) => whole + next);
 		} else {
@@ -66,8 +81,6 @@ export class NaniumBuffer {
 		const data = await this.asUint8Array();
 		if (targetType.name === 'Blob') {
 			return new targetType([data]);
-		} else if (targetType.name === 'String') {
-			return new TextDecoder().decode(data) as unknown as T;
 		} else if (targetType.name === 'Buffer') {
 			return targetType['from'](data.buffer);
 		} else { // any typed Array
@@ -86,8 +99,6 @@ export class NaniumBuffer {
 				return new Uint8Array(data);
 			} else if (data?.constructor?.name === 'Blob') {
 				return new Uint8Array(await data.arrayBuffer(), 0, data.size);
-			} else if (data?.constructor?.name === 'String') {
-				return new TextEncoder().encode(data);
 			} else { // Buffer or any typed Array
 				return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 			}
@@ -95,7 +106,6 @@ export class NaniumBuffer {
 
 		// if there are multiple parts create a new buffer and copy data of all parts into it
 		const result = new Uint8Array(this.length);
-		let tmp: Uint8Array;
 		let i: number = 0;
 		let j: number = 0;
 		for (const part of internalValues) {
@@ -106,11 +116,6 @@ export class NaniumBuffer {
 				}
 				for (i = 0; i < (view).length; ++i) {
 					result[j + i] = view[i];
-				}
-			} else if (typeof part === 'string') { // String
-				tmp = new TextEncoder().encode(part);
-				for (i = 0; i < tmp.byteLength; ++i) {
-					result[j + i] = tmp[i];
 				}
 			} else if (part['buffer']) { // Buffer & UInt8Array & ...
 				if (part.byteLength !== part.length) {
@@ -163,6 +168,97 @@ export class NaniumBuffer {
 		}
 		return result.join('');
 	}
+
+	slice(start: number, end?: number): NaniumBuffer {
+		const result = new NaniumBuffer();
+		const data = this[NaniumBuffer.naniumBufferInternalValueSymbol];
+		if (end === undefined) {
+			end = this.length;
+		} else if (end < 0) {
+			end = this.length + end;
+		}
+		let i: number = 0;
+		let l: number;
+		while (true) {
+			l = this.getLength(data[i]);
+			if (start < l) {
+				break;
+			}
+			start -= l;
+			end -= l;
+			i++;
+		}
+
+		// add rest of current part zu result
+		if (end > l && start > 0) {
+			if (data[i].BYTES_PER_ELEMENT > 1) {
+				result.write(data[i].buffer.slice(start));
+			} else {
+				result.write(data[i].subarray ? data[i].subarray(start) : data[i].slice(start));
+			}
+			end -= l;
+			i++;
+			l = this.getLength(data[i]);
+			start = 0;
+		}
+		// add all parts between start and end
+		while (i < data.length && end > l) {
+			result.write(data[i]);
+			i++;
+			end -= l;
+			l = this.getLength(data[i]);
+		}
+		// add part of last part
+		if (i < data.length && end > 0) {
+			if (data[i].BYTES_PER_ELEMENT > 1) {
+				result.write(data[i].buffer.slice(0, end));
+			} else {
+				result.write(data[i].subarray ? data[i].subarray(start, end) : data[i].slice(start, end));
+			}
+		}
+
+		return result;
+	}
+
+	async readBigInt64LE(idx: number): Promise<bigint> {
+		return (await this.slice(idx, BigInt64Array.BYTES_PER_ELEMENT).as(BigInt64Array))[0];
+	}
+
+	async readBigUInt64LE(idx: number): Promise<bigint> {
+		return (await this.slice(idx, BigUint64Array.BYTES_PER_ELEMENT).as(BigUint64Array))[0];
+	}
+
+	async readFloat32LE(idx: number): Promise<number> {
+		return (await this.slice(idx, idx + Float32Array.BYTES_PER_ELEMENT).as(Float32Array))[0];
+	}
+
+	async readFloat64LE(idx: number): Promise<number> {
+		return (await this.slice(idx, idx + Float64Array.BYTES_PER_ELEMENT).as(Float64Array))[0];
+	}
+
+	async readInt8LE(idx: number) {
+		return (await this.slice(idx, idx + Int8Array.BYTES_PER_ELEMENT).as(Int8Array))[0];
+	}
+
+	async readInt16LE(idx: number) {
+		return (await this.slice(idx, idx + Int16Array.BYTES_PER_ELEMENT).as(Int16Array))[0];
+	}
+
+	async readInt32LE(idx: number) {
+		return (await this.slice(idx, idx + Int32Array.BYTES_PER_ELEMENT).as(Int32Array))[0];
+	}
+
+	async readUInt8LE(idx: number) {
+		return (await this.slice(idx, idx + Uint8Array.BYTES_PER_ELEMENT).as(Uint8Array))[0];
+	}
+
+	async readUInt16LE(idx: number) {
+		return (await this.slice(idx, idx + Uint16Array.BYTES_PER_ELEMENT).as(Uint16Array))[0];
+	}
+
+	async readUInt32LE(idx: number) {
+		return (await this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).as(Uint32Array))[0];
+	}
 }
 
 export interface BlobLike {
@@ -178,4 +274,4 @@ export interface BlobLike {
 	text(): Promise<string>;
 }
 
-export type DataSource = (NaniumBuffer | ArrayBuffer | Uint8Array | BlobLike | string);
+export type DataSource = (NaniumBuffer | ArrayBuffer | Uint8Array | BlobLike);

@@ -191,8 +191,8 @@ describe('basic browser client tests', () => {
 		it('--> NaniumBuffers in request \n', async function (): Promise<void> {
 			const request = new TestBufferRequest({
 				id: '1',
-				buffer1: new NaniumBuffer('123'),
-				buffer2: new NaniumBuffer('456')
+				buffer1: new NaniumBuffer(new TextEncoder().encode('123')),
+				buffer2: new NaniumBuffer(new TextEncoder().encode('456'))
 			});
 			const response = await request.execute();
 			expect(response.id).toBe('1');
@@ -203,7 +203,7 @@ describe('basic browser client tests', () => {
 		it('--> NaniumBuffers in request but one is undefined \n', async function (): Promise<void> {
 			const request = new TestBufferRequest({
 				id: '1',
-				buffer1: new NaniumBuffer('123'),
+				buffer1: new NaniumBuffer(new TextEncoder().encode('123')),
 				buffer2: undefined
 			});
 			const response = await request.execute();
@@ -216,16 +216,15 @@ describe('basic browser client tests', () => {
 	describe('NaniumBuffer \n', function (): void {
 		const arrayBuffer: ArrayBuffer = new TextEncoder().encode('abc').buffer;
 		const blob = new Blob(['def']);
-		const str: string = 'gh😄';
 		const uint8Array: ArrayBuffer = new TextEncoder().encode('jkl');
 
 		describe('asString', function (): void {
 			it('with different types in constructor', async function (): Promise<void> {
 				const buf = new NaniumBuffer([
-					arrayBuffer, blob, str, uint8Array
+					arrayBuffer, blob, uint8Array
 				]);
 				expect(buf.id?.length > 0).toBeTruthy();
-				expect(await buf.asString()).toBe('abcdefgh😄jkl');
+				expect(await buf.asString()).toBe('abcdefjkl');
 			});
 
 			it('asString with a single arrayBuffer', async function (): Promise<void> {
@@ -238,18 +237,17 @@ describe('basic browser client tests', () => {
 				expect(buf.id).toBe('1');
 				buf.write(arrayBuffer);
 				buf.write(blob);
-				buf.write(str);
 				buf.write(uint8Array);
-				expect(await buf.asString()).toBe('abcdefgh😄jkl');
+				expect(await buf.asString()).toBe('abcdefjkl');
 			});
 		});
 
 		describe('asUInt8Array', function (): void {
 			it('asUInt8Array with different types in constructor \n', async function (): Promise<void> {
 				const buf = new NaniumBuffer([
-					arrayBuffer, blob, str, uint8Array
+					arrayBuffer, blob, uint8Array
 				]);
-				expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefgh😄jkl');
+				expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjkl');
 			});
 
 			it('asUInt8Array with a single arrayBuffer', async function (): Promise<void> {
@@ -266,11 +264,24 @@ describe('basic browser client tests', () => {
 		describe('as())', function (): void {
 			it('as(Buffer) with different types in constructor \n', async function (): Promise<void> {
 				const buf = new NaniumBuffer([
-					arrayBuffer, blob, str, uint8Array
+					arrayBuffer, blob, uint8Array
 				]);
 				const b = await buf.as(Blob);
 				expect(b instanceof Blob).toBeTruthy();
-				expect(new TextDecoder().decode(new Uint8Array(await b.arrayBuffer()))).toBe('abcdefgh😄jkl');
+				expect(new TextDecoder().decode(new Uint8Array(await b.arrayBuffer()))).toBe('abcdefjkl');
+			});
+		});
+
+		describe('splice())', function (): void {
+			it('splice(Buffer) with different types in constructor \n', async function (): Promise<void> {
+				const buf = new NaniumBuffer([
+					arrayBuffer, blob, uint8Array
+				]);
+				expect(await buf.slice(3, 6).asString()).toBe('def');
+				expect(await buf.slice(3, 5).asString()).toBe('de');
+				expect(await buf.slice(4, 6).asString()).toBe('ef');
+				expect(await buf.slice(4, 7).asString()).toBe('efj');
+				expect(await buf.slice(2, 7).asString()).toBe('cdefj');
 			});
 		});
 	});

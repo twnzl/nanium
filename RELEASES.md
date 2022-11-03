@@ -1,3 +1,11 @@
+# 1.19.5
+
+- new methods of NaniumBuffer: .slice(), .read...LE()
+
+## breaking changes
+
+- NaniumBuffer constructor and method "write" no longer accept strings
+
 # 1.19.4
 
 - exclude all tests from packed package
