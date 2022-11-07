@@ -1,3 +1,7 @@
+# 1.19.6
+
+- fixed bug: NaniumObject.Init: null or undefined ArrayProperties lead to in [ undefiend ] of [ null ].
+
 # 1.19.5
 
 - new methods of NaniumBuffer: .slice(), .read...LE()

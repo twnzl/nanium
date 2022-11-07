@@ -36,6 +36,7 @@ describe('nanium objects', function (): void {
 					aBoolean: true,
 					theGeneric: 1,
 				},
+				aDateArray: [new Date(2000, 2, 3)],
 				sub2: {
 					theGeneric: new Date(2000, 1, 2)
 				},
@@ -45,7 +46,16 @@ describe('nanium objects', function (): void {
 			expect(obj.aDate.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 			expect(obj.sub1 instanceof MyTestClass, 'sub1 should be Instance of MyTestClass').toBe(true);
 			expect(obj.sub1.theGeneric).toBe(1);
+			expect(obj.aDateArray[0].toISOString()).toBe(new Date(2000, 2, 3).toISOString());
 			expect(obj.sub2.theGeneric.toISOString()).toBe(new Date(2000, 1, 2).toISOString());
+		});
+
+
+		it('--> array property is undefined or null \n', async function (): Promise<void> {
+			let obj: MyTestClass<number> = new MyTestClass({ aDateArray: undefined }, { 'T': Number });
+			expect(obj.aDateArray).toBeUndefined();
+			obj = new MyTestClass({ aDateArray: null }, { 'T': Number });
+			expect(obj.aDateArray).toBeNull();
 		});
 
 		it('--> parsing should work \n', async function (): Promise<void> {
@@ -140,3 +150,4 @@ describe('nanium objects', function (): void {
 		});
 	});
 });
+
