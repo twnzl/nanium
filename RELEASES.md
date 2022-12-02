@@ -1,3 +1,8 @@
+# 1.19.7
+
+- added namespace parameter to nanium init cmd
+- changed search for nanium.json - take the first nanium.json file from executing directory up to root that is found.
+
 # 1.19.6
 
 - fixed bug: NaniumObject.Init: null or undefined ArrayProperties lead to in [ undefiend ] of [ null ].
