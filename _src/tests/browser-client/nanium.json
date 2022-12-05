@@ -1,0 +1,6 @@
+{
+	"serviceDirectory": "src/services",
+	"eventsDirectory": "src/events",
+	"indentString": "\t",
+	"namespace": "NaniumClientTest"
+}

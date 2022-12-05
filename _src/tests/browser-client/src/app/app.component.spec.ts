@@ -315,7 +315,7 @@ describe('test browser client with mocked server', () => {
 		},
 		isResponsibleForEvent: async (eventName) => {
 			return eventName.startsWith('NaniumTest:') ? 2 : 0;
-		},
+		}
 	});
 
 	beforeEach(async () => {

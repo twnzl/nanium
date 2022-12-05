@@ -5,7 +5,7 @@ import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, NaniumObject } from '../../objects';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 
 export class NaniumBrowserProviderConfig {
 	/**
@@ -26,6 +26,11 @@ export class NaniumBrowserProviderConfig {
 	 * @param context
 	 */
 	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<number>;
+
+	/**
+	 * interceptors (code that runs before each request is executed)
+	 */
+	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
 }
 
 
@@ -72,7 +77,6 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 
 	async execute(serviceName: string, request: any, context?: ExecutionContext): Promise<any> {
 		context = context || {};
-		let realRequest: any;
 
 		try {
 			// validation
@@ -89,16 +93,22 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 				}
 			}
 
-			// if the request comes from a communication channel it is normally a deserialized object,
-			// but we need real object that is constructed via the request constructor
-			realRequest = NaniumObject.create(
-				request,
-				this.repository[serviceName].Request,
-				this.repository[serviceName].Request[genericTypesSymbol]);
+			// interceptors
+			if (this.config.requestInterceptors?.length) {
+				let result: any;
+				for (const interceptor of this.config.requestInterceptors) {
+					result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, context);
+					// if an interceptor returns an object other than the request it is a result and the execution shall be
+					// finished with this result
+					if (result !== undefined && result !== request) {
+						return result;
+					}
+				}
+			}
 
 			// execution
 			const executor: ServiceExecutor<any, any> = new this.repository[serviceName].Executor();
-			return await executor.execute(realRequest, context);
+			return await executor.execute(request, context);
 		} catch (e) {
 			return await this.config.handleError(e, serviceName, request, context);
 		}

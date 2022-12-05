@@ -2,6 +2,7 @@
 
 - added namespace parameter to nanium init cmd
 - changed search for nanium.json - take the first nanium.json file from executing directory up to root that is found.
+- added property requestInterceptors to browser provider config
 
 # 1.19.6
 
