@@ -67,9 +67,15 @@ describe('NaniumChannelHttp \n', function (): void {
 		await coreTest();
 	});
 
-	it('--> Request with buffers and transmission between the end marks of buffer content \n', async function (): Promise<void> {
+	it('--> Request with buffers and transmission break within the end mark of buffer content \n', async function (): Promise<void> {
 		await parser.parsePart(requestBody.slice(0, 485));
 		await parser.parsePart(requestBody.slice(485));
+		await coreTest();
+	});
+
+	it('--> Request with buffers and transmission break before the end mark of buffer content \n', async function (): Promise<void> {
+		await parser.parsePart(requestBody.slice(0, 484));
+		await parser.parsePart(requestBody.slice(484));
 		await coreTest();
 	});
 
@@ -78,6 +84,12 @@ describe('NaniumChannelHttp \n', function (): void {
 		await parser.parsePart(requestBody.slice(100));
 		await coreTest();
 	});
+
+	// it('--> Request with buffers and transmission break in boundary after request \n', async function (): Promise<void> {
+	// 	await parser.parsePart(requestBody.slice(0, 319));
+	// 	await parser.parsePart(requestBody.slice(319));
+	// 	await coreTest();
+	// });
 
 	it('--> Request with buffers and transmission break between fieldName \n', async function (): Promise<void> {
 		await parser.parsePart(requestBody.slice(0, 482));

@@ -1,3 +1,9 @@
+# 1.19.8
+
+- fixed NaniumBuffer.as(Buffer). Previously it used the internal ArrayBuffer to create the Buffer which sometimes is
+  bigger then it has to be.
+- fixed NaniumBuffer handling in http channel. Transmission-breaks within boundaries have not been handled before.
+
 # 1.19.7
 
 - added namespace parameter to nanium init cmd

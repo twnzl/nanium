@@ -82,7 +82,7 @@ export class NaniumBuffer {
 		if (targetType.name === 'Blob') {
 			return new targetType([data]);
 		} else if (targetType.name === 'Buffer') {
-			return targetType['from'](data.buffer);
+			return targetType['from'](data);
 		} else { // any typed Array
 			return new targetType(data.buffer, data.byteOffset, data.byteLength / targetType['BYTES_PER_ELEMENT'] ?? 1);
 		}

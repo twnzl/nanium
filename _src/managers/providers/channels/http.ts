@@ -449,19 +449,36 @@ export class MultipartParser {
 						valueStart = undefined;
 						i += this.boundary.length;
 						this.state = 'readingFieldHeader';
+					} else if (
+						buf[i] === this.boundary[0] &&
+						(i + this.boundary.length) > buf.length &&
+						Buffer.compare(this.boundary.slice(0, buf.length - i), buf.slice(i, i + buf.length)) === 0
+					) {
+						// ends with something that looks like a boundary
+						// keep the rest in tmp buffer, as prefix of next data portion and stop for current data portion
+						if (this.state === 'readingRequest') {
+							this.requestBuf.write(buf.slice(valueStart, i));
+						} else {
+							this.currentBinary.write(buf.slice(valueStart, i));
+						}
+						this.tmp = new NaniumBuffer(buf.slice(i));
+						buf = undefined;
+						break;
 					} else {
 						i++;
 					}
 				}
 			}
-			if (this.nameStart) {
+			if (this.nameStart && buf) {
 				this.tmp = new NaniumBuffer(buf.slice(this.nameStart));
 			}
-			if (this.state === 'readingRequest' && valueStart) {
+			if (this.state === 'readingRequest' && valueStart && buf) {
 				this.requestBuf.write(buf.slice(valueStart));
+				this.tmp = new NaniumBuffer();
 			}
-			if (this.state === 'readingBinary' && valueStart) {
+			if (this.state === 'readingBinary' && valueStart && buf) {
 				this.currentBinary.write(buf.slice(valueStart));
+				this.tmp = new NaniumBuffer();
 			}
 			this.dataPortions.shift(); // remove current data portion, when all of it is parsed, so that the next portions can start
 		}
