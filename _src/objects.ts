@@ -184,6 +184,11 @@ export class NaniumObject<T> {
 		}
 	}
 
+	static isPropertyDefined(c: ConstructorType, prop: string): boolean {
+		const info = c[propertyInfoSymbol];
+		return info && (prop in info);
+	}
+
 	static forEachProperty(obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void) {
 		const core = (obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void, name: string[]) => {
 			if (!obj) {

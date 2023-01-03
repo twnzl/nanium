@@ -21,6 +21,7 @@ class MyTestClass2 extends NaniumObject<MyTestClass2> {
 	@Type(Date) aDate?: Date;
 	@Type(Object) anObject?: any;
 	@Type(Object, MyTestClass2) aDictionary?: { [key: string]: MyTestClass2 };
+	something?: string;
 }
 
 describe('nanium objects', function (): void {
@@ -147,6 +148,20 @@ describe('nanium objects', function (): void {
 			expect(created.theGeneric instanceof MyTestClass2, 'theGeneric should have the type MyTestClass2').toBeTruthy();
 			expect(created.theGeneric.aDate.toISOString(), 'sub properties of theGeneric should have the right types and values').toBe(obj.theGeneric.aDate.toISOString());
 			expect(created.theGeneric.aNumber, 'sub properties of theGeneric should have the right types an values').toBe(42);
+		});
+	});
+
+	describe('isPropertyDefined', function (): void {
+		it('isPropertyDefined: yes', async function (): Promise<void> {
+			expect(NaniumObject.isPropertyDefined(MyTestClass, 'aNumber')).toBe(true);
+		});
+
+		it('isPropertyDefined: not defined', async function (): Promise<void> {
+			expect(NaniumObject.isPropertyDefined(MyTestClass, 'nothing')).toBe(false);
+		});
+
+		it('isPropertyDefined: defined but without @Type() modifier', async function (): Promise<void> {
+			expect(NaniumObject.isPropertyDefined(MyTestClass, 'something')).toBe(false);
 		});
 	});
 });

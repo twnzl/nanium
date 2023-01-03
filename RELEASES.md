@@ -1,3 +1,7 @@
+# 1.19.9
+
+- added NaniumObject.isPropertyDefined
+
 # 1.19.8
 
 - fixed NaniumBuffer.as(Buffer). Previously it used the internal ArrayBuffer to create the Buffer which sometimes is
