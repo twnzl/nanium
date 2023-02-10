@@ -29,7 +29,8 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	servicePath?: string = 'services';
 
 	/**
-	 * array of transport adaptors
+	 * array of channels for incoming requests
+	 * !do not change this collection after the manager has been initialized (that means after calling Nanium.addManager())!
 	 */
 	channels?: Channel[] = [];
 
@@ -93,6 +94,9 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			...config
 		};
 		this.repository = {};
+		for (const channel of this.config.channels ?? []) {
+			channel.manager = this;
+		}
 	}
 
 	addService<T>(
@@ -103,6 +107,12 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			Executor: executorClass,
 			Request: requestClass
 		};
+	}
+
+	addChannel<T>(channel: Channel): void {
+		channel.init(this.repository, this).then();
+		this.config.channels = this.config.channels ?? [];
+		this.config.channels.push(channel);
 	}
 
 	async init(): Promise<void> {
@@ -138,7 +148,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		// init channels over which requests can come from public scope
 		if (this.config.channels && this.config.channels.length) {
 			for (const channel of this.config.channels) {
-				await channel.init(this.repository);
+				await channel.init(this.repository, this);
 			}
 		}
 	}
@@ -267,7 +277,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		const interceptors: EventEmissionSendInterceptor<any>[] = this.config.eventEmissionSendInterceptors?.map(
 			(instanceOrClass) => typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass
 		) ?? [];
-		for (const channel of this.config.channels) { // channels
+		for (const channel of this.config.channels ?? []) { // channels
 			if (!channel.eventSubscriptions) {
 				continue;
 			}
@@ -308,7 +318,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<EventSubscription> {
+	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = (eventConstructor as any).eventName;
 		this.internalEventSubscriptions[eventName] =
 			this.internalEventSubscriptions[eventName] ?? [];

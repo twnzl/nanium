@@ -1,11 +1,13 @@
 import { ServiceResponseMessage } from '../serviceResponseBase';
 import { TestGetRequest, TestGetResponse } from './get.contract';
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
+import { StuffEvent } from '../../events/test/stuffEvent';
+import { TestExecutionContext } from '../testExecutionContext';
 
 export class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
 	static serviceName: string = 'NaniumTest:test/get';
 
-	async execute(request: TestGetRequest): Promise<TestGetResponse> {
+	async execute(request: TestGetRequest, executionContext: TestExecutionContext): Promise<TestGetResponse> {
 		if (request.body.input2 === 5) {
 			throw new Error('no!');
 		}
@@ -15,6 +17,7 @@ export class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetR
 		if (request.body.input2 === 10) {
 			throw new Error('no no!');
 		}
+		new StuffEvent(9, '10', new Date(2011, 11, 11)).emit(executionContext);
 		return new TestGetResponse({
 			output1: request.body.input1 + ' :-)',
 			output2: 2

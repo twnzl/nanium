@@ -3,12 +3,13 @@ import { EventHandler } from './eventHandler';
 import { ServiceManager } from './serviceManager';
 import { Type } from '../objects';
 
-export class EventSubscription<TData = any> {
+export class EventSubscription<TData = any, TContext = any> {
 	private static nextId: number = 0;
 
 	id: number;
 	clientId: string;
 	manager: ServiceManager;
+	context: TContext;
 	@Type(String) eventName?: string;
 	@Type(Object) handler?: EventHandler;
 	@Type('TData') additionalData?: TData;

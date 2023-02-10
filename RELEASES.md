@@ -1,3 +1,16 @@
+# 1.20.0
+
+- added interface NaniumCommunicator and ClusterCommunicator as the default way for communication between multiple
+  processes via cluster module. With this, events also work in multi-process environments that use the nodejs:cluster
+  module.
+- event subscription of providers now remember the execution context when they have been subscribed. This information
+  can be used e.g. in SendEventEmission interceptors to decide if an event ist emitted to a specific subscriber (client)
+  or not
+- EventClass.subscribe() now throws errors of SendEventSubscription interceptors
+- add function addChannel() to interface ServiceProviderManager, because adding channels to a manager after calling
+  Nanium.addManager must be managed. The channel needs a back reference to its manager
+- fixed a bug in Nanium.shutdown(). Now managers are also terminated correctly
+
 # 1.19.9
 
 - added NaniumObject.isPropertyDefined

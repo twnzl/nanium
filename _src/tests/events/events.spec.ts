@@ -1,21 +1,24 @@
-import { ServiceRequestContext } from '../services/serviceRequestContext';
+import { TestExecutionContext } from '../services/testExecutionContext';
 import { TestHelper } from '../testHelper';
-import { StuffCreatedEvent } from './test/stuffCreated.event';
+import { StuffEvent } from './test/stuffEvent';
 import { AsyncHelper } from '../../helper';
-import { TestEventSubscriptionReceiveInterceptor, TestEventSubscriptionSendInterceptor } from './test.interceptor';
 import { EventSubscription } from '../../interfaces/eventSubscription';
+import {
+	TestEventSubscriptionReceiveInterceptor
+} from '../interceptors/server/test.receive-event-subscription.interceptor';
+import { TestEventSubscriptionSendInterceptor } from '../interceptors/client/test.send-event-subscription.interceptor';
 
-const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
+const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 let stuffCreatedEventSubscription: EventSubscription = null;
 
 describe('events \n', function (): void {
 
 	describe('same provider subscribes and emits the event \n', () => {
-		const sendEvent: StuffCreatedEvent = new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6));
-		let receivedEvent: StuffCreatedEvent;
+		const sendEvent: StuffEvent = new StuffEvent(42, ':-)', new Date(2021, 12, 6));
+		let receivedEvent: StuffEvent;
 		beforeEach(async () => {
 			await TestHelper.initClientServerScenario('http', true);
-			stuffCreatedEventSubscription = await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
+			stuffCreatedEventSubscription = await StuffEvent.subscribe((e: StuffEvent) => {
 				receivedEvent = e;
 			});
 			sendEvent.emit(executionContext);
@@ -34,8 +37,8 @@ describe('events \n', function (): void {
 	});
 
 	describe('consumer (http) subscribes and provider emits the event \n', () => {
-		const sendEvent: StuffCreatedEvent = new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6));
-		let receivedEvent: StuffCreatedEvent;
+		const sendEvent: StuffEvent = new StuffEvent(42, ':-)', new Date(2021, 12, 6));
+		let receivedEvent: StuffEvent;
 
 		beforeEach(async () => {
 			await TestHelper.initClientServerScenario('http', false);
@@ -43,13 +46,13 @@ describe('events \n', function (): void {
 		});
 
 		afterEach(async () => {
-			await StuffCreatedEvent.unsubscribe(stuffCreatedEventSubscription);
+			await StuffEvent.unsubscribe(stuffCreatedEventSubscription);
 			await TestHelper.shutdown();
 		});
 
 		describe('with no interceptor \n', () => {
 			beforeEach(async () => {
-				await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
+				await StuffEvent.subscribe((e: StuffEvent) => {
 					receivedEvent = e;
 				});
 				sendEvent.emit(executionContext);
@@ -71,7 +74,7 @@ describe('events \n', function (): void {
 			describe('interceptor accepts subscription \n', function (): void {
 				beforeEach(async function (): Promise<void> {
 					TestEventSubscriptionSendInterceptor.tenant = 'Company1';
-					await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
+					await StuffEvent.subscribe((e: StuffEvent) => {
 						receivedEvent = e;
 					});
 					sendEvent.emit(executionContext);

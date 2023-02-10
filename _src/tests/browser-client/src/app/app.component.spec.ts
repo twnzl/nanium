@@ -11,14 +11,19 @@ import { TestNoIORequest } from '../../../services/test/noIO.contract';
 import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
 import { TimeRequest } from '../../../services/test/time.contract';
 import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
-import { StuffCreatedEvent } from '../../../events/test/stuffCreated.event';
+import { StuffEvent } from '../../../events/test/stuffEvent';
 import { TestBufferRequest } from '../../../services/test/buffer.contract';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { TestGetStreamedNaniumBufferRequest } from '../../../services/test/getStreamedNaniumBuffer.contract';
 import { TestGetNaniumBufferRequest } from '../../../services/test/getNaniumBuffer.contract';
 import { TestClientResponseInterceptor } from '../../../interceptors/client/test.response.interceptor';
+import {
+	TestEventSubscriptionSendInterceptor
+} from '../../../interceptors/client/test.send-event-subscription.interceptor';
+import { EventSubscription } from '../../../../interfaces/eventSubscription';
+import { AsyncHelper } from '../../../../helper';
 
-function initNanium(baseUrl: string = 'http://localhost:8080'): void {
+function initNanium(baseUrl: string = 'http://localhost:8080', responsibility: number = 1): void {
 	const serializer = new NaniumJsonSerializer();
 	serializer.packageSeparator = '\0';
 	const naniumConsumer = new NaniumConsumerBrowserHttp({
@@ -27,6 +32,8 @@ function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 		serializer: serializer,
 		requestInterceptors: [TestClientRequestInterceptor],
 		responseInterceptors: [TestClientResponseInterceptor],
+		eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
+		isResponsible: () => Promise.resolve(responsibility),
 		handleError: async (err: any): Promise<any> => {
 			throw { handleError: err };
 		}
@@ -38,11 +45,15 @@ describe('basic browser client tests', () => {
 	jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
 
 	beforeEach(async () => {
+		TestEventSubscriptionSendInterceptor.token = '1234';
+		TestEventSubscriptionSendInterceptor.token = 'Company1';
 		initNanium();
 	});
 
 	afterEach(async () => {
 		await Nanium.shutdown();
+		TestEventSubscriptionSendInterceptor.token = '1234';
+		TestEventSubscriptionSendInterceptor.token = 'Company1';
 	});
 
 	describe('execute request via the consumer \n', function (): void {
@@ -345,9 +356,110 @@ describe('test browser client with mocked server', () => {
 	});
 
 	it('normal event subscription and emission should choose the Mock implementation', async function (): Promise<void> {
-		await StuffCreatedEvent.subscribe((evt: StuffCreatedEvent) => {
+		await StuffEvent.subscribe((evt: StuffEvent) => {
 			expect(evt.aString).toBe(':-)');
 		});
-		new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6)).emit();
+		new StuffEvent(42, ':-)', new Date(2021, 12, 6)).emit();
 	});
+});
+
+describe('events and inter-process communication via cluster communicator', () => {
+	jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+
+	beforeEach(async () => {
+		TestEventSubscriptionSendInterceptor.token = '1234';
+		TestEventSubscriptionSendInterceptor.tenant = 'Company1';
+		initNanium('http://localhost:8080');
+		initNanium('http://localhost:8081');
+	});
+	afterEach(async () => {
+		await Nanium.shutdown();
+	});
+
+	it('subscribe with wrong auth token', async function (): Promise<void> {
+		const manager = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
+		let subscription;
+		try {
+			TestEventSubscriptionSendInterceptor.token = 'wrong!!';
+			// should call the client interceptor that adds credentials, but they are wrong
+			subscription = await StuffEvent.subscribe(() => {
+			}, manager);
+			expect(true).withContext('an exception should have been thrown').toBeFalse();
+		} catch (e) {
+			expect(e).toBe('unauthorized');
+		} finally {
+			subscription?.unsubscribe();
+			TestEventSubscriptionSendInterceptor.token = '1234'; // reset right credentials
+		}
+	});
+
+	it('event should also be received by clients that are connected to other server processes', async function (): Promise<void> {
+		let subscription1: EventSubscription;
+		let subscription2: EventSubscription;
+		TestEventSubscriptionSendInterceptor.token = '1234'; // reset right credentials
+		const manager1 = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
+		const manager2 = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8081'));
+		let event1: StuffEvent;
+		let event2: StuffEvent;
+		await new Promise<void>(async (resolve: Function) => {
+			subscription1 = await StuffEvent.subscribe((event) => {
+				event1 = event;
+				if (event2) {
+					resolve();
+				}
+			}, manager1);
+			subscription2 = await StuffEvent.subscribe((event) => {
+				event2 = event;
+				if (event1) {
+					resolve();
+				}
+			}, manager2);
+			await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
+		});
+		await subscription1.unsubscribe();
+		await subscription2.unsubscribe();
+		expect(event1.aNumber).withContext('aNumber should be correct').toBe(9);
+		expect(event1.aString).withContext('aString should be correct').toBe('10');
+		expect(event1.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
+		expect(event2.aNumber).withContext('aNumber should be correct').toBe(9);
+		expect(event2.aString).withContext('aString should be correct').toBe('10');
+		expect(event2.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
+	});
+
+	it('event should not be received users of other tenants than me, because of the TestEventEmissionSendInterceptor on server side', async function (): Promise<void> {
+		let subscription1: EventSubscription;
+		let subscription2: EventSubscription;
+		TestEventSubscriptionSendInterceptor.token = '1234'; // reset right credentials
+		TestEventSubscriptionSendInterceptor.tenant = 'Company1';
+		const manager1 = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
+		const manager2 = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8081'));
+		let event1: StuffEvent;
+		let event2: StuffEvent;
+		await new Promise<void>(async (resolve: Function) => {
+			subscription1 = await StuffEvent.subscribe((event) => {
+				event1 = event;
+				if (event2) {
+					resolve();
+				}
+			}, manager1);
+			TestEventSubscriptionSendInterceptor.token = '5678'; // other tenant
+			TestEventSubscriptionSendInterceptor.tenant = 'Company2';
+			subscription2 = await StuffEvent.subscribe((event) => {
+				event2 = event;
+				if (event1) {
+					resolve();
+				}
+			}, manager2);
+			await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
+			await AsyncHelper.waitUntil(() => !!subscription2, 100, 2000);
+			resolve();
+		});
+		await subscription1.unsubscribe();
+		expect(event1.aNumber).withContext('aNumber should be correct').toBe(9);
+		expect(event1.aString).withContext('aString should be correct').toBe('10');
+		expect(event1.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
+		expect(subscription2).withContext('subscription 2 should be defined').toBeDefined();
+		expect(event2).withContext('event 2 should be undefined (not raised for second subscription because it was made as a different tenant)').toBeUndefined();
+	});
+
 });

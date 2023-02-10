@@ -223,11 +223,11 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			});
 			fetch(req)
 				.then(async (response) => {
+					const data: ArrayBuffer = await response.arrayBuffer();
 					if (response.ok) {
-						const data: ArrayBuffer = await response.arrayBuffer();
 						resolve(data);
 					} else {
-						reject(await response.arrayBuffer());
+						reject(data);
 					}
 				})
 				.catch((error) => {

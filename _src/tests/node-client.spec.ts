@@ -1,4 +1,4 @@
-import { ServiceRequestContext } from './services/serviceRequestContext';
+import { TestExecutionContext } from './services/testExecutionContext';
 import * as http from 'http';
 import { IncomingMessage } from 'http';
 import * as https from 'https';
@@ -19,7 +19,7 @@ import { TestGetStreamedNaniumBufferRequest } from './services/test/getStreamedN
 import { TestGetNaniumBufferRequest } from './services/test/getNaniumBuffer.contract';
 
 let request: TestGetRequest;
-const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
+const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 let response: TestGetResponse;
 
 describe('host services via http \n', function (): void {

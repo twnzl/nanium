@@ -3,7 +3,7 @@ import { EventSubscription } from './eventSubscription';
 
 export interface EventSubscriptionSendInterceptor<TEvent, TSubscriptionData> {
 	execute(
-		eventClass: new(data?: any) => TEvent, data: EventSubscription<TSubscriptionData>
+		eventClass: new(data?: any) => TEvent, subscription: EventSubscription<TSubscriptionData>
 	): Promise<void>;
 }
 

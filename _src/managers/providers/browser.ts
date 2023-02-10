@@ -6,6 +6,7 @@ import { ServiceProviderManager } from '../../interfaces/serviceProviderManager'
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
+import { Channel } from '../../interfaces/channel';
 
 export class NaniumBrowserProviderConfig {
 	/**
@@ -63,6 +64,10 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 			Executor: executorClass,
 			Request: requestClass
 		};
+	}
+
+	addChannel<T>(channel: Channel): void {
+		throw('channels not supported by this provider');
 	}
 
 	async init(): Promise<void> {
@@ -166,7 +171,7 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<EventSubscription> {
+	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = (eventConstructor as any).eventName;
 		this.internalEventSubscriptions[eventName] =
 			this.internalEventSubscriptions[eventName] ?? [];

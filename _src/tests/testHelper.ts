@@ -7,32 +7,13 @@ import * as fs from 'fs';
 import { Nanium } from '../core';
 import { NaniumProviderNodejs } from '../managers/providers/nodejs';
 import { NaniumHttpChannel } from '../managers/providers/channels/http';
-import { ServiceRequestContext } from './services/serviceRequestContext';
+import { TestExecutionContext } from './services/testExecutionContext';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
-import { TestEventSubscriptionSendInterceptor } from './events/test.interceptor';
 import { LogLevel } from '../interfaces/logger';
 import { TestLogger } from './testLogger';
-
-// export class TestLogger implements Logger {
-// 	loglevel: LogLevel;
-// 	errors: any[][] = [];
-// 	warnings: any[][] = [];
-// 	infos: any[][] = [];
-//
-// 	error(...args: any[]): void {
-// 		this.errors.push(args);
-// 	}
-//
-// 	warn(...args: any[]): void {
-// 		this.warnings.push(args);
-// 	}
-//
-// 	info(...args: any[]): void {
-// 		this.infos.push(args);
-// 	}
-// }
+import { TestEventSubscriptionSendInterceptor } from './interceptors/client/test.send-event-subscription.interceptor';
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
@@ -91,7 +72,7 @@ export class TestHelper {
 					apiPath: '/api',
 					eventPath: '/events',
 					server: TestHelper.httpServer,
-					executionContextConstructor: ServiceRequestContext
+					executionContextConstructor: TestExecutionContext
 				})
 			],
 			requestInterceptors: [TestServerRequestInterceptor],

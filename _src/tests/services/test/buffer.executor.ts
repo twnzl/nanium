@@ -1,11 +1,11 @@
 import { TestBufferRequest, TestBufferResponse } from './buffer.contract';
-import { ServiceRequestContext } from '../serviceRequestContext';
+import { TestExecutionContext } from '../testExecutionContext';
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
 
 export class TestBufferExecutor implements ServiceExecutor<TestBufferRequest, TestBufferResponse> {
 	static serviceName: string = 'NaniumTest:test/buffer';
 
-	async execute(request: TestBufferRequest, executionContext: ServiceRequestContext): Promise<TestBufferResponse> {
+	async execute(request: TestBufferRequest, executionContext: TestExecutionContext): Promise<TestBufferResponse> {
 		request.body.buffer1?.write(new TextEncoder().encode('*'));
 		request.body.buffer2?.write(new TextEncoder().encode('*'));
 		return new TestBufferResponse({

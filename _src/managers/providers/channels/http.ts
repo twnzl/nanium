@@ -11,6 +11,7 @@ import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
 import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
 
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
@@ -21,6 +22,8 @@ export interface NaniumHttpChannelConfig extends ChannelConfig {
 }
 
 export class NaniumHttpChannel implements Channel {
+	manager: ServiceProviderManager;
+
 	private serviceRepository: NaniumRepository;
 	private readonly config: NaniumHttpChannelConfig;
 	private longPollingResponses: { [clientId: string]: ServerResponse } = {};
@@ -41,8 +44,9 @@ export class NaniumHttpChannel implements Channel {
 		};
 	}
 
-	async init(serviceRepository: NaniumRepository): Promise<void> {
+	async init(serviceRepository: NaniumRepository, manager: ServiceProviderManager): Promise<void> {
 		this.serviceRepository = serviceRepository;
+		this.manager = manager;
 		this.eventSubscriptions = {};
 
 		const handleFunction: (req: IncomingMessage, res: ServerResponse, next?: Function) => Promise<void> =
@@ -234,9 +238,10 @@ export class NaniumHttpChannel implements Channel {
 							Nanium.logger.info('channel http: incoming event subscription: ', subscriptionData.eventName);
 							// ask the manager to execute interceptors and to decide if the subscription is accepted or not
 							try {
+								subscriptionData.manager = this.manager;
 								await Nanium.receiveSubscription(subscriptionData);
 							} catch (e) {
-								Nanium.logger.error(e);
+								Nanium.logger.warn(e);
 								res.statusCode = 400;
 								const responseBody: string | ArrayBuffer = this.config.serializer.serialize(e.message);
 								res.write(responseBody);
@@ -341,7 +346,7 @@ export class NaniumHttpChannel implements Channel {
 			Nanium.logger.info('channel http: emitEventCore: transmit the data and end the long-polling request');
 			try {
 				const responseBody: string | ArrayBuffer = this.config.serializer.serialize({
-					eventName: event.constructor.eventName,
+					eventName: subscription.eventName,
 					event
 				});
 				this.longPollingResponses[subscription.clientId].setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -439,6 +444,7 @@ export class MultipartParser {
 						i++;
 					}
 				} else if (this.state === 'readingRequest' || this.state === 'readingBinary') {
+					// noinspection JSUnusedAssignment
 					valueStart = valueStart ?? i;
 					if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) { // next boundary
 						if (this.state === 'readingRequest') {

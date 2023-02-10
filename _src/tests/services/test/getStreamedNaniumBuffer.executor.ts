@@ -1,5 +1,5 @@
 import { TestGetStreamedNaniumBufferRequest } from './getStreamedNaniumBuffer.contract';
-import { ServiceRequestContext } from '../serviceRequestContext';
+import { TestExecutionContext } from '../testExecutionContext';
 import { Observable, Observer } from 'rxjs';
 import { StreamServiceExecutor } from '../../../interfaces/streamServiceExecutor';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
@@ -7,7 +7,7 @@ import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 export class TestGetStreamedNaniumBufferExecutor implements StreamServiceExecutor<TestGetStreamedNaniumBufferRequest, NaniumBuffer> {
 	static serviceName: string = 'NaniumTest:test/getStreamedNaniumBuffer';
 
-	stream(request: TestGetStreamedNaniumBufferRequest, executionContext: ServiceRequestContext): Observable<NaniumBuffer> {
+	stream(request: TestGetStreamedNaniumBufferRequest, executionContext: TestExecutionContext): Observable<NaniumBuffer> {
 		return new Observable((observer: Observer<NaniumBuffer>): void => {
 			observer.next(new NaniumBuffer(Float32Array.of(1, 2, 3)));
 			setTimeout(() => observer.next(new NaniumBuffer(Float32Array.of(4, 5))), 500);

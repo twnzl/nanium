@@ -2,7 +2,7 @@ import { ServiceRequestHead } from './serviceRequestHead';
 import { ServiceResponseBase } from './serviceResponseBase';
 import { Nanium } from '../../core';
 import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry';
-import { ServiceRequestContext } from './serviceRequestContext';
+import { TestExecutionContext } from './testExecutionContext';
 import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
 import { Observable } from 'rxjs';
 import { ConstructorType, NaniumObject, Type } from '../../objects';
@@ -19,7 +19,7 @@ export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = 
 		this.head = head ? new ServiceRequestHead(head) : undefined;
 	}
 
-	async execute(context?: ServiceRequestContext): Promise<ServiceResponseBase<TResponseBody>> {
+	async execute(context?: TestExecutionContext): Promise<ServiceResponseBase<TResponseBody>> {
 		return await Nanium.execute(this, undefined, context);
 	}
 

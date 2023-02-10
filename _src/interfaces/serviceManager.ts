@@ -43,9 +43,9 @@ export interface ServiceManager {
 	 * returns if the Manager is responsible for the given eventName
 	 * manager with the highest values above 0 wins
 	 * @param eventName
-	 * @param context
+	 * @param data
 	 */
-	isResponsibleForEvent(eventName: string, context?: any): Promise<number>;
+	isResponsibleForEvent(eventName: string, data?: any): Promise<number>;
 
 	/**
 	 * emit an event

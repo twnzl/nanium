@@ -220,7 +220,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription> {
+	async subscribe(eventConstructor: new () => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		return await this.httpCore.subscribe(eventConstructor, handler);
 	}
 

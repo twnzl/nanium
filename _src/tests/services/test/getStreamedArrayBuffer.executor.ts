@@ -1,12 +1,12 @@
 import { TestGetStreamedArrayBufferRequest } from './getStreamedArrayBuffer.contract';
-import { ServiceRequestContext } from '../serviceRequestContext';
+import { TestExecutionContext } from '../testExecutionContext';
 import { Observable, Observer } from 'rxjs';
 import { StreamServiceExecutor } from '../../../interfaces/streamServiceExecutor';
 
 export class TestGetStreamedArrayBufferExecutor implements StreamServiceExecutor<TestGetStreamedArrayBufferRequest, Float32Array> {
 	static serviceName: string = 'NaniumTest:test/getStreamedArrayBuffer';
 
-	stream(request: TestGetStreamedArrayBufferRequest, executionContext: ServiceRequestContext): Observable<Float32Array> {
+	stream(request: TestGetStreamedArrayBufferRequest, executionContext: TestExecutionContext): Observable<Float32Array> {
 		return new Observable((observer: Observer<Float32Array>): void => {
 			observer.next(Float32Array.of(1, 2, 3));
 			setTimeout(() => observer.next(Float32Array.of(4, 5)), 500);

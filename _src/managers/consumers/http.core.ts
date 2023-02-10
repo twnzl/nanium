@@ -5,6 +5,7 @@ import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { Nanium } from '../../core';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+import { ExecutionContext } from '../../interfaces/executionContext';
 
 interface NaniumEventResponse {
 	eventName: string;
@@ -22,6 +23,7 @@ interface NaniumHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
 	apiEventUrl?: string;
 	onServerConnectionRestored?: () => void;
+	executionContextConstructor?: new (data: ExecutionContext) => ExecutionContext;
 }
 
 export class HttpCore {
@@ -127,8 +129,6 @@ export class HttpCore {
 				}
 				const subscription: EventSubscription = new EventSubscription(this.id, eventConstructor.eventName);
 
-				// execute interceptors
-
 				// add basics to eventSubscriptions for this eventName and inform the server
 				if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
 					this.eventSubscriptions[eventConstructor.eventName] = {
@@ -139,7 +139,7 @@ export class HttpCore {
 					this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
 					this.sendEventSubscription(eventConstructor, subscription).then(
 						() => resolve(subscription),
-						() => core()
+						(e) => reject(e)
 					);
 				}
 
@@ -164,7 +164,8 @@ export class HttpCore {
 		try {
 			await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
 		} catch (e) {
-			setTimeout(() => this.sendEventSubscription(eventConstructor, subscription), 1000);
+			const error = this.config.serializer.deserialize(e);
+			throw error;
 		}
 	}
 
