@@ -162,7 +162,7 @@ export class HttpCore {
 		}
 		const requestBody: string | ArrayBuffer = this.config.serializer.serialize(subscription);
 		try {
-			await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
+			await this.httpRequest('POST', this.config.apiEventUrl + '?' + subscription.eventName, requestBody);
 		} catch (e) {
 			const error = this.config.serializer.deserialize(e);
 			throw error;
@@ -184,7 +184,7 @@ export class HttpCore {
 				additionalData: {}
 			});
 			delete this.eventSubscriptions[eventName];
-			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
+			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete' + '?' + subscription.eventName, requestBody);
 			if (error.byteLength) {
 				Nanium.logger.error(this.config.serializer.deserialize(error));
 				return;
@@ -198,13 +198,14 @@ export class HttpCore {
 		if (this.id) {
 			return true;
 		}
+		let response;
 		try {
-			this.id = this.config.serializer.deserialize(
-				await this.httpRequest('GET', this.config.apiEventUrl));
-			return true;
+			response = await this.httpRequest('GET', this.config.apiEventUrl + '?');
 		} catch (e) {
 			return false;
 		}
+		this.id = this.config.serializer.deserialize(response);
+		return true;
 	}
 
 	private async startLongPolling(resendSubscriptions: boolean = false): Promise<void> {

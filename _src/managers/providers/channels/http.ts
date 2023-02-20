@@ -44,6 +44,14 @@ export class NaniumHttpChannel implements Channel {
 		};
 	}
 
+	private getRootUrl(url) {
+		let result = url.split('?')[0].split('#')[0]?.toLowerCase();
+		if (result.endsWith('/')) {
+			result = result.slice(0, -1);
+		}
+		return result;
+	}
+
 	async init(serviceRepository: NaniumRepository, manager: ServiceProviderManager): Promise<void> {
 		this.serviceRepository = serviceRepository;
 		this.manager = manager;
@@ -56,20 +64,20 @@ export class NaniumHttpChannel implements Channel {
 				if (res.writableFinished) {
 					return;
 				}
-				const url: string = req['originalUrl'] || req.url;
+				let url: string = this.getRootUrl(req['originalUrl'] || req.url);
 
 				// event subscriptions
-				if ((url).split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath) {
+				if (url === this.config.eventPath) {
 					await this.handleIncomingEventSubscription(req, res);
 				}
 
 				// event unsubscriptions
-				else if (url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath + '/delete') {
+				else if (url === this.config.eventPath + '/delete') {
 					await this.handleIncomingEventUnsubscription(req, res);
 				}
 
 				// service requests
-				else if (req.method.toLowerCase() === 'post' && url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
+				else if (req.method.toLowerCase() === 'post' && url === this.config.apiPath) {
 					await this.handleIncomingServiceRequest(req, res);
 				}
 
