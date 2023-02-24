@@ -64,13 +64,13 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	async execute<T>(serviceName: string, request: any): Promise<any> {
+	async execute<T>(serviceName: string, request: any, executionContext?: ExecutionContext): Promise<any> {
 
 		// execute request interceptors
 		if (this.config.requestInterceptors?.length) {
 			let result: any;
 			for (const interceptor of this.config.requestInterceptors) {
-				result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
+				result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, executionContext ?? {});
 				// if an interceptor returns an object other than the request it is a result and the execution shall be
 				// finished with this result
 				if (result !== undefined && result !== request) {

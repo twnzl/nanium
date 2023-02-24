@@ -1,3 +1,7 @@
+# 1.20.1
+
+- browserHttp: executionContext for request interceptors
+
 # 1.20.0
 
 - added interface NaniumCommunicator and ClusterCommunicator as the default way for communication between multiple
