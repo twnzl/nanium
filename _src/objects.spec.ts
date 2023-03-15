@@ -12,6 +12,7 @@ class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(Array, Date) aDateArray?: Date[];
 	@Type(MyTestClass) sub1?: MyTestClass<T>;
 	@Type(MyTestClass, { 'T': Date }) sub2?: MyTestClass<Date>;
+	@Type(Object) anyObject?: Object;
 }
 
 class MyTestClass2 extends NaniumObject<MyTestClass2> {
@@ -22,6 +23,31 @@ class MyTestClass2 extends NaniumObject<MyTestClass2> {
 	@Type(Object) anObject?: any;
 	@Type(Object, MyTestClass2) aDictionary?: { [key: string]: MyTestClass2 };
 	something?: string;
+}
+
+class S {
+	@Type(String) type: string;
+	@Type(String) value: string;
+}
+
+class D {
+	@Type(String) type: string;
+	@Type(Date) value: Date;
+}
+
+
+class MyTestClass3<TConfig> extends NaniumObject<MyTestClass3<TConfig>> {
+	@Type(Number) no?: number;
+	@Type(String) str?: string;
+	@Type(Object, (me, p: any, pp: MyTestClass3<String | Date>) => pp.str === 's' ? String : Date)
+	dict?: { [key: string]: String | Date };
+	@Type(Array, (me: S | D) => me.type === 's' ? S : D)
+	arr?: (S | D)[];
+	@Type((me, p: MyTestClass3<any>) => p.str === 's' ? String : Date)
+	aGeneric?: TConfig;
+	@Type(MyTestClass, { 'T': (me, p: MyTestClass<String | Date>) => p.aString === 's' ? String : Date })
+	aSubGeneric?: MyTestClass<String | Date>;
+
 }
 
 describe('nanium objects', function (): void {
@@ -50,7 +76,6 @@ describe('nanium objects', function (): void {
 			expect(obj.aDateArray[0].toISOString()).toBe(new Date(2000, 2, 3).toISOString());
 			expect(obj.sub2.theGeneric.toISOString()).toBe(new Date(2000, 1, 2).toISOString());
 		});
-
 
 		it('--> array property is undefined or null \n', async function (): Promise<void> {
 			let obj: MyTestClass<number> = new MyTestClass({ aDateArray: undefined }, { 'T': Number });
@@ -109,6 +134,37 @@ describe('nanium objects', function (): void {
 			expect(obj.aDictionary.b.aNumber).toBe(1);
 			expect(obj.aDictionary.b['anyProp']).toBeUndefined();
 		});
+
+		it('via constructor created object must be a deep clone', async function (): Promise<void> {
+			const obj: MyTestClass<number> = new MyTestClass({
+				aNumber: 1,
+				aString: '123',
+				aDate: new Date(2000, 1, 1),
+				sub1: {
+					aBoolean: true,
+					theGeneric: 1,
+				},
+				aDateArray: [new Date(2000, 2, 3)],
+				sub2: {
+					theGeneric: new Date(2000, 1, 2)
+				},
+				anyObject: {
+					str: ':-)',
+					arr: [],
+					date: new Date(),
+					obj: {}
+				}
+			}, { 'T': Number });
+			const result = new MyTestClass(obj);
+			expect(result.sub1 === obj.sub1).toBe(false);
+			expect(result.aDate === obj.aDate).toBe(false);
+			expect(result.aDateArray === obj.aDateArray).toBe(false);
+			expect(result.anyObject === obj.anyObject).toBe(false);
+			expect((result.anyObject as any).str === (obj.anyObject as any).str).toBe(true);
+			expect((result.anyObject as any).arr === (obj.anyObject as any).arr).toBe(false);
+			expect((result.anyObject as any).date === (obj.anyObject as any).date).toBe(false);
+			expect((result.anyObject as any).obj === (obj.anyObject as any).obj).toBe(false);
+		});
 	});
 
 	describe('create', function (): void {
@@ -143,11 +199,113 @@ describe('nanium objects', function (): void {
 			expect(testLogger.warnings[1][0].includes('unknownProp'), 'in loose mode - warnings should have logged regarding unknown properties').toBeTruthy();
 		});
 
+		it('deepClone = true', async function (): Promise<void> {
+			const obj: MyTestClass<number> = new MyTestClass({
+				aNumber: 1,
+				aString: '123',
+				aDate: new Date(2000, 1, 1),
+				sub1: {
+					aBoolean: true,
+					theGeneric: 1,
+				},
+				aDateArray: [new Date(2000, 2, 3)],
+				sub2: {
+					theGeneric: new Date(2000, 1, 2)
+				},
+				anyObject: {
+					str: ':-)',
+					arr: [],
+					date: new Date(),
+					obj: {}
+				}
+			}, { 'T': Number });
+			const result = NaniumObject.create(obj, MyTestClass, { 'T': Number }, true, true);
+			expect(result.sub1 === obj.sub1).toBe(false);
+			expect(result.aDate === obj.aDate).toBe(false);
+			expect(result.aDateArray === obj.aDateArray).toBe(false);
+			expect(result.anyObject === obj.anyObject).toBe(false);
+			expect((result.anyObject as any).str === (obj.anyObject as any).str).toBe(true);
+			expect((result.anyObject as any).arr === (obj.anyObject as any).arr).toBe(false);
+			expect((result.anyObject as any).date === (obj.anyObject as any).date).toBe(false);
+			expect((result.anyObject as any).obj === (obj.anyObject as any).obj).toBe(false);
+		});
+
+		it('deepClone = false', async function (): Promise<void> {
+			const obj: MyTestClass<number> = new MyTestClass({
+				aNumber: 1,
+				aString: '123',
+				aDate: new Date(2000, 1, 1),
+				sub1: {
+					aBoolean: true,
+					theGeneric: 1,
+				},
+				aDateArray: [new Date(2000, 2, 3)],
+				sub2: {
+					theGeneric: new Date(2000, 1, 2)
+				},
+				anyObject: {
+					str: ':-)',
+					arr: [],
+					date: new Date(),
+					obj: {}
+				}
+			}, { 'T': Number });
+			const result = NaniumObject.create(obj, MyTestClass, { 'T': Number }, true, false);
+			expect(result.sub1 === obj.sub1).toBe(false);
+			expect(result.aDate === obj.aDate).toBe(false);
+			expect(result.aDateArray === obj.aDateArray).toBe(false);
+			expect(result.anyObject === obj.anyObject).toBe(true);
+			expect((result.anyObject as any).str === (obj.anyObject as any).str).toBe(true);
+			expect((result.anyObject as any).arr === (obj.anyObject as any).arr).toBe(true);
+			expect((result.anyObject as any).date === (obj.anyObject as any).date).toBe(true);
+			expect((result.anyObject as any).obj === (obj.anyObject as any).obj).toBe(true);
+		});
+
 		it('generic subtypes should work, when specified', async function (): Promise<void> {
 			const created = NaniumObject.create(obj, MyTestClass, { 'T': MyTestClass2 }, true);
 			expect(created.theGeneric instanceof MyTestClass2, 'theGeneric should have the type MyTestClass2').toBeTruthy();
 			expect(created.theGeneric.aDate.toISOString(), 'sub properties of theGeneric should have the right types and values').toBe(obj.theGeneric.aDate.toISOString());
 			expect(created.theGeneric.aNumber, 'sub properties of theGeneric should have the right types an values').toBe(42);
+		});
+
+		it('determining generic Type via arrow function', async function (): Promise<void> {
+			let result = NaniumObject.create<MyTestClass3<any>>({
+				str: 's',
+				aGeneric: '2023-01-01T00:00:00.000Z',
+				dict: { from: '2023-01-01T00:00:00.888Z', to: '2023-01-01T00:00:00.999Z' },
+				aSubGeneric: { aString: 's', theGeneric: '2023-03-02T20:00:58.637Z' }
+			}, MyTestClass3, { 'T': Number }, true, false);
+			expect(result instanceof MyTestClass3).toBe(true);
+			expect(result.dict.from).toBe('2023-01-01T00:00:00.888Z');
+			expect(result.dict.to).toBe('2023-01-01T00:00:00.999Z');
+			expect(result.aGeneric).toBe('2023-01-01T00:00:00.000Z');
+			expect(result.aSubGeneric instanceof MyTestClass).toBe(true);
+			expect(typeof result.aSubGeneric.theGeneric === 'string').toBe(true);
+
+			result = NaniumObject.create<MyTestClass3<any>>({
+				str: 'd',
+				dict: { from: '2023-01-01T00:00:00.888Z', to: '2023-01-01T00:00:00.999Z' },
+				arr: [{ type: 's', value: '***' }, { type: 'd', value: '2023-01-01T00:00:00.999Z' }],
+				aGeneric: '2023-01-01T00:00:00.000Z',
+				aSubGeneric: { aString: 'd', theGeneric: '2023-03-02T20:00:58.637Z' }
+			}, MyTestClass3, { 'T': Number }, true, false);
+			expect(result instanceof MyTestClass3).toBe(true);
+			expect((result.dict.from as Date).toISOString()).toBe('2023-01-01T00:00:00.888Z');
+			expect((result.dict.to as Date).toISOString()).toBe('2023-01-01T00:00:00.999Z');
+			expect(result.arr.length).toBe(2);
+			expect(result.arr[0].value).toBe('***');
+			expect((result.arr[1] as D).value.toISOString()).toBe('2023-01-01T00:00:00.999Z');
+			expect((result.aGeneric as Date).toISOString()).toBe('2023-01-01T00:00:00.000Z');
+			expect(result.aSubGeneric instanceof MyTestClass).toBe(true);
+			expect(result.aSubGeneric.theGeneric instanceof Date).toBe(true);
+			expect((result.aSubGeneric.theGeneric as Date).toISOString()).toBe('2023-03-02T20:00:58.637Z');
+		});
+	});
+
+	describe('isConstructor', function (): void {
+		it('works', async function (): Promise<void> {
+			expect(NaniumObject['isConstructor'](MyTestClass)).toBe(true);
+			expect(NaniumObject['isConstructor'](() => MyTestClass)).toBe(false);
 		});
 	});
 
@@ -165,4 +323,5 @@ describe('nanium objects', function (): void {
 		});
 	});
 });
+
 

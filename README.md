@@ -256,6 +256,10 @@ export class Stuff<TStuffSubType> extends NaniumObject<Stuff<TStuffSubType>> {
 
 	@Type(Object, Boolean) aBooleanDictionary: { [key: string]: Boolean };
 
+	// the type of property 'config' is determined dynamically using the given arrow function   
+	@Type(String) configType: 'a' | 'b';
+	@Type((p: Stuff<any>) => a.configType === 'a' ? A : B) config: A | B;
+
 	get aCalculatedProperty(): string {
 		return this.aStringArray?.join(' ');
 	}

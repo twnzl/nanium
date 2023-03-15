@@ -1,3 +1,37 @@
+# 1.21.0
+
+- NaniumObject: init and create have a new optional parameter "deepClone" to specify if objects with unknown type (e.g.
+  @Type(Object)) should be copied to the target object as is (deepClone = false) or as a deep clone. For Properties with
+  known type the property of the target object will always be created via the constructor of this type (= new object)
+- NaniumObject: the constructor creates per default a deep clone
+- NaniumObject: the @Type Decorator now also accepts an arrow function as first parameter, that takes the parent source
+  Object and must return a Constructor for this property.
+  ```ts  
+  class MyClass<T extends A | B> extends NaniumObject<MyClass<any>> { 
+    @Type(String) type: 'a' | 'b';
+    @Type((p: MyClass<any>) => a.type === 'a' ? A : B) config: T;
+  };
+  const c = new MyClass({ 
+    type: 'b',
+    config: { bb: 3 }}
+  ); 
+  // c.config will have type B
+  ```
+- NaniumObject: the @Type Decorator now also accepts this type of arrow functions in the second parameter. Either direct
+  or as value of a generic typeId
+  ```ts
+  class Wrapper extends NaniumObject<Wrapper> { 	
+    @Type(MyClass, p => a.type === 'a' ? A : B) mc: MyClass<A | B>;
+  };
+  const c = new MyClass({     
+    mc: {
+      type: 'b',
+      config: { bb: 3}
+    }
+  }); 
+  // c.mc.config will have type B
+  ```
+
 # 1.20.1
 
 - browserHttp: executionContext for request interceptors
