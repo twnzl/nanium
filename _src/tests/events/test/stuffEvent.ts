@@ -4,7 +4,7 @@ import { EventType, Type } from '../../../objects';
 @EventType({
 	scope: 'public'
 })
-export class StuffEvent extends EventBase {
+export class StuffEvent extends EventBase<StuffEvent> {
 	static eventName: string = 'NaniumTest:test/stuff';
 
 	@Type(Number) public aNumber: number;

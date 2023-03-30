@@ -31,6 +31,9 @@
   }); 
   // c.mc.config will have type B
   ```
+- Events: static unsubscribe of EventClass is now callable without parameter and will unsubscribe alls subscriptions of
+  this event type. Note! the EventBase class has changed and generated Events no longer need the subscribe function -
+  the one of the base is enough.
 
 # 1.20.1
 

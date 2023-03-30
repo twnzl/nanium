@@ -169,22 +169,22 @@ export class HttpCore {
 		}
 	}
 
-	async unsubscribe(subscription?: EventSubscription): Promise<void> {
-		const eventName: string = subscription.eventName;
+	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
 		if (!this.eventSubscriptions) {
 			return;
 		}
+		eventName = subscription?.eventName ?? eventName;
 		if (subscription) {
 			this.eventSubscriptions[eventName]?.eventHandlers?.delete(subscription.id);
 		}
-		if (!subscription || this.eventSubscriptions[eventName]?.eventHandlers?.size === 0) {
+		if (!subscription || !this.eventSubscriptions[eventName]?.eventHandlers?.size) {
 			const requestBody: string | ArrayBuffer = this.config.serializer.serialize({
 				clientId: this.id,
-				eventName: subscription.eventName,
+				eventName: eventName,
 				additionalData: {}
 			});
 			delete this.eventSubscriptions[eventName];
-			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete' + '?' + subscription.eventName, requestBody);
+			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete' + '?' + eventName, requestBody);
 			if (error.byteLength) {
 				Nanium.logger.error(this.config.serializer.deserialize(error));
 				return;

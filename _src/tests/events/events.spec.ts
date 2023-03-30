@@ -7,6 +7,7 @@ import {
 	TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
 import { TestEventSubscriptionSendInterceptor } from '../interceptors/client/test.send-event-subscription.interceptor';
+import { Stuff2Event } from './test/stuff2Event';
 
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 let stuffCreatedEventSubscription: EventSubscription = null;
@@ -21,18 +22,37 @@ describe('events \n', function (): void {
 			stuffCreatedEventSubscription = await StuffEvent.subscribe((e: StuffEvent) => {
 				receivedEvent = e;
 			});
-			sendEvent.emit(executionContext);
 		});
 
 		afterEach(async () => {
-			await stuffCreatedEventSubscription?.unsubscribe();
 			await TestHelper.shutdown();
 		});
 
 		it('--> subscribed handler should have been executed and the event must be received as real event instance with correct property values and value types \n', async () => {
+			sendEvent.emit(executionContext);
 			expect(receivedEvent.aNumber).toBe(sendEvent.aNumber);
 			expect(receivedEvent.aString).toBe(sendEvent.aString);
 			expect(receivedEvent.aDate).toBe(sendEvent.aDate);
+			await stuffCreatedEventSubscription?.unsubscribe();
+		});
+
+		it('--> unsubscribe all handlers of an event type \n', async () => {
+			let receivedEvent2: Stuff2Event;
+			await Stuff2Event.subscribe((e: StuffEvent) => {
+				receivedEvent2 = e;
+			});
+			new Stuff2Event().emit(executionContext);
+			expect(receivedEvent2).toBeDefined();
+			receivedEvent2 = undefined;
+			await Stuff2Event.unsubscribe();
+			new Stuff2Event().emit(executionContext);
+			expect(receivedEvent2).toBeUndefined();
+			sendEvent.emit(executionContext);
+			expect(receivedEvent.aNumber).toBe(sendEvent.aNumber);
+			expect(receivedEvent.aString).toBe(sendEvent.aString);
+			expect(receivedEvent.aDate).toBe(sendEvent.aDate);
+			await StuffEvent.unsubscribe();
+			await stuffCreatedEventSubscription?.unsubscribe();
 		});
 	});
 
@@ -46,7 +66,7 @@ describe('events \n', function (): void {
 		});
 
 		afterEach(async () => {
-			await StuffEvent.unsubscribe(stuffCreatedEventSubscription);
+			await StuffEvent.unsubscribe(/*stuffCreatedEventSubscription*/);
 			await TestHelper.shutdown();
 		});
 

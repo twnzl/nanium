@@ -65,8 +65,9 @@ export interface ServiceManager {
 	/**
 	 * unsubscribe from a specific eventType
 	 * @param subscription
+	 * @param eventName
 	 */
-	unsubscribe(subscription: EventSubscription): Promise<void>;
+	unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void>;
 
 	/**
 	 * receive a subscription: decide to accept or to reject the subscription

@@ -75,7 +75,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 
 export class NaniumProviderNodejs implements ServiceProviderManager {
 	repository: NaniumRepository;
-	internalEventSubscriptions: { [eventName: string]: ((event: any) => void)[] } = {};
+	internalEventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
 	config: NaniumNodejsProviderConfig = {
 		servicePath: 'services',
 		requestInterceptors: [],
@@ -307,8 +307,8 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				}
 			}
 			if (emissionOk) {
-				for (const handler of this.internalEventSubscriptions[eventName]) {
-					handler(event);
+				for (const s of this.internalEventSubscriptions[eventName]) {
+					s.handler(event);
 				}
 			}
 		}
@@ -320,16 +320,19 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 
 	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = (eventConstructor as any).eventName;
-		this.internalEventSubscriptions[eventName] =
-			this.internalEventSubscriptions[eventName] ?? [];
-		this.internalEventSubscriptions[eventName].push(handler);
-		return new EventSubscription('', eventName, handler);
+		const subscription = new EventSubscription('', eventName, handler);
+		this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName] ?? [];
+		this.internalEventSubscriptions[eventName].push(subscription);
+		return subscription;
 	}
 
-	async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
-		const eventName: string = eventConstructor.eventName;
-		if (handler) {
-			this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName].filter(h => h !== handler);
+	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
+		eventName = subscription?.eventName ?? eventName;
+		if (subscription) {
+			if (eventName in this.internalEventSubscriptions) {
+				this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName]
+					.filter(s => s !== subscription);
+			}
 		} else {
 			delete this.internalEventSubscriptions[eventName];
 		}

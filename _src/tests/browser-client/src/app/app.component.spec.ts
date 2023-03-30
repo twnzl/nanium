@@ -22,6 +22,7 @@ import {
 } from '../../../interceptors/client/test.send-event-subscription.interceptor';
 import { EventSubscription } from '../../../../interfaces/eventSubscription';
 import { AsyncHelper } from '../../../../helper';
+import { Stuff2Event } from '../../../events/test/stuff2Event';
 
 function initNanium(baseUrl: string = 'http://localhost:8080', responsibility: number = 1): void {
 	const serializer = new NaniumJsonSerializer();
@@ -424,6 +425,23 @@ describe('events and inter-process communication via cluster communicator', () =
 		expect(event2.aNumber).withContext('aNumber should be correct').toBe(9);
 		expect(event2.aString).withContext('aString should be correct').toBe('10');
 		expect(event2.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
+	});
+
+	it('unsubscribe without parameters', async function (): Promise<void> {
+		TestEventSubscriptionSendInterceptor.token = '1234'; // reset right credentials
+		const manager = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
+		let event1: StuffEvent;
+		let event2: Stuff2Event;
+		await StuffEvent.subscribe((event) => event1 = event, manager);
+		await Stuff2Event.subscribe((event) => event2 = event, manager);
+		await Stuff2Event.unsubscribe();
+		await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
+		await AsyncHelper.pause(1000);
+		await StuffEvent.unsubscribe();
+		expect(event1.aNumber).withContext('aNumber should be correct').toBe(9);
+		expect(event1.aString).withContext('aString should be correct').toBe('10');
+		expect(event1.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
+		expect(event2).toBeUndefined();
 	});
 
 	it('event should not be received users of other tenants than me, because of the TestEventEmissionSendInterceptor on server side', async function (): Promise<void> {
