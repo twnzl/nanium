@@ -356,10 +356,16 @@ if (typeof global !== 'undefined') {
 	if (!global['__nanium__']) {
 		global['__nanium__'] = new CNanium();
 	}
-} else {
+} else if (typeof window !== 'undefined') {
 	if (!window['__nanium__']) {
 		window['__nanium__'] = new CNanium();
 	}
+} else if (typeof globalThis !== 'undefined') {
+	if (!globalThis['__nanium__']) {
+		globalThis['__nanium__'] = new CNanium();
+	}
 }
 
-export const Nanium: CNanium = typeof global !== 'undefined' ? global['__nanium__'] : window['__nanium__'];
+export const Nanium: CNanium = typeof global !== 'undefined' ? global['__nanium__'] : (
+	typeof window !== 'undefined' ? window['__nanium__'] : globalThis['__nanium__']);
+

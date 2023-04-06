@@ -1,3 +1,7 @@
+# 1.21.1
+
+- Using globalThis when whether global nor window are available. E.e. in web workers.
+
 # 1.21.0
 
 - NaniumObject: init and create have a new optional parameter "deepClone" to specify if objects with unknown type (e.g.
