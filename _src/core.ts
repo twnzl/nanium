@@ -11,6 +11,8 @@ import { NaniumCommunicator } from './interfaces/communicator';
 
 declare var global: any;
 
+export const managerSymbol: symbol = Symbol.for('__nanium__manager__');
+
 class ConsoleLogger implements Logger {
 	loglevel: LogLevel = LogLevel.none;
 	includeTimestamp: boolean = true;
@@ -179,25 +181,36 @@ export class CNanium {
 			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
 		}
 		const subscription: EventSubscription = await manager.subscribe(eventConstructor, handler);
-		subscription.manager = manager;
+		subscription[managerSymbol] = manager;
 		return subscription;
 	}
 
-	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
-		if (subscription) {
-			await subscription.manager.unsubscribe(subscription, eventName);
+	async unsubscribe(subscription?: EventSubscription, eventName?: string, broadcast: boolean = true): Promise<void> {
+		eventName = eventName ?? subscription?.eventName;
+		const manager = subscription ? subscription[managerSymbol] : undefined;
+		if (manager) {
+			await manager.unsubscribe(subscription, eventName);
 		} else {
 			for (const manager of this.managers) {
-				await manager.unsubscribe(undefined, eventName);
+				if (await manager.isResponsibleForEvent(eventName, subscription)) {
+					await manager.unsubscribe(subscription, eventName);
+				}
 			}
+		}
+		if (broadcast) {
+			this.communicators.forEach(c => c.broadcastUnsubscription(subscription));
 		}
 	}
 
-	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
-		if (!subscriptionData.manager) {
-			throw new Error('no responsible manager for event subscription: ' + subscriptionData.eventName);
+	async receiveSubscription(subscription: EventSubscription, broadcast: boolean = true): Promise<void> {
+		for await (const manager of this.managers) {
+			if (await manager.isResponsibleForEvent(subscription.eventName, subscription)) {
+				await manager.receiveSubscription(subscription);
+			}
 		}
-		await subscriptionData.manager.receiveSubscription(subscriptionData);
+		if (broadcast) {
+			this.communicators.forEach(c => c.broadcastSubscription(subscription));
+		}
 	}
 
 	async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {

@@ -28,8 +28,6 @@ export class NaniumHttpChannel implements Channel {
 	private readonly config: NaniumHttpChannelConfig;
 	private longPollingResponses: { [clientId: string]: ServerResponse } = {};
 
-	public eventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
-
 	constructor(config: NaniumHttpChannelConfig) {
 		this.config = {
 			...{
@@ -55,7 +53,6 @@ export class NaniumHttpChannel implements Channel {
 	async init(serviceRepository: NaniumRepository, manager: ServiceProviderManager): Promise<void> {
 		this.serviceRepository = serviceRepository;
 		this.manager = manager;
-		this.eventSubscriptions = {};
 
 		const handleFunction: (req: IncomingMessage, res: ServerResponse, next?: Function) => Promise<void> =
 			async (
@@ -246,7 +243,6 @@ export class NaniumHttpChannel implements Channel {
 							Nanium.logger.info('channel http: incoming event subscription: ', subscriptionData.eventName);
 							// ask the manager to execute interceptors and to decide if the subscription is accepted or not
 							try {
-								subscriptionData.manager = this.manager;
 								await Nanium.receiveSubscription(subscriptionData);
 							} catch (e) {
 								Nanium.logger.warn(e);
@@ -257,10 +253,7 @@ export class NaniumHttpChannel implements Channel {
 								resolve();
 								return;
 							}
-							this.eventSubscriptions[subscriptionData.eventName] = this.eventSubscriptions[subscriptionData.eventName] ?? [];
-							this.eventSubscriptions[subscriptionData.eventName].push(subscriptionData);
 							res.end();
-							Nanium.logger.info('channel http: event subscription successful');
 							resolve();
 						}
 
@@ -284,7 +277,7 @@ export class NaniumHttpChannel implements Channel {
 	}
 
 	private async handleIncomingEventUnsubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
-		if (!this.eventSubscriptions || req.method.toLowerCase() !== 'post') {
+		if (req.method.toLowerCase() !== 'post') {
 			return;
 		}
 
@@ -303,13 +296,14 @@ export class NaniumHttpChannel implements Channel {
 					// 	{'TData': this.config.subscriptionDataConstructor}
 					// );
 
-					if (!this.eventSubscriptions[subscriptionData.eventName]) {
-						resolve();
-					}
-					const idx: number = this.eventSubscriptions[subscriptionData.eventName].findIndex(s => s.clientId === subscriptionData.clientId);
-					if (idx >= 0) {
-						this.eventSubscriptions[subscriptionData.eventName].splice(idx, 1);
-					}
+					await Nanium.unsubscribe(subscriptionData);
+					// if (!this.eventSubscriptions[subscriptionData.eventName]) {
+					// 	resolve();
+					// }
+					// const idx: number = this.eventSubscriptions[subscriptionData.eventName].findIndex(s => s.clientId === subscriptionData.clientId);
+					// if (idx >= 0) {
+					// 	this.eventSubscriptions[subscriptionData.eventName].splice(idx, 1);
+					// }
 					resolve();
 				} catch (e) {
 					reject(e);
@@ -322,31 +316,34 @@ export class NaniumHttpChannel implements Channel {
 
 	async emitEvent(event: any, subscription?: EventSubscription): Promise<void> {
 		Nanium.logger.info('channel http: emitEvent: ', event, subscription);
-		const promises: Promise<void>[] = [];
-		promises.push(this.emitEventCore(event, subscription));
-		await Promise.all(promises);
+		await this.emitEventCore(event, subscription);
+		//todo: ### change response to boolean?
 	}
 
-	async emitEventCore(event: any, subscription?: EventSubscription, tryCount: number = 0): Promise<void> {
+	async emitEventCore(event: any, subscription?: EventSubscription, tryCount: number = 0): Promise<boolean> {
 		// try later if there is no open long-polling response (e.g. because of a recent event transmission)
 		if (!this.longPollingResponses[subscription.clientId] || this.longPollingResponses[subscription.clientId].writableFinished) {
 			Nanium.logger.info('channel http: emitEventCore: no open long-polling response');
-			if (tryCount > 5) {
-				// client seams to be gone, so remove subscription from this client
-				for (const eventName in this.eventSubscriptions) {
-					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
-						Nanium.logger.info('channel http: emitEventCore: client seams to be gone, so remove subscription from client: ' + subscription.clientId);
-						this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter((s) => s.clientId !== subscription.clientId);
-					}
-				}
-				delete this.longPollingResponses[subscription.clientId];
-				return;
-			}
-			return new Promise<void>((resolve: Function, _reject: Function) => {
-				setTimeout(async () => {
-					resolve(await this.emitEventCore(event, subscription, ++tryCount));
-				}, 500);
-			});
+			return false;
+			//todo: ### move this to manager: if no channel returns true repeat for some time
+			// or collect emissions and only try to send all every 500 ms or something like that - so there should always be time enough to start a new longpolling request
+
+			// if (tryCount > 5) {
+			// 	// client seams to be gone, so remove subscription from this client
+			// 	for (const eventName in this.eventSubscriptions) {
+			// 		if (this.eventSubscriptions.hasOwnProperty(eventName)) {
+			// 			Nanium.logger.info('channel http: emitEventCore: client seams to be gone, so remove subscription from client: ' + subscription.clientId);
+			// 			this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter((s) => s.clientId !== subscription.clientId);
+			// 		}
+			// 	}
+			// 	delete this.longPollingResponses[subscription.clientId];
+			// 	return;
+			// }
+			// return new Promise<boolean>((resolve: Function, _reject: Function) => {
+			// 	setTimeout(async () => {
+			// 		resolve(await this.emitEventCore(event, subscription, ++tryCount));
+			// 	}, 500);
+			// });
 		}
 
 		// else, transmit the data and end the long-polling request
@@ -361,8 +358,10 @@ export class NaniumHttpChannel implements Channel {
 				this.longPollingResponses[subscription.clientId].statusCode = 200;
 				this.longPollingResponses[subscription.clientId].write(responseBody);
 				this.longPollingResponses[subscription.clientId].end();
+				delete this.longPollingResponses[subscription.clientId];
 			} catch (e) {
 			}
+			return false;
 		}
 	}
 

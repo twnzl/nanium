@@ -2,6 +2,7 @@ import { NaniumCommunicator } from '../interfaces/communicator';
 import * as cluster from 'cluster';
 import { Nanium } from '../core';
 import { ExecutionContext } from '../interfaces/executionContext';
+import { EventSubscription } from '../interfaces/eventSubscription';
 
 export class ClusterCommunicator implements NaniumCommunicator {
 	private primaryMessageListenerInstalled: { [key: string]: boolean } = {};
@@ -31,11 +32,17 @@ export class ClusterCommunicator implements NaniumCommunicator {
 				}
 			}
 		} else if (cluster.isWorker) {
-			process.on('message', (msg: Message) => {
+			process.on('message', async (msg: Message) => {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': receive message ', msg.type);
 				if (msg.type === 'event_emit') {
 					const eventMessage = msg as Message<EmitEventMessage>;
 					Nanium.emit(eventMessage.data.event, eventMessage.data.eventName, eventMessage.data.context, false);
+				} else if (msg.type === 'event_subscribe') {
+					const eventMessage = msg as Message<EventSubscription>;
+					await Nanium.receiveSubscription(eventMessage.data, false);
+				} else if (msg.type === 'event_unsubscribe') {
+					const eventMessage = msg as Message<EventSubscription>;
+					await Nanium.unsubscribe(eventMessage.data, undefined, false);
 				}
 			});
 		}
@@ -67,6 +74,32 @@ export class ClusterCommunicator implements NaniumCommunicator {
 			}
 		});
 	}
+
+	async broadcastSubscription(subscription: EventSubscription): Promise<void> {
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			if (cluster.worker) {
+				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_subscribe message to primary ');
+				process.send(
+					new Message<EventSubscription>('event_subscribe', subscription, cluster.worker.id),
+					undefined, undefined,
+					e => (e ? reject(e) : resolve())
+				);
+			}
+		});
+	}
+
+	async broadcastUnsubscription(subscription: EventSubscription): Promise<void> {
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			if (cluster.worker) {
+				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
+				process.send(
+					new Message<EventSubscription>('event_unsubscribe', subscription, cluster.worker.id),
+					undefined, undefined,
+					e => (e ? reject(e) : resolve())
+				);
+			}
+		});
+	}
 }
 
 class Message<T = any> {
@@ -78,7 +111,7 @@ class Message<T = any> {
 	}
 }
 
-type MessageType = 'event_emit';
+type MessageType = 'event_emit' | 'event_subscribe' | 'event_unsubscribe';
 
 class EmitEventMessage {
 	event: any;

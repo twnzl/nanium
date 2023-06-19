@@ -18,11 +18,11 @@ export class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetR
 		if (request.body.input2 === 10) {
 			throw new Error('no no!');
 		}
-		new StuffEvent(9, '10', new Date(2011, 11, 11)).emit(executionContext);
+		new StuffEvent(request.body.cnt ?? 9, '10', new Date(2011, 11, 11)).emit(executionContext);
 		new Stuff2Event().emit(executionContext);
 		return new TestGetResponse({
 			output1: request.body.input1 + ' :-)',
-			output2: 2
+			output2: 2,
 		});
 	}
 }

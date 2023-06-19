@@ -3,15 +3,13 @@ import { TestGetRequest, TestGetResponseBody } from '../../../services/test/get.
 import { ServiceResponseBase } from '../../../services/serviceResponseBase';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { TestBufferRequest } from '../../../services/test/buffer.contract';
-import { NaniumJsonSerializer } from '../../../../serializers/json';
-import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
-import { TestClientRequestInterceptor } from '../../../interceptors/client/test.request.interceptor';
+import { TestService } from './test.service';
+import { session } from '../../../session';
 import { Nanium } from '../../../../core';
-import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
-import { ServiceRequestBase } from '../../../services/serviceRequestBase';
-import { ClientServiceExecutionContext } from '../services/clientServiceExecutionContext';
-import { StuffGetExecutor } from '../services/stuff/get.executor';
-import { StuffGetRequest } from '../services/stuff/get.contract';
+import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
+import { StuffEvent } from '../../../events/test/stuffEvent';
+import { Stuff2Event } from '../../../events/test/stuff2Event';
+import { AsyncHelper } from '../../../../helper';
 
 @Component({
 	selector: 'app-root',
@@ -22,49 +20,17 @@ export class AppComponent implements OnInit {
 	testGetResponse?: ServiceResponseBase<TestGetResponseBody>;
 	error?: any;
 
-	browserProvider = new NaniumProviderBrowser({
-		isResponsible: async (request, serviceName) => {
-			return serviceName.startsWith('NaniumClientTest:') ? 2 : 0;
-		},
-		isResponsibleForEvent: async (eventName) => {
-			return eventName.startsWith('NaniumClientTest:') ? 2 : 0;
-		},
-		requestInterceptors: [new class {
-			async execute(request: ServiceRequestBase<any, any>, context: ClientServiceExecutionContext): Promise<ServiceRequestBase<any, any>> {
-				context.user = { id: 1, name: 'TestUser' };
-				return request;
-			}
-		}]
-	});
-
-	async ngOnInit() {
-		this.initNanium();
+	constructor(
+		public testService: TestService
+	) {
 	}
 
-	initNanium(baseUrl: string = 'http://localhost:8080'): void {
-		const serializer = new NaniumJsonSerializer();
-		serializer.packageSeparator = '\0';
-		const naniumConsumer = new NaniumConsumerBrowserHttp({
-			apiUrl: baseUrl + '/api',
-			apiEventUrl: baseUrl + '/events',
-			serializer: serializer,
-			requestInterceptors: [TestClientRequestInterceptor],
-			handleError: async (err: any): Promise<any> => {
-				throw { handleError: err };
-			},
-			isResponsible: async (request, serviceName) => {
-				return serviceName.startsWith('NaniumTest:') ? 2 : 0;
-			},
-			isResponsibleForEvent: async (eventName) => {
-				return eventName.startsWith('NaniumTest:') ? 2 : 0;
-			},
-		});
-		Nanium.addManager(naniumConsumer).then();
-		Nanium.addManager(this.browserProvider).then();
+	async ngOnInit() {
 	}
 
 	async test1(): Promise<void> {
 		try {
+			this.testService.init();
 			this.testGetResponse = await new TestGetRequest({ input1: 'hello world' }).execute();
 		} catch (e) {
 			this.error = e;
@@ -73,6 +39,7 @@ export class AppComponent implements OnInit {
 
 	async test2(): Promise<void> {
 		try {
+			this.testService.init();
 			const request = new TestBufferRequest({
 				id: '1',
 				buffer1: new NaniumBuffer(new TextEncoder().encode('123')),
@@ -89,16 +56,20 @@ export class AppComponent implements OnInit {
 		}
 	}
 
-	async test3(): Promise<void> {
-		try {
-			this.browserProvider.addService(StuffGetRequest, StuffGetExecutor);
-			const result = await new StuffGetRequest().execute();
-			console.log('value: ', result.value, ' ?=== "TestUser"');
-		} catch (e) {
-			this.error = e;
-		}
+	async unsubscribeWithoutParameters(): Promise<{ event1: StuffEvent, event2: Stuff2Event }> {
+		this.testService.init();
+		session.token = '1234'; // reset right credentials
+		const manager = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
+		let event1: StuffEvent;
+		let event2: Stuff2Event;
+		await StuffEvent.subscribe((event) => event1 = event, manager);
+		await Stuff2Event.subscribe((event) => event2 = event, manager);
+		await Stuff2Event.unsubscribe();
+		await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
+		await AsyncHelper.pause(1000);
+		await StuffEvent.unsubscribe();
+		return { event1, event2 };
 	}
 
 	// execute request via the consumer
-
 }

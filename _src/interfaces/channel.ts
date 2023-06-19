@@ -3,9 +3,9 @@ import { EventSubscription } from './eventSubscription';
 import { ServiceProviderManager } from './serviceProviderManager';
 
 export interface Channel {
-	manager: ServiceProviderManager;
+	// manager: ServiceProviderManager;
 
-	eventSubscriptions: { [eventName: string]: EventSubscription[] };
+	// eventSubscriptions: { [eventName: string]: EventSubscription[] };
 
 	init(serviceRepository: NaniumRepository, manager: ServiceProviderManager): Promise<void>;
 

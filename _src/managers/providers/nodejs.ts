@@ -75,7 +75,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 
 export class NaniumProviderNodejs implements ServiceProviderManager {
 	repository: NaniumRepository;
-	internalEventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
+	eventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
 	config: NaniumNodejsProviderConfig = {
 		servicePath: 'services',
 		requestInterceptors: [],
@@ -94,9 +94,6 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			...config
 		};
 		this.repository = {};
-		for (const channel of this.config.channels ?? []) {
-			channel.manager = this;
-		}
 	}
 
 	addService<T>(
@@ -277,28 +274,13 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		const interceptors: EventEmissionSendInterceptor<any>[] = this.config.eventEmissionSendInterceptors?.map(
 			(instanceOrClass) => typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass
 		) ?? [];
-		for (const channel of this.config.channels ?? []) { // channels
-			if (!channel.eventSubscriptions) {
-				continue;
-			}
-			Nanium.logger.info('provider nodejs emit: event ', eventName, channel.eventSubscriptions[eventName]?.length ?? 0);
-			Nanium.logger.info('provider nodejs emit: active subscriptions. ', channel.eventSubscriptions[eventName]?.length ?? 0);
-			for (const subscription of channel.eventSubscriptions[eventName] ?? []) { // subscriptions
-				emissionOk = true;
-				for (const interceptor of interceptors) { // interceptors
-					emissionOk = await interceptor.execute(event, executionContext, subscription);
-					if (!emissionOk) {
-						break;
-					}
-				}
-				if (emissionOk) {
-					channel.emitEvent(event, subscription).then();
-				}
-			}
-		}
-		// internal
-		if (this.internalEventSubscriptions[eventName]?.length) {
-			const subscription: EventSubscription = new EventSubscription('', eventName);
+		// for (const channel of this.config.channels ?? []) { // channels
+		// if (!channel.eventSubscriptions) {
+		// 	continue;
+		// }
+		// Nanium.logger.info('provider nodejs emit: event ', eventName, channel.eventSubscriptions[eventName]?.length ?? 0);
+		// Nanium.logger.info('provider nodejs emit: active subscriptions. ', channel.eventSubscriptions[eventName]?.length ?? 0);
+		for (const subscription of this.eventSubscriptions[eventName] ?? []) { // subscriptions
 			emissionOk = true;
 			for (const interceptor of interceptors) { // interceptors
 				emissionOk = await interceptor.execute(event, executionContext, subscription);
@@ -307,11 +289,33 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				}
 			}
 			if (emissionOk) {
-				for (const s of this.internalEventSubscriptions[eventName]) {
-					s.handler(event);
+				if (subscription.handler) { // server internal
+					subscription.handler(event);
+				} else {
+					for (const channel of this.config.channels ?? []) { // channels
+						channel.emitEvent(event, subscription).then();
+					}
 				}
 			}
 		}
+		// internal
+		// if (this.eventSubscriptions[eventName]?.length) {
+		// 	const internal = this.eventSubscriptions[eventName].filter(s => s.handler);
+		// 	if (emissionOk) {
+		// 		for (const subscription of this.eventSubscriptions[eventName]) {
+		// 			emissionOk = true;
+		// 			for (const interceptor of interceptors) { // interceptors
+		// 				emissionOk = await interceptor.execute(event, executionContext, subscription);
+		// 				if (!emissionOk) {
+		// 					break;
+		// 				}
+		// 			}
+		// 			if (subscription.handler) {
+		// 				subscription.handler(event);
+		// 			}
+		// 		}
+		// 	}
+		// }
 	}
 
 	async isResponsibleForEvent(eventName: string, context?: any): Promise<number> {
@@ -321,30 +325,42 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = (eventConstructor as any).eventName;
 		const subscription = new EventSubscription('', eventName, handler);
-		this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName] ?? [];
-		this.internalEventSubscriptions[eventName].push(subscription);
+		this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName] ?? [];
+		this.eventSubscriptions[eventName].push(subscription);
 		return subscription;
 	}
 
 	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
 		eventName = subscription?.eventName ?? eventName;
-		if (subscription) {
-			if (eventName in this.internalEventSubscriptions) {
-				this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName]
-					.filter(s => s !== subscription);
-			}
-		} else {
-			delete this.internalEventSubscriptions[eventName];
-		}
-	}
-
-	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 		if (this.config.eventSubscriptionReceiveInterceptors?.length) {
 			let interceptor: EventSubscriptionReceiveInterceptor<any>;
 			for (const instanceOrClass of this.config.eventSubscriptionReceiveInterceptors) {
 				interceptor = typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass;
-				await interceptor.execute(subscriptionData);
+				await interceptor.execute(subscription);
 			}
 		}
+		if (subscription) {
+			if (eventName in this.eventSubscriptions) {
+				this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName]
+					.filter(s => s.id !== subscription.id);
+				if (!this.eventSubscriptions[eventName].length) {
+					delete this.eventSubscriptions[eventName];
+				}
+			}
+		} else {
+			delete this.eventSubscriptions[eventName];
+		}
+	}
+
+	async receiveSubscription(subscription: EventSubscription): Promise<void> {
+		if (this.config.eventSubscriptionReceiveInterceptors?.length) {
+			let interceptor: EventSubscriptionReceiveInterceptor<any>;
+			for (const instanceOrClass of this.config.eventSubscriptionReceiveInterceptors) {
+				interceptor = typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass;
+				await interceptor.execute(subscription);
+			}
+		}
+		this.eventSubscriptions[subscription.eventName] = this.eventSubscriptions[subscription.eventName] ?? [];
+		this.eventSubscriptions[subscription.eventName].push(subscription);
 	}
 }

@@ -5,7 +5,7 @@ import { AsyncHelper } from '../../helper';
 import {
 	TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
-import { TestEventSubscriptionSendInterceptor } from '../interceptors/client/test.send-event-subscription.interceptor';
+import { session } from '../session';
 
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 
@@ -20,7 +20,7 @@ describe('events \n', function (): void {
 			await TestHelper.initClientServerScenario('http', false);
 			receivedEvent = undefined;
 			TestHelper.provider.config.eventSubscriptionReceiveInterceptors = [TestEventSubscriptionReceiveInterceptor];
-			TestEventSubscriptionSendInterceptor.tenant = 'WrongCompany';
+			session.tenant = 'WrongCompany';
 			try {
 				await StuffEvent.subscribe((e: StuffEvent) => {
 					receivedEvent = e;

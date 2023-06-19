@@ -6,8 +6,8 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 import {
 	TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
-import { TestEventSubscriptionSendInterceptor } from '../interceptors/client/test.send-event-subscription.interceptor';
 import { Stuff2Event } from './test/stuff2Event';
+import { session } from '../session';
 
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 let stuffCreatedEventSubscription: EventSubscription = null;
@@ -93,7 +93,7 @@ describe('events \n', function (): void {
 
 			describe('interceptor accepts subscription \n', function (): void {
 				beforeEach(async function (): Promise<void> {
-					TestEventSubscriptionSendInterceptor.tenant = 'Company1';
+					session.tenant = 'Company1';
 					await StuffEvent.subscribe((e: StuffEvent) => {
 						receivedEvent = e;
 					});

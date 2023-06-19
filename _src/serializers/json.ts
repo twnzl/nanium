@@ -2,6 +2,12 @@ import { NaniumSerializer } from '../interfaces/serializer';
 
 export class NaniumJsonSerializer implements NaniumSerializer {
 
+	constructor(
+		public packageSeparator: string = '\0nanium\0',
+		public mimeType: string = 'application/json',
+	) {
+	}
+
 	deserialize(raw: string | ArrayBuffer): any {
 		try {
 			if (typeof raw === 'string') {
@@ -46,7 +52,4 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 		}
 		return { data: result, rest };
 	}
-
-	packageSeparator: string = '\0nanium\0';
-	mimeType: string = 'application/json';
 }

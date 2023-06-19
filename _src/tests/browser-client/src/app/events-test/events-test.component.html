@@ -1,0 +1,26 @@
+<form>
+	<button (click)="connect(8080)">connect 80</button>
+	<button (click)="connect(8081)">connect 81</button>
+	<span *ngIf="port">connected to: {{port}}</span>
+	<br/>
+
+	<label for="token">Token</label>
+	<input id="token" name="token" [(ngModel)]="mySession.token">
+	<br/>
+
+	<button (click)="subscribe()">subscribe event</button>
+	<div *ngFor="let s of subscriptions">
+		{{s.id}}
+		<button (click)="unsubscribe(s)">unsubscribe event</button>
+	</div>
+	<br/>
+
+	<button (click)="emit()">emit event</button>
+	<span>{{eventNumber}}</span>
+	<br/>
+
+	<div style="width: 50vw; height: 40vh; overflow: auto; border: solid 1px #333;">
+		<div *ngFor="let item of log">{{item}}</div>
+	</div>
+	<button (click)="log.splice(0, log.length-1)">clear log</button>
+</form>

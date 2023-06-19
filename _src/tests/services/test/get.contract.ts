@@ -1,6 +1,6 @@
 import { ServiceRequestBase } from '../serviceRequestBase';
 import { ServiceResponseBase } from '../serviceResponseBase';
-import { RequestType } from '../../../objects';
+import { RequestType, Type } from '../../../objects';
 
 export class TestGetResponse extends ServiceResponseBase<TestGetResponseBody> {
 }
@@ -13,6 +13,7 @@ export class TestGetResponseBody {
 export class TestGetRequestBody {
 	input1?: string;
 	input2?: number;
+	@Type(Number) cnt: number;
 }
 
 @RequestType({
