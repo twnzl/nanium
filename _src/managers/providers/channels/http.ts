@@ -13,7 +13,6 @@ import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
 
-
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
 	apiPath?: string;
@@ -21,12 +20,17 @@ export interface NaniumHttpChannelConfig extends ChannelConfig {
 	longPollingRequestTimeoutInSeconds?: number;
 }
 
+const LPR_TIMEOUT_MS: number = 3000;
+
 export class NaniumHttpChannel implements Channel {
 	manager: ServiceProviderManager;
+	onClientRemoved: ((clientId) => void)[] = [];
 
-	private serviceRepository: NaniumRepository;
 	private readonly config: NaniumHttpChannelConfig;
+	private serviceRepository: NaniumRepository;
 	private longPollingResponses: { [clientId: string]: ServerResponse } = {};
+	private lastLongPollingContact: { [clientId: string]: number } = {};
+	private pendingEvents: { [clientId: string]: { eventName: string, event: Event }[] } = {};
 
 	constructor(config: NaniumHttpChannelConfig) {
 		this.config = {
@@ -266,6 +270,12 @@ export class NaniumHttpChannel implements Channel {
 								// todo: self cleaning: delete this.longPollingResponses[subscriptionData.clientId];
 							});
 							this.longPollingResponses[subscriptionData.clientId] = res;
+							this.lastLongPollingContact[subscriptionData.clientId] = Date.now();
+							if (Nanium.communicators?.length) {
+								for (const com of Nanium.communicators) {
+									com.broadcast({ type: 'long_polling_response_received', clientId: subscriptionData.clientId }).then();
+								}
+							}
 							Nanium.logger.info('channel http: open long-polling requests from clientId ', subscriptionData.clientId);
 						}
 					} catch (e) {
@@ -297,13 +307,6 @@ export class NaniumHttpChannel implements Channel {
 					// );
 
 					await Nanium.unsubscribe(subscriptionData);
-					// if (!this.eventSubscriptions[subscriptionData.eventName]) {
-					// 	resolve();
-					// }
-					// const idx: number = this.eventSubscriptions[subscriptionData.eventName].findIndex(s => s.clientId === subscriptionData.clientId);
-					// if (idx >= 0) {
-					// 	this.eventSubscriptions[subscriptionData.eventName].splice(idx, 1);
-					// }
 					resolve();
 				} catch (e) {
 					reject(e);
@@ -320,48 +323,79 @@ export class NaniumHttpChannel implements Channel {
 		//todo: ### change response to boolean?
 	}
 
-	async emitEventCore(event: any, subscription?: EventSubscription, tryCount: number = 0): Promise<boolean> {
+	async emitEventCore(event: any, subscription: EventSubscription, tryStart?: number): Promise<boolean> {
 		// try later if there is no open long-polling response (e.g. because of a recent event transmission)
 		if (!this.longPollingResponses[subscription.clientId] || this.longPollingResponses[subscription.clientId].writableFinished) {
 			Nanium.logger.info('channel http: emitEventCore: no open long-polling response');
-			return false;
-			//todo: ### move this to manager: if no channel returns true repeat for some time
-			// or collect emissions and only try to send all every 500 ms or something like that - so there should always be time enough to start a new longpolling request
 
-			// if (tryCount > 5) {
-			// 	// client seams to be gone, so remove subscription from this client
-			// 	for (const eventName in this.eventSubscriptions) {
-			// 		if (this.eventSubscriptions.hasOwnProperty(eventName)) {
-			// 			Nanium.logger.info('channel http: emitEventCore: client seams to be gone, so remove subscription from client: ' + subscription.clientId);
-			// 			this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter((s) => s.clientId !== subscription.clientId);
-			// 		}
-			// 	}
-			// 	delete this.longPollingResponses[subscription.clientId];
-			// 	return;
-			// }
-			// return new Promise<boolean>((resolve: Function, _reject: Function) => {
-			// 	setTimeout(async () => {
-			// 		resolve(await this.emitEventCore(event, subscription, ++tryCount));
-			// 	}, 500);
-			// });
+			// if we've tried/waited enough
+			if (tryStart && timeDiff(tryStart) > LPR_TIMEOUT_MS) {
+				// if nobody had contact, or it is too long ago - remove client
+				if (
+					!this.lastLongPollingContact[subscription.clientId] ||
+					timeDiff(this.lastLongPollingContact[subscription.clientId]) > (LPR_TIMEOUT_MS * 2)
+					// if anyone has connection to the client he would use the lpr to send this event,
+					// so the client will start a new lpr request immediately and
+					// so the last contact can not be much longer ago than the waiting time for the new lpr
+					// if so - client has gone
+				) {
+					this.removeClient(subscription.clientId);
+					return;
+				}
+				return;
+			}
+
+			// else remember current event and try again later
+			if (event) {
+				this.pendingEvents[subscription.clientId] = this.pendingEvents[subscription.clientId] ?? [];
+				this.pendingEvents[subscription.clientId].push({ event, eventName: subscription.eventName });
+			}
+			tryStart = tryStart ?? Date.now();
+			return new Promise<boolean>((resolve: Function, _reject: Function) => {
+				setTimeout(async () => {
+					resolve(await this.emitEventCore(undefined, subscription, tryStart));
+				}, 500);
+			});
 		}
 
 		// else, transmit the data and end the long-polling request
 		else {
 			Nanium.logger.info('channel http: emitEventCore: transmit the data and end the long-polling request');
 			try {
-				const responseBody: string | ArrayBuffer = this.config.serializer.serialize({
-					eventName: subscription.eventName,
-					event
-				});
+				let responseBody: string | ArrayBuffer;
+				// if events are waiting for an open long-polling-request send them together with the current event as array
+				if (this.pendingEvents[subscription.clientId]?.length) {
+					if (event) {
+						this.pendingEvents[subscription.clientId].push({ eventName: subscription.eventName, event });
+					}
+					responseBody = this.config.serializer.serialize(this.pendingEvents[subscription.clientId]);
+				} else {
+					responseBody = this.config.serializer.serialize({ eventName: subscription.eventName, event });
+				}
 				this.longPollingResponses[subscription.clientId].setHeader('Content-Type', 'application/json; charset=utf-8');
 				this.longPollingResponses[subscription.clientId].statusCode = 200;
 				this.longPollingResponses[subscription.clientId].write(responseBody);
 				this.longPollingResponses[subscription.clientId].end();
 				delete this.longPollingResponses[subscription.clientId];
+				delete this.pendingEvents[subscription.clientId];
 			} catch (e) {
 			}
 			return false;
+		}
+	}
+
+	receiveCommunicatorMessage(msg: CommunicatorMessage): void {
+		if (msg.type === 'long_polling_response_received') {
+			this.lastLongPollingContact[msg.clientId] = Date.now();
+		}
+	};
+
+	removeClient?(clientId: string) {
+		delete this.longPollingResponses[clientId];
+		delete this.pendingEvents[clientId];
+		delete this.lastLongPollingContact[clientId];
+		for (const handler of this.onClientRemoved) {
+			handler(clientId);
 		}
 	}
 
@@ -511,4 +545,13 @@ export class MultipartParser {
 		});
 		return [request, deserialized];
 	}
+}
+
+class CommunicatorMessage {
+	type: 'long_polling_response_received';
+	clientId: string;
+}
+
+function timeDiff(timestamp: number) {
+	return Date.now() - timestamp;
 }

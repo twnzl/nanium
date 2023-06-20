@@ -241,7 +241,6 @@ export class CNanium {
 		return undefined;
 	}
 
-
 	//#region queue
 	async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
 		const priorities: number[] = await Promise.all(

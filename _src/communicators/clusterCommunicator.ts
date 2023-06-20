@@ -1,8 +1,9 @@
-import { NaniumCommunicator } from '../interfaces/communicator';
+import { EmitEventMessage, Message, NaniumCommunicator } from '../interfaces/communicator';
 import * as cluster from 'cluster';
 import { Nanium } from '../core';
 import { ExecutionContext } from '../interfaces/executionContext';
 import { EventSubscription } from '../interfaces/eventSubscription';
+import { ServiceProviderManager } from '../interfaces/serviceProviderManager';
 
 export class ClusterCommunicator implements NaniumCommunicator {
 	private primaryMessageListenerInstalled: { [key: string]: boolean } = {};
@@ -43,6 +44,12 @@ export class ClusterCommunicator implements NaniumCommunicator {
 				} else if (msg.type === 'event_unsubscribe') {
 					const eventMessage = msg as Message<EventSubscription>;
 					await Nanium.unsubscribe(eventMessage.data, undefined, false);
+				} else if (msg.type === 'generic') {
+					await Nanium.managers?.forEach(m => {
+						if ((m as ServiceProviderManager).receiveCommunicatorMessage) {
+							(m as ServiceProviderManager).receiveCommunicatorMessage(msg.data, msg.from);
+						}
+					});
 				}
 			});
 		}
@@ -100,21 +107,17 @@ export class ClusterCommunicator implements NaniumCommunicator {
 			}
 		});
 	}
-}
 
-class Message<T = any> {
-	constructor(
-		public type: MessageType,
-		public data: T,
-		public from?: number
-	) {
+	async broadcast(message: any): Promise<void> {
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			if (cluster.worker) {
+				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
+				process.send(
+					new Message('generic', message, cluster.worker.id),
+					undefined, undefined,
+					e => (e ? reject(e) : resolve())
+				);
+			}
+		});
 	}
-}
-
-type MessageType = 'event_emit' | 'event_subscribe' | 'event_unsubscribe';
-
-class EmitEventMessage {
-	event: any;
-	eventName: string;
-	context?: ExecutionContext;
 }

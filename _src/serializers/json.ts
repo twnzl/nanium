@@ -11,9 +11,9 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 	deserialize(raw: string | ArrayBuffer): any {
 		try {
 			if (typeof raw === 'string') {
-				return JSON.parse(raw);
+				return raw ? JSON.parse(raw) : undefined;
 			} else {
-				return JSON.parse(new TextDecoder('utf-8').decode(raw));
+				return (raw as ArrayBuffer)?.byteLength ? JSON.parse(new TextDecoder('utf-8').decode(raw)) : undefined;
 			}
 		} catch (e) {
 			throw new Error('NaniumJsonSerializer: error while deserializing: "' + raw + '"');

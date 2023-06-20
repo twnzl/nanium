@@ -235,10 +235,10 @@ export class HttpCore {
 				}
 				await this.config.onServerConnectionRestored();
 			}
-			const eventResponseString: string | ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl,
+			const rawEventResponse: string | ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl,
 				this.config.serializer.serialize({ clientId: this.id }));
-			if (eventResponseString) {
-				eventResponse = this.config.serializer.deserialize(eventResponseString);
+			if (rawEventResponse) {
+				eventResponse = this.config.serializer.deserialize(rawEventResponse);
 			}
 		} catch (e) {
 			if (typeof e === 'string') {
@@ -256,22 +256,30 @@ export class HttpCore {
 			this.startLongPolling().then();
 		});
 
-		// if an event has arrived handle it
+		// if an event (or multiple events at the same time) has arrived handle it
 		// (the timeout is to get the restart of the long-polling run before the event handling - so the gap with no open is request small)
 		if (eventResponse) {
 			setTimeout(async () => {
-				const eventConstructor: any = this.eventSubscriptions[eventResponse.eventName]?.eventConstructor;
-				if (eventConstructor) {
-					// type-save deserialization
-					const event: any = NaniumObject.create(
-						eventResponse.event,
-						eventConstructor,
-						eventConstructor[genericTypesSymbol]
-					);
-					// call registered handlers
-					if (event) {
-						for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers.values()) {
-							await handler(event);
+				let responseItems;
+				if (Array.isArray(eventResponse)) {
+					responseItems = eventResponse;
+				} else {
+					responseItems = [eventResponse];
+				}
+				for (const responseItem of responseItems) {
+					const eventConstructor: any = this.eventSubscriptions[responseItem.eventName]?.eventConstructor;
+					if (eventConstructor) {
+						// type-save deserialization
+						const event = NaniumObject.create(
+							responseItem.event,
+							eventConstructor,
+							eventConstructor[genericTypesSymbol]
+						);
+						// call registered handlers
+						if (event) {
+							for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers.values()) {
+								await handler(event);
+							}
 						}
 					}
 				}

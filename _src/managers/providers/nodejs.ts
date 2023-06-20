@@ -108,6 +108,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 
 	addChannel<T>(channel: Channel): void {
 		channel.init(this.repository, this).then();
+		channel.onClientRemoved.push(clientId => this.removeClient(clientId));
 		this.config.channels = this.config.channels ?? [];
 		this.config.channels.push(channel);
 	}
@@ -146,6 +147,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		if (this.config.channels && this.config.channels.length) {
 			for (const channel of this.config.channels) {
 				await channel.init(this.repository, this);
+				channel.onClientRemoved.push(clientId => this.removeClient(clientId));
 			}
 		}
 	}
@@ -362,5 +364,21 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		}
 		this.eventSubscriptions[subscription.eventName] = this.eventSubscriptions[subscription.eventName] ?? [];
 		this.eventSubscriptions[subscription.eventName].push(subscription);
+	}
+
+	receiveCommunicatorMessage(msg: any, from: string | number): void {
+		if (msg.type === 'long_polling_response_received') {
+			this.config.channels.forEach(c => {
+				if (c.receiveCommunicatorMessage) {
+					c.receiveCommunicatorMessage(msg);
+				}
+			});
+		}
+	}
+
+	removeClient(clientId: string): void {
+		for (const eventName of Object.keys(this.eventSubscriptions)) {
+			this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter(s => s.clientId !== clientId);
+		}
 	}
 }

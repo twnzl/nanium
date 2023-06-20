@@ -429,7 +429,6 @@ describe('events and inter-process communication via cluster communicator', () =
 
 	it('unsubscribe without parameters', async function (): Promise<void> {
 		session.token = '1234'; // reset right credentials
-		const manager = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
 		let event1: StuffEvent;
 		let event2: Stuff2Event;
 		await StuffEvent.subscribe((event) => event1 = event);
