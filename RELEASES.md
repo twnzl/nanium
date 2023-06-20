@@ -1,3 +1,7 @@
+# 1.22.0
+
+- events are now also working in environments that use the cluster module to work with multiple processes.
+
 # 1.21.1
 
 - Using globalThis when whether global nor window are available. E.e. in web workers.
