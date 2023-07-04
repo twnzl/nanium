@@ -222,7 +222,7 @@ export class NaniumObject<T> {
 			}
 			for (const prop of Object.keys(obj)) {
 				if (Object.prototype.hasOwnProperty.call(obj, prop)) {
-					fn([...name, prop], obj, obj.constructor[propertyInfoSymbol] ? obj.constructor[propertyInfoSymbol][prop] : undefined);
+					fn([...name, prop], obj, obj.constructor[propertyInfoSymbol] && obj.constructor[propertyInfoSymbol][prop]);
 					if (!['string', 'function', 'number', 'boolean'].includes(typeof obj[prop])) {
 						core(obj[prop], fn, [...name, prop]);
 					}
@@ -231,6 +231,82 @@ export class NaniumObject<T> {
 		};
 
 		core(obj, fn, []);
+	}
+
+	static createJsonSchemas(_c: ConstructorType, baseURI: string, knownSchemas?: JSONSchema[]): JSONSchema[] {
+		const results: JSONSchema[] = knownSchemas ?? [];
+
+		function trySetSimpleProperty(
+			c: ConstructorType,
+			info: NaniumPropertyInfoCore | undefined,
+			name: string,
+			result?: any,
+		): boolean {
+			if (c === String || c === Number || c === Boolean || c === Date) {
+				result[name] = { type: c.name.toLowerCase() };
+			} else if (c === Array) {
+				const schemaPart: any = { type: 'array' };
+				if (info?.localGenerics?.name) {
+					if (!trySetSimpleProperty(info.localGenerics as ConstructorType, info, 'items', schemaPart)) {
+						createJsonSchema(info.localGenerics as ConstructorType);
+						schemaPart.items = { $ref: baseURI + (info.localGenerics as ConstructorType).name + '.schema.json' };
+					}
+				}
+				result[name] = schemaPart;
+			} else if (c === Object) { // Object/Dictionary
+				const schemaPart: any = { type: 'object' };
+				if (info?.localGenerics?.name) {
+					if (!trySetSimpleProperty(info.localGenerics as ConstructorType, info, 'additionalProperties', schemaPart)) {
+						schemaPart.additionalProperties = { $ref: baseURI + (info.localGenerics as ConstructorType).name + '.schema.json' };
+						createJsonSchema(info.localGenerics as ConstructorType);
+					}
+				}
+				result[name] = schemaPart;
+			} else if (c === undefined && info.genericTypeId) { // todo: generic
+				result[name] = {};
+			} else if (typeof c === 'function' && !c.name) { // todo: dynamic via getType function
+				result[name] = {};
+			} else {
+				return false;
+			}
+			return true;
+		}
+
+		function createJsonSchema(c: ConstructorType): void {
+
+			// scheme for this type is already in results array
+			const uri: string = baseURI + c.name + '.schema.json';
+			if (results.some(s => s.uri === uri)) {
+				return;
+			}
+
+			// new type
+			else {
+				const subSchema = {
+					uri: baseURI + c.name + '.schema.json',
+					schema: {
+						type: 'object',
+						properties: {}
+					}
+				};
+				results.push(subSchema);
+				for (const prop of Object.keys(c[propertyInfoSymbol])) {
+					if (prop in c[propertyInfoSymbol]) {
+						if (
+							!trySetSimpleProperty(c[propertyInfoSymbol][prop].ctor, c[propertyInfoSymbol][prop], prop, subSchema.schema.properties)
+						) {
+							const ctor = c[propertyInfoSymbol][prop].ctor;
+							subSchema.schema.properties[prop] = { $ref: baseURI + ctor.name + '.schema.json' };
+							createJsonSchema(ctor);
+						}
+					}
+				}
+			}
+		}
+
+		createJsonSchema(_c);
+
+		return results;
 	}
 
 	private static cloneDeep(source: any): any {
@@ -340,4 +416,17 @@ export type ConstructorOrGenericTypeIdOrFkt = (ConstructorOrGenericTypeId | Cons
 
 export interface LocalGenerics {
 	[genericTypeId: string]: ConstructorOrGenericTypeIdOrFkt;
+}
+
+export interface JSONSchemaCore {
+	type?: string;
+	items?: JSONSchemaCore;
+	properties?: { [key: string]: JSONSchemaCore };
+	additionalProperties?: boolean | JSONSchemaCore;
+	$ref?: string;
+}
+
+export interface JSONSchema {
+	uri: string;
+	schema: JSONSchemaCore;
 }

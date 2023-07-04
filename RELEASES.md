@@ -1,3 +1,8 @@
+# 1.23.0
+
+- new function NaniumObject.createJsonSchemas: just a basic version that creates JSON schemas for a simple nanium
+  object (annotated type)
+
 # 1.22.0
 
 - events are now also working in environments that use the cluster module to work with multiple processes.

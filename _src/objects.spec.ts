@@ -1,7 +1,17 @@
-import { NaniumObject, Type } from './objects';
+import { JSONSchema, NaniumObject, Type } from './objects';
 import { Nanium } from './core';
 import { TestLogger } from './tests/testLogger';
 import { LogLevel } from './interfaces/logger';
+
+class MyTestClass2 extends NaniumObject<MyTestClass2> {
+	@Type(Number) aNumber?: number;
+	@Type(String) aString?: string;
+	@Type(Boolean) aBoolean?: boolean;
+	@Type(Date) aDate?: Date;
+	@Type(Object) anObject?: any;
+	@Type(Object, MyTestClass2) aDictionary?: { [key: string]: MyTestClass2 };
+	something?: string;
+}
 
 class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(Number) aNumber?: number;
@@ -13,16 +23,8 @@ class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(MyTestClass) sub1?: MyTestClass<T>;
 	@Type(MyTestClass, { 'T': Date }) sub2?: MyTestClass<Date>;
 	@Type(Object) anyObject?: Object;
-}
-
-class MyTestClass2 extends NaniumObject<MyTestClass2> {
-	@Type(Number) aNumber?: number;
-	@Type(String) aString?: string;
-	@Type(Boolean) aBoolean?: boolean;
-	@Type(Date) aDate?: Date;
-	@Type(Object) anObject?: any;
-	@Type(Object, MyTestClass2) aDictionary?: { [key: string]: MyTestClass2 };
-	something?: string;
+	@Type(Object, MyTestClass2) dict?: MyTestClass2;
+	@Type(Array, MyTestClass2) anObjectArray?: MyTestClass2;
 }
 
 class S {
@@ -47,7 +49,6 @@ class MyTestClass3<TConfig> extends NaniumObject<MyTestClass3<TConfig>> {
 	aGeneric?: TConfig;
 	@Type(MyTestClass, { 'T': (me, p: MyTestClass<String | Date>) => p.aString === 's' ? String : Date })
 	aSubGeneric?: MyTestClass<String | Date>;
-
 }
 
 describe('nanium objects', function (): void {
@@ -320,6 +321,131 @@ describe('nanium objects', function (): void {
 
 		it('isPropertyDefined: defined but without @Type() modifier', async function (): Promise<void> {
 			expect(NaniumObject.isPropertyDefined(MyTestClass, 'something')).toBe(false);
+		});
+	});
+
+	describe('createJsonSchema', function (): void {
+		const expected: JSONSchema[] = [
+			{
+				'uri': 'https://syscore.io/MyTestClass3.schema.json',
+				'schema': {
+					'type': 'object',
+					'properties': {
+						'no': {
+							'type': 'number'
+						},
+						'str': {
+							'type': 'string'
+						},
+						'dict': {
+							'type': 'object'
+						},
+						'arr': {
+							'type': 'array'
+						},
+						'aGeneric': {},
+						'aSubGeneric': {
+							'$ref': 'https://syscore.io/MyTestClass.schema.json'
+						}
+					}
+				}
+			},
+			{
+				'uri': 'https://syscore.io/MyTestClass.schema.json',
+				'schema': {
+					'type': 'object',
+					'properties': {
+						'aNumber': {
+							'type': 'number'
+						},
+						'aString': {
+							'type': 'string'
+						},
+						'aBoolean': {
+							'type': 'boolean'
+						},
+						'aDate': {
+							'type': 'date'
+						},
+						'theGeneric': {},
+						'aDateArray': {
+							'type': 'array',
+							'items': {
+								'type': 'date'
+							}
+						},
+						'sub1': {
+							'$ref': 'https://syscore.io/MyTestClass.schema.json'
+						},
+						'sub2': {
+							'$ref': 'https://syscore.io/MyTestClass.schema.json'
+						},
+						'anyObject': {
+							'type': 'object'
+						},
+						'dict': {
+							'type': 'object',
+							'additionalProperties': {
+								'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+							}
+						},
+						'anObjectArray': {
+							'type': 'array',
+							'items': {
+								'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+							}
+						}
+					}
+				}
+			},
+			{
+				'uri': 'https://syscore.io/MyTestClass2.schema.json',
+				'schema': {
+					'type': 'object',
+					'properties': {
+						'aNumber': {
+							'type': 'number'
+						},
+						'aString': {
+							'type': 'string'
+						},
+						'aBoolean': {
+							'type': 'boolean'
+						},
+						'aDate': {
+							'type': 'date'
+						},
+						'anObject': {
+							'type': 'object'
+						},
+						'aDictionary': {
+							'type': 'object',
+							'additionalProperties': {
+								'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+							}
+						}
+					}
+				}
+			}
+		];
+
+		it('MyTestClass3 with no types already known', async function (): Promise<void> {
+			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/');
+			// console.log(JSON.stringify(schema, null, '  '));
+			expect(schema).toEqual(expected);
+		});
+
+		it('MyTestClass3 with one type already known', async function (): Promise<void> {
+			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', [expected[2]]);
+			// console.log(JSON.stringify(schema, null, '  '));
+			schema.push(schema.shift());
+			expect(schema).toEqual(expected);
+		});
+
+		it('MyTestClass3 with all types already known', async function (): Promise<void> {
+			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', expected);
+			// console.log(JSON.stringify(schema, null, '  '));
+			expect(schema).toEqual(expected);
 		});
 	});
 });
