@@ -161,4 +161,3 @@ describe('NaniumBuffer', function (): void {
 		expect((await buf.readFloat64LE(3)).toFixed(13)).toBe('12.3456789012345');
 	});
 });
-

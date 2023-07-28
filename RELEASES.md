@@ -1,3 +1,7 @@
+# 1.23.1
+
+- make NaniumBuffer work correct for derived Types like File
+
 # 1.23.0
 
 - new function NaniumObject.createJsonSchemas: just a basic version that creates JSON schemas for a simple nanium

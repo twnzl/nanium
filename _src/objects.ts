@@ -335,8 +335,17 @@ export class NaniumObject<T> {
 		}
 	}
 
-	private static isConstructor(obj) {
-		return !!obj.prototype && !!obj.prototype.constructor.name;
+	// private static isConstructor(obj) {
+	// 	return !!obj.prototype && !!obj.prototype.constructor.name;
+	// }
+
+	static isConstructor(f: any): boolean {
+		try {
+			new f();
+		} catch (err) {
+			return false;
+		}
+		return true;
 	}
 }
 

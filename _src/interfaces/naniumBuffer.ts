@@ -1,4 +1,4 @@
-import { Type } from '../objects';
+import { NaniumObject, Type } from '../objects';
 
 let uuidCounter: number = 0;
 
@@ -75,17 +75,56 @@ export class NaniumBuffer {
 	}
 
 	async as<T>(targetType: new (first?: any, second?: any, third?: any) => T): Promise<T> {
-		if (targetType.name === 'ArrayBuffer') {
+		if (this.isArrayBufferLike(targetType)) {
 			return await this.asArrayBuffer() as unknown as T;
 		}
 		const data = await this.asUint8Array();
-		if (targetType.name === 'Blob') {
+		if (this.isBlobLike(targetType)) {
 			return new targetType([data]);
-		} else if (targetType.name === 'Buffer') {
+		} else if (this.isBufferLike(targetType)) {
 			return targetType['from'](data);
 		} else { // any typed Array
 			return new targetType(data.buffer, data.byteOffset, data.byteLength / targetType['BYTES_PER_ELEMENT'] ?? 1);
 		}
+	}
+
+	private isBlobLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		try {
+			const obj = NaniumObject.isConstructor(objectOrConstructor) ? new objectOrConstructor() : objectOrConstructor;
+			return typeof obj['arrayBuffer'] === 'function';
+		} catch {
+			return false;
+		}
+	}
+
+	private isArrayBufferLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		const ctor = NaniumObject.isConstructor(objectOrConstructor) ? objectOrConstructor : objectOrConstructor.constructor;
+		return typeof ctor['isView'] === 'function';
+	}
+
+	private isBufferLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		return (
+			NaniumObject.isConstructor(objectOrConstructor)
+				? typeof objectOrConstructor['alloc'] === 'function'
+				: typeof objectOrConstructor['readBigInt64BE'] === 'function'
+		);
+	}
+
+	private isTypedArrayLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		const obj = NaniumObject.isConstructor(objectOrConstructor) ? new objectOrConstructor() : objectOrConstructor;
+		return typeof obj['forEach'] === 'function' && !this.isBufferLike(objectOrConstructor);
 	}
 
 	async asUint8Array(): Promise<Uint8Array> {
@@ -95,9 +134,9 @@ export class NaniumBuffer {
 		// buffer changes the result of this function
 		if (internalValues.length === 1) {
 			const data = internalValues[0];
-			if (data?.constructor?.name === 'ArrayBuffer') {
+			if (this.isArrayBufferLike(data)) {
 				return new Uint8Array(data);
-			} else if (data?.constructor?.name === 'Blob') {
+			} else if (this.isBlobLike(data)) {
 				return new Uint8Array(await data.arrayBuffer(), 0, data.size);
 			} else { // Buffer or any typed Array
 				return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
@@ -109,7 +148,7 @@ export class NaniumBuffer {
 		let i: number = 0;
 		let j: number = 0;
 		for (const part of internalValues) {
-			if (typeof part['arrayBuffer'] === 'function') { // Blob
+			if (this.isBlobLike(part)) { // Blob
 				const view = new Uint8Array(await part.arrayBuffer());
 				if (internalValues.length === 1) {
 					return view;
@@ -117,16 +156,14 @@ export class NaniumBuffer {
 				for (i = 0; i < (view).length; ++i) {
 					result[j + i] = view[i];
 				}
-			} else if (part['buffer']) { // Buffer & UInt8Array & ...
-				if (part.byteLength !== part.length) {
-					const view = new Uint8Array(part.buffer);
-					for (i = 0; i < part.byteLength; ++i) {
-						result[j + i] = view[i];
-					}
-				} else {
-					for (i = 0; i < part.byteLength; ++i) {
-						result[j + i] = part[i];
-					}
+			} else if (this.isTypedArrayLike(part)) { // UInt8Array & ...
+				const view = new Uint8Array(part.buffer);
+				for (i = 0; i < part.byteLength; ++i) {
+					result[j + i] = view[i];
+				}
+			} else if (this.isBufferLike(part)) { // Buffer
+				for (i = 0; i < part.byteLength; ++i) {
+					result[j + i] = part[i];
 				}
 			} else { // ArrayBuffer
 				const view = new Uint8Array(part);
@@ -158,6 +195,9 @@ export class NaniumBuffer {
 	async asString(): Promise<string> {
 		const result: string[] = [];
 		for (const part of this[NaniumBuffer.naniumBufferInternalValueSymbol]) {
+			if (!part) {
+				continue;
+			}
 			if (typeof part['text'] === 'function') { // Blob
 				result.push(await part['text']());
 			} else if (typeof part === 'string') { // String
