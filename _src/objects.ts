@@ -438,4 +438,5 @@ export interface JSONSchemaCore {
 export interface JSONSchema {
 	uri: string;
 	schema: JSONSchemaCore;
+	fileMatch?: string[];
 }
