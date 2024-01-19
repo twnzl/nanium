@@ -51,6 +51,11 @@ class MyTestClass3<TConfig> extends NaniumObject<MyTestClass3<TConfig>> {
 	aSubGeneric?: MyTestClass<String | Date>;
 }
 
+class MyTestClass4 extends NaniumObject<MyTestClass4> {
+	@Type(Array, Object) jsonSchemas?: JSONSchema[];
+	@Type(Object, MyTestClass4) dic?: { [key: string]: MyTestClass4 };
+}
+
 describe('nanium objects', function (): void {
 
 	describe('constructor', function (): void {
@@ -446,6 +451,33 @@ describe('nanium objects', function (): void {
 			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', expected);
 			// console.log(JSON.stringify(schema, null, '  '));
 			expect(schema).toEqual(expected);
+		});
+
+		it('MyTestClass4: JSON schema of JSONSchema - infinit recursive', async function (): Promise<void> {
+			const expected4 = [
+				{
+					'uri': 'https://syscore.io/MyTestClass4.schema.json',
+					'schema': {
+						'type': 'object',
+						'properties': {
+							'jsonSchemas': {
+								'type': 'array',
+								'items': {
+									'type': 'object'
+								}
+							},
+							'dic': {
+								'additionalProperties': {
+									'$ref': 'https://syscore.io/MyTestClass4.schema.json',
+								},
+								'type': 'object',
+							},
+						}
+					}
+				}
+			];
+			const result = NaniumObject.createJsonSchemas(MyTestClass4, 'https://syscore.io/', []);
+			expect(result).toEqual(expected4);
 		});
 	});
 });

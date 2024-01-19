@@ -1,3 +1,8 @@
+# 1.23.2
+
+- json schema interface: fileMatch
+- json schema: fix infinit recursion of @Type(.., Object)
+
 # 1.23.1
 
 - make NaniumBuffer work correct for derived Types like File

@@ -255,7 +255,7 @@ export class NaniumObject<T> {
 				result[name] = schemaPart;
 			} else if (c === Object) { // Object/Dictionary
 				const schemaPart: any = { type: 'object' };
-				if (info?.localGenerics?.name) {
+				if (info?.localGenerics !== Object && info?.localGenerics?.name) {
 					if (!trySetSimpleProperty(info.localGenerics as ConstructorType, info, 'additionalProperties', schemaPart)) {
 						schemaPart.additionalProperties = { $ref: baseURI + (info.localGenerics as ConstructorType).name + '.schema.json' };
 						createJsonSchema(info.localGenerics as ConstructorType);
