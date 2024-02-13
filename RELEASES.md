@@ -1,3 +1,7 @@
+# 1.23.3
+
+- added class AnySimple: to allow any simple type in function @Type()
+
 # 1.23.2
 
 - json schema interface: fileMatch

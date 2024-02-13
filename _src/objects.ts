@@ -73,6 +73,12 @@ export class NaniumObject<T> {
 				return plain === 'false' ? false : Boolean(plain).valueOf();
 			case String:
 				return plain;
+			case AnySimple:
+				return (
+					['number', 'boolean', 'string', 'bigint'].includes(typeof plain)
+						? plain
+						: strict ? undefined : plain
+				);
 		}
 
 		// object
@@ -242,7 +248,11 @@ export class NaniumObject<T> {
 			name: string,
 			result?: any,
 		): boolean {
-			if (c === String || c === Number || c === Boolean || c === Date) {
+			if (c === AnySimple) {
+				result[name] = {
+					'type': ['number', 'string', 'boolean']
+				};
+			} else if (c === String || c === Number || c === Boolean || c === Date) {
 				result[name] = { type: c.name.toLowerCase() };
 			} else if (c === Array) {
 				const schemaPart: any = { type: 'array' };
@@ -253,7 +263,7 @@ export class NaniumObject<T> {
 					}
 				}
 				result[name] = schemaPart;
-			} else if (c === Object) { // Object/Dictionary
+			} else if (c === Object || c === AnySimple) { // Object/Dictionary
 				const schemaPart: any = { type: 'object' };
 				if (info?.localGenerics !== Object && info?.localGenerics?.name) {
 					if (!trySetSimpleProperty(info.localGenerics as ConstructorType, info, 'additionalProperties', schemaPart)) {
@@ -423,12 +433,15 @@ export type ConstructorGetter = ((...parents: Object[]) => ConstructorType);
 
 export type ConstructorOrGenericTypeIdOrFkt = (ConstructorOrGenericTypeId | ConstructorGetter);
 
+export class AnySimple {
+}
+
 export interface LocalGenerics {
 	[genericTypeId: string]: ConstructorOrGenericTypeIdOrFkt;
 }
 
 export interface JSONSchemaCore {
-	type?: string;
+	type?: string | string[];
 	items?: JSONSchemaCore;
 	properties?: { [key: string]: JSONSchemaCore };
 	additionalProperties?: boolean | JSONSchemaCore;

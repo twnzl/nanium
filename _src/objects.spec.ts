@@ -1,4 +1,4 @@
-import { JSONSchema, NaniumObject, Type } from './objects';
+import { AnySimple, JSONSchema, NaniumObject, Type } from './objects';
 import { Nanium } from './core';
 import { TestLogger } from './tests/testLogger';
 import { LogLevel } from './interfaces/logger';
@@ -25,6 +25,7 @@ class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(Object) anyObject?: Object;
 	@Type(Object, MyTestClass2) dict?: MyTestClass2;
 	@Type(Array, MyTestClass2) anObjectArray?: MyTestClass2;
+	@Type(Array, AnySimple) anySimpleArray?: (string | number)[];
 }
 
 class S {
@@ -73,6 +74,7 @@ describe('nanium objects', function (): void {
 				sub2: {
 					theGeneric: new Date(2000, 1, 2)
 				},
+				anySimpleArray: [1, '2']
 			}, { 'T': Number });
 			expect(obj.aNumber).toBe(1);
 			expect(obj.aString).toBe('123');
@@ -81,6 +83,8 @@ describe('nanium objects', function (): void {
 			expect(obj.sub1.theGeneric).toBe(1);
 			expect(obj.aDateArray[0].toISOString()).toBe(new Date(2000, 2, 3).toISOString());
 			expect(obj.sub2.theGeneric.toISOString()).toBe(new Date(2000, 1, 2).toISOString());
+			expect(obj.anySimpleArray[0]).toBe(1);
+			expect(obj.anySimpleArray[1]).toBe('2');
 		});
 
 		it('--> array property is undefined or null \n', async function (): Promise<void> {
@@ -398,6 +402,12 @@ describe('nanium objects', function (): void {
 							'type': 'array',
 							'items': {
 								'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+							}
+						},
+						'anySimpleArray': {
+							'type': 'array',
+							'items': {
+								'type': ['number', 'string', 'boolean']
 							}
 						}
 					}
