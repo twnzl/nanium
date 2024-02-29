@@ -14,6 +14,7 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { Nanium } from '../../core';
 import { NaniumStream } from '../../interfaces/naniumStream';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -176,8 +177,11 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					req = requestFn(options, (response) => {
 						response.on('data', async (chunk: Buffer) => {
 							if (chunk.length > 0) {
-								if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
-									observer.next(chunk);
+								if (
+									request.constructor[responseTypeSymbol] === ArrayBuffer ||
+									(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
+								) {
+									observer.next(chunk.constructor['naniumBufferInternalValueSymbol'] ? chunk : new NaniumBuffer(chunk));
 								} else {
 									deserialized = this.config.serializer.deserializePartial(chunk.toString(), restFromLastTime);
 									if (deserialized.data?.length) {
@@ -222,12 +226,12 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription> {
+	async subscribe(eventConstructor: new () => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		return await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
-	async unsubscribe(subscription?: EventSubscription): Promise<void> {
-		await this.httpCore.unsubscribe(subscription);
+	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
+		await this.httpCore.unsubscribe(subscription, eventName);
 	}
 
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {

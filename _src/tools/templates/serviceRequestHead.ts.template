@@ -1,9 +1,9 @@
-import { NaniumObject } from 'nanium/objects';
+import { NaniumObject, Type } from 'nanium/objects';
 
 export class ServiceRequestHead extends NaniumObject<ServiceRequestHead> {
-	user?: string;
-	password?: string;
-	token?: string;
-	language?: string;
-	timezone?: string;
+	@Type(String) user?: string;
+	@Type(String) password?: string;
+	@Type(String) token?: string;
+	@Type(String) language?: string;
+	@Type(String) timezone?: string;
 }

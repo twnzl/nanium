@@ -2,12 +2,18 @@ import { NaniumSerializer } from '../interfaces/serializer';
 
 export class NaniumJsonSerializer implements NaniumSerializer {
 
+	constructor(
+		public packageSeparator: string = '\0nanium\0',
+		public mimeType: string = 'application/json',
+	) {
+	}
+
 	deserialize(raw: string | ArrayBuffer): any {
 		try {
 			if (typeof raw === 'string') {
-				return JSON.parse(raw);
+				return raw ? JSON.parse(raw) : undefined;
 			} else {
-				return JSON.parse(new TextDecoder('utf-8').decode(raw));
+				return (raw as ArrayBuffer)?.byteLength ? JSON.parse(new TextDecoder('utf-8').decode(raw)) : undefined;
 			}
 		} catch (e) {
 			throw new Error('NaniumJsonSerializer: error while deserializing: "' + raw + '"');
@@ -46,7 +52,4 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 		}
 		return { data: result, rest };
 	}
-
-	packageSeparator: string = '\0nanium\0';
-	mimeType: string = 'application/json';
 }

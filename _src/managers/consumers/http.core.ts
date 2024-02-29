@@ -1,9 +1,11 @@
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
-import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../objects';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { Nanium } from '../../core';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { NaniumStream } from '../../interfaces/naniumStream';
 
 interface NaniumEventResponse {
@@ -22,6 +24,7 @@ interface NaniumHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
 	apiEventUrl?: string;
 	onServerConnectionRestored?: () => void;
+	executionContextConstructor?: new (data: ExecutionContext) => ExecutionContext;
 }
 
 export class HttpCore {
@@ -31,7 +34,7 @@ export class HttpCore {
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => Promise<ArrayBuffer>,
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => Promise<ArrayBuffer>,
 		private httpRequestStreaming: (url: string, requestStream: NaniumStream) => void,
 		private httpResponseStreaming: (url: string, responseStream: NaniumStream) => void,
 	) {
@@ -39,12 +42,33 @@ export class HttpCore {
 
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
 		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
+		const buffers: NaniumBuffer[] = [];
+		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
+			if (
+				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
+				(parent[name[name.length - 1]]?.constructor && parent[name[name.length - 1]]?.constructor['naniumBufferInternalValueSymbol'])
+			) {
+				const buffer = parent[name[name.length - 1]];
+				if (buffer) {
+					buffers.push(buffer);
+				}
+			}
+		});
 		try {
-			const body: string | ArrayBuffer = this.config.serializer.serialize({ serviceName, request });
+			let body: string | ArrayBuffer | FormData = this.config.serializer.serialize({ serviceName, request });
+			// handle binary data included in the request
+			if (buffers.length) {
+				const tmp = body as string;
+				body = new FormData();
+				body.append('request', tmp);
 
-			// send the base request data
+				for (const buffer of buffers) {
+					body.append(buffer.id, new Blob([await buffer.asUint8Array()]));
+				}
+			}
+
+			// send the request
 			const data: ArrayBuffer = await this.httpRequest('POST', uri, body);
-
 			if (data === undefined || data === null) {
 				return data;
 			} else if (data.byteLength === 0) {
@@ -52,6 +76,11 @@ export class HttpCore {
 			}
 			if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
 				return data;
+			} else if (
+				request.constructor[responseTypeSymbol] === ArrayBuffer ||
+				(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
+			) {
+				return data.constructor['naniumBufferInternalValueSymbol'] ? data : new NaniumBuffer(data);
 			} else {
 				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),
@@ -104,8 +133,6 @@ export class HttpCore {
 				}
 				const subscription: EventSubscription = new EventSubscription(this.id, eventConstructor.eventName);
 
-				// execute interceptors
-
 				// add basics to eventSubscriptions for this eventName and inform the server
 				if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
 					this.eventSubscriptions[eventConstructor.eventName] = {
@@ -116,7 +143,7 @@ export class HttpCore {
 					this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
 					this.sendEventSubscription(eventConstructor, subscription).then(
 						() => resolve(subscription),
-						() => core()
+						(e) => reject(e)
 					);
 				}
 
@@ -139,28 +166,36 @@ export class HttpCore {
 		}
 		const requestBody: string | ArrayBuffer = this.config.serializer.serialize(subscription);
 		try {
-			await this.httpRequest('POST', this.config.apiEventUrl, requestBody);
+			await this.httpRequest('POST', this.config.apiEventUrl + '?' + subscription.eventName, requestBody);
 		} catch (e) {
-			setTimeout(() => this.sendEventSubscription(eventConstructor, subscription), 1000);
+			const error = this.config.serializer.deserialize(e);
+			throw error;
 		}
 	}
 
-	async unsubscribe(subscription?: EventSubscription): Promise<void> {
-		const eventName: string = subscription.eventName;
+	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
 		if (!this.eventSubscriptions) {
 			return;
 		}
+		eventName = subscription?.eventName ?? eventName;
 		if (subscription) {
 			this.eventSubscriptions[eventName]?.eventHandlers?.delete(subscription.id);
 		}
-		if (!subscription || this.eventSubscriptions[eventName]?.eventHandlers?.size === 0) {
+		if (!subscription || !this.eventSubscriptions[eventName]?.eventHandlers?.size) {
+			subscription = subscription ?? new EventSubscription(this.id, eventName);
+			for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
+				const interceptor: EventSubscriptionSendInterceptor<any, any>
+					= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
+				await interceptor.execute(this.eventSubscriptions[eventName].eventConstructor, subscription);
+			}
 			const requestBody: string | ArrayBuffer = this.config.serializer.serialize({
 				clientId: this.id,
-				eventName: subscription.eventName,
-				additionalData: {}
+				eventName: eventName,
+				additionalData: subscription.additionalData,
+				id: subscription.id
 			});
 			delete this.eventSubscriptions[eventName];
-			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete', requestBody);
+			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete' + '?' + eventName, requestBody);
 			if (error.byteLength) {
 				Nanium.logger.error(this.config.serializer.deserialize(error));
 				return;
@@ -174,13 +209,14 @@ export class HttpCore {
 		if (this.id) {
 			return true;
 		}
+		let response;
 		try {
-			this.id = this.config.serializer.deserialize(
-				await this.httpRequest('GET', this.config.apiEventUrl));
-			return true;
+			response = await this.httpRequest('GET', this.config.apiEventUrl + '?');
 		} catch (e) {
 			return false;
 		}
+		this.id = this.config.serializer.deserialize(response);
+		return true;
 	}
 
 	private async startLongPolling(resendSubscriptions: boolean = false): Promise<void> {
@@ -203,10 +239,10 @@ export class HttpCore {
 				}
 				await this.config.onServerConnectionRestored();
 			}
-			const eventResponseString: string | ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl,
+			const rawEventResponse: string | ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl,
 				this.config.serializer.serialize({ clientId: this.id }));
-			if (eventResponseString) {
-				eventResponse = this.config.serializer.deserialize(eventResponseString);
+			if (rawEventResponse) {
+				eventResponse = this.config.serializer.deserialize(rawEventResponse);
 			}
 		} catch (e) {
 			if (typeof e === 'string') {
@@ -224,21 +260,31 @@ export class HttpCore {
 			this.startLongPolling().then();
 		});
 
-		// if an event has arrived handle it
+		// if an event (or multiple events at the same time) has arrived handle it
 		// (the timeout is to get the restart of the long-polling run before the event handling - so the gap with no open is request small)
 		if (eventResponse) {
 			setTimeout(async () => {
-				const eventConstructor: any = this.eventSubscriptions[eventResponse.eventName].eventConstructor;
-				// type-save deserialization
-				const event: any = NaniumObject.create(
-					eventResponse.event,
-					eventConstructor,
-					eventConstructor[genericTypesSymbol]
-				);
-				// call registered handlers
-				if (event) {
-					for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers.values()) {
-						await handler(event);
+				let responseItems;
+				if (Array.isArray(eventResponse)) {
+					responseItems = eventResponse;
+				} else {
+					responseItems = [eventResponse];
+				}
+				for (const responseItem of responseItems) {
+					const eventConstructor: any = this.eventSubscriptions[responseItem.eventName]?.eventConstructor;
+					if (eventConstructor) {
+						// type-save deserialization
+						const event = NaniumObject.create(
+							responseItem.event,
+							eventConstructor,
+							eventConstructor[genericTypesSymbol]
+						);
+						// call registered handlers
+						if (event) {
+							for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers.values()) {
+								await handler(event);
+							}
+						}
 					}
 				}
 			});

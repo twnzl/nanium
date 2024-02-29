@@ -5,7 +5,7 @@ import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
 import { TestDto, TestQueryRequest } from './services/test/query.contract';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
-import { ServiceRequestContext } from './services/serviceRequestContext';
+import { TestExecutionContext } from './services/testExecutionContext';
 import { TimeRequest } from './services/test/time.contract';
 import { TestLogger } from './testLogger';
 import { LogLevel } from '../interfaces/logger';
@@ -13,7 +13,7 @@ import { LogLevel } from '../interfaces/logger';
 describe('execute TestRequest on server \n', function (): void {
 	let request: TestGetRequest;
 	let privateRequest: PrivateStuffRequest;
-	const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
+	const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 	const testProvider: NaniumProviderNodejs = new NaniumProviderNodejs({
 		servicePath: 'tests/services',
 		requestInterceptors: [TestServerRequestInterceptor],

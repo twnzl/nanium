@@ -5,7 +5,8 @@ import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, NaniumObject } from '../../objects';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
+import { Channel } from '../../interfaces/channel';
 
 export class NaniumBrowserProviderConfig {
 	/**
@@ -26,12 +27,17 @@ export class NaniumBrowserProviderConfig {
 	 * @param context
 	 */
 	isResponsibleForEvent?: (eventName: string, context?: any) => Promise<number>;
+
+	/**
+	 * interceptors (code that runs before each request is executed)
+	 */
+	requestInterceptors?: (ServiceRequestInterceptor<any> | (new() => ServiceRequestInterceptor<any>))[];
 }
 
 
 export class NaniumProviderBrowser implements ServiceProviderManager {
 	repository: NaniumRepository;
-	internalEventSubscriptions: { [eventName: string]: ((event: any) => void)[] } = {};
+	internalEventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
 	config: NaniumBrowserProviderConfig = {
 		isResponsible: async (): Promise<number> => Promise.resolve(1),
 		isResponsibleForEvent: async (): Promise<number> => Promise.resolve(1),
@@ -60,6 +66,10 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 		};
 	}
 
+	addChannel<T>(channel: Channel): void {
+		throw('channels not supported by this provider');
+	}
+
 	async init(): Promise<void> {
 	}
 
@@ -72,7 +82,6 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 
 	async execute(serviceName: string, request: any, context?: ExecutionContext): Promise<any> {
 		context = context || {};
-		let realRequest: any;
 
 		try {
 			// validation
@@ -89,16 +98,22 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 				}
 			}
 
-			// if the request comes from a communication channel it is normally a deserialized object,
-			// but we need real object that is constructed via the request constructor
-			realRequest = NaniumObject.create(
-				request,
-				this.repository[serviceName].Request,
-				this.repository[serviceName].Request[genericTypesSymbol]);
+			// interceptors
+			if (this.config.requestInterceptors?.length) {
+				let result: any;
+				for (const interceptor of this.config.requestInterceptors) {
+					result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, context);
+					// if an interceptor returns an object other than the request it is a result and the execution shall be
+					// finished with this result
+					if (result !== undefined && result !== request) {
+						return result;
+					}
+				}
+			}
 
 			// execution
 			const executor: ServiceExecutor<any, any> = new this.repository[serviceName].Executor();
-			return await executor.execute(realRequest, context);
+			return await executor.execute(request, context);
 		} catch (e) {
 			return await this.config.handleError(e, serviceName, request, context);
 		}
@@ -146,8 +161,8 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 
 	async emit(eventName: string, event: any, executionContext: ExecutionContext): Promise<void> {
 		if (this.internalEventSubscriptions[eventName]?.length) {
-			for (const handler of this.internalEventSubscriptions[eventName]) {
-				handler(event);
+			for (const s of this.internalEventSubscriptions[eventName]) {
+				s.handler(event);
 			}
 		}
 	}
@@ -156,18 +171,21 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<EventSubscription> {
+	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = (eventConstructor as any).eventName;
-		this.internalEventSubscriptions[eventName] =
-			this.internalEventSubscriptions[eventName] ?? [];
-		this.internalEventSubscriptions[eventName].push(handler);
-		return new EventSubscription('', eventName, handler);
+		const subscription = new EventSubscription('', eventName, handler);
+		this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName] ?? [];
+		this.internalEventSubscriptions[eventName].push(subscription);
+		return subscription;
 	}
 
-	async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
-		const eventName: string = eventConstructor.eventName;
-		if (handler) {
-			this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName].filter(h => h !== handler);
+	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
+		eventName = subscription?.eventName ?? eventName;
+		if (subscription) {
+			if (eventName in this.internalEventSubscriptions) {
+				this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName]
+					.filter(s => s !== subscription);
+			}
 		} else {
 			delete this.internalEventSubscriptions[eventName];
 		}

@@ -71,51 +71,51 @@ nanium sdk {b|p|u}
 
 // read config file
 let root: string;
-const config: NaniumToolConfig = (function (): NaniumToolConfig {
-	root = process.cwd();
-	let configFromFile: Partial<NaniumToolConfig> = {};
-	let configFile: string;
-	while (true) {
-		configFile = path.join(root, 'nanium.json');
-		if (fs.existsSync(configFile)) {
-			configFromFile = JSON.parse(fs.readFileSync(configFile, 'utf8'));
-			if (!configFromFile.namespace) {
-				console.error('nanium.json: namespace not found');
-				process.exit(1);
-			}
-			break;
+
+function getNaniumConfig(dir?: string): NaniumToolConfig {
+	dir = dir ?? process.cwd();
+	let result: NaniumToolConfig;
+	if (fs.existsSync(path.join(dir, 'nanium.json'))) {
+		result = JSON.parse(fs.readFileSync(path.join(dir, 'nanium.json'), 'utf8'));
+		if (!result.namespace) {
+			console.error('nanium.json: namespace not found');
+			process.exit(1);
 		}
-		if (path.resolve(path.join(root, '/..')) === root) {
-			root = process.cwd();
-			break;
-		}
-		root = path.resolve(path.join(root, '/..'));
-	}
-	return {
-		...{
-			serviceDirectory: 'src/server/services',
-			eventsDirectory: 'src/server/events',
-			indentString: '\t',
-			namespace: 'NaniumTest',
-			sdkPackage: {},
-			sdkTsConfig: {
-				'compilerOptions': {
-					'module': 'commonjs',
-					'sourceMap': false,
-					'declaration': true,
-					'watch': false,
-					'noEmitOnError': false,
-					'emitDecoratorMetadata': true,
-					'experimentalDecorators': true,
-					'target': 'ES2020',
-					'lib': ['ES2020'],
-					'types': ['node']
+		root = dir;
+		return {
+			...{
+				serviceDirectory: 'src/server/services',
+				eventsDirectory: 'src/server/events',
+				indentString: '\t',
+				namespace: 'NaniumTest',
+				sdkPackage: {},
+				sdkTsConfig: {
+					'compilerOptions': {
+						'module': 'commonjs',
+						'sourceMap': false,
+						'declaration': true,
+						'watch': false,
+						'noEmitOnError': false,
+						'emitDecoratorMetadata': true,
+						'experimentalDecorators': true,
+						'target': 'ES2020',
+						'lib': ['ES2020'],
+						'types': ['node']
+					}
 				}
-			}
-		},
-		...configFromFile
-	};
-})();
+			},
+			...result
+		};
+	}
+
+	if (path.join(dir, '..') === dir) {
+		return undefined;
+	}
+
+	return getNaniumConfig(path.resolve(path.join(dir, '..')));
+}
+
+const config: NaniumToolConfig = getNaniumConfig();
 const packageJson: any = require(path.join(root, 'package.json'));
 
 // determine and execute action
@@ -278,6 +278,10 @@ function generateEvent([eventsPath, scope, namespace]: [string, string, string])
 // }
 
 function init(): void {
+	if (process.argv.length < 2) {
+		console.error('namespace is missing');
+		process.exit(1);
+	}
 	let fileContent: string;
 	fs.mkdirSync(config.serviceDirectory, { recursive: true });
 	fs.mkdirSync(config.eventsDirectory, { recursive: true });
@@ -288,7 +292,7 @@ function init(): void {
 			serviceDirectory: 'src/server/services',
 			eventsDirectory: 'src/server/events',
 			indentString: '\t',
-			namespace: '',
+			namespace: process.argv[1],
 			outDir: 'sdk',
 			sdkPackage: {
 				name: 'myServices',

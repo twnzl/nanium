@@ -6,14 +6,14 @@ import {
 	StuffRequest,
 	StuffStringEnum
 } from '../tests/services/test/stuff.contract';
-import { ServiceRequestContext } from '../tests/services/serviceRequestContext';
+import { TestExecutionContext } from '../tests/services/testExecutionContext';
 import { TestHelper } from '../tests/testHelper';
 import { ServiceResponseBase } from '../tests/services/serviceResponseBase';
 import { NaniumObject } from '../objects';
 
 let request: StuffRequest = null;
 let response: ServiceResponseBase<Stuff<Date>[]>;
-const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
+const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 
 describe('JsonSerializer: execution via client server szenario \n', function (): void {
 	beforeAll(async () => {

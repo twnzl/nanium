@@ -4,11 +4,14 @@ import { ServiceManager } from './interfaces/serviceManager';
 import { ExecutionContext } from './interfaces/executionContext';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
 import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
-import { AsyncHelper, DateHelper } from './helper';
+import { DateHelper } from './helper';
 import { EventSubscription } from './interfaces/eventSubscription';
 import { Logger, LogLevel } from './interfaces/logger';
+import { NaniumCommunicator } from './interfaces/communicator';
 
 declare var global: any;
+
+export const managerSymbol: symbol = Symbol.for('__nanium__manager__');
 
 class ConsoleLogger implements Logger {
 	loglevel: LogLevel = LogLevel.none;
@@ -67,6 +70,11 @@ export class CNanium {
 	managers: ServiceManager[] = [];
 	queues: ServiceRequestQueue[] = [];
 	logger: Logger = new ConsoleLogger(LogLevel.warn);
+
+	// Supports functions to communicate with other processes or threads of the same server instance or even other hosted
+	// server instances of the same nanium scope.
+	// for example this is used to spread information about emitted events
+	communicators: NaniumCommunicator[] = [];
 
 	get isShutDownInitiated(): boolean {
 		return this._isShutDownInitiated;
@@ -146,40 +154,63 @@ export class CNanium {
 		return result;
 	}
 
-	emit(event: any, eventName?: string, context?: ExecutionContext): void {
+	emit(event: any, eventName?: string, context?: ExecutionContext, broadcast: boolean = true): void {
 		eventName = eventName ?? event.constructor.eventName;
 		this.managers.forEach((manager: ServiceManager) => manager.emit(eventName, event, context));
+		if (broadcast) {
+			for (const communicator of this.communicators) {
+				communicator.broadcastEvent(event, eventName, context).then();
+			}
+		}
 	}
 
 	async subscribe(
 		eventConstructor: any,
 		handler: (data: any) => Promise<void>,
-		context?: ServiceManager | Omit<any, 'subscribe'>
+		managerOrData?: ServiceManager | Omit<any, 'subscribe'>
 	): Promise<EventSubscription> {
 		let manager: ServiceManager;
-		if (context && (context as ServiceManager).subscribe) {
-			manager = context as ServiceManager;
+		let data: any;
+		if (managerOrData && (managerOrData as ServiceManager).subscribe) {
+			manager = managerOrData as ServiceManager;
 		} else {
-			manager = await this.getResponsibleManagerForEvent(eventConstructor.eventName, context);
+			data = managerOrData;
+			manager = await this.getResponsibleManagerForEvent(eventConstructor.eventName, data);
 		}
 		if (!manager) {
 			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
 		}
 		const subscription: EventSubscription = await manager.subscribe(eventConstructor, handler);
-		subscription.manager = manager;
+		subscription[managerSymbol] = manager;
 		return subscription;
 	}
 
-	async unsubscribe(subscription: EventSubscription): Promise<void> {
-		if (subscription) {
-			await subscription.manager.unsubscribe(subscription);
+	async unsubscribe(subscription?: EventSubscription, eventName?: string, broadcast: boolean = true): Promise<void> {
+		eventName = eventName ?? subscription?.eventName;
+		const manager = subscription ? subscription[managerSymbol] : undefined;
+		if (manager) {
+			await manager.unsubscribe(subscription, eventName);
+		} else {
+			for (const manager of this.managers) {
+				if (await manager.isResponsibleForEvent(eventName, subscription)) {
+					await manager.unsubscribe(subscription, eventName);
+				}
+			}
+		}
+		if (broadcast) {
+			this.communicators.forEach(c => c.broadcastUnsubscription(subscription));
 		}
 	}
 
-	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
-		await AsyncHelper.parallel(this.managers, async (manager: ServiceManager) => {
-			await manager.receiveSubscription(subscriptionData);
-		});
+	async receiveSubscription(subscription: EventSubscription, broadcast: boolean = true): Promise<void> {
+		for await (const manager of this.managers) {
+			if (await manager.isResponsibleForEvent(subscription.eventName, subscription)) {
+				await manager.receiveSubscription(subscription);
+			}
+		}
+		if (broadcast) {
+			this.communicators.forEach(c => c.broadcastSubscription(subscription));
+		}
 	}
 
 	async getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager> {
@@ -196,12 +227,12 @@ export class CNanium {
 		return undefined;
 	}
 
-	async getResponsibleManagerForEvent(eventName: string, context: any): Promise<ServiceManager> {
+	async getResponsibleManagerForEvent(eventName: string, data: any): Promise<ServiceManager> {
 		if (this.managers.length === 0) {
 			throw new Error('nanium: no managers registered - call Nanium.addManager().');
 		}
 		const priorities: number[] = await Promise.all(
-			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, context)));
+			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, data)));
 		const maxPriority = Math.max(...priorities);
 		let idx: number = priorities.findIndex(p => p === maxPriority);
 		if (idx >= 0 && priorities[idx] > 0) {
@@ -209,7 +240,6 @@ export class CNanium {
 		}
 		return undefined;
 	}
-
 
 	//#region queue
 	async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
@@ -305,16 +335,20 @@ export class CNanium {
 
 	async shutdown(): Promise<void> {
 		if (this.queues?.length) {
-			await Promise.all([
-				...this.queues.map((q: ServiceRequestQueue) => {
+			await Promise.all(
+				this.queues.map((q: ServiceRequestQueue) => {
 					q.isShutdownInitiated = true;
 					return q.stop();
-				}),
-				...this.managers.map(m => m.terminate())
-			]);
+				})
+			);
 			this.queues = [];
 		}
-		this.managers = [];
+		if (this.managers?.length) {
+			await Promise.all(
+				this.managers.map(m => m.terminate())
+			);
+			this.managers = [];
+		}
 	}
 
 	private async startQueue(requestQueue: ServiceRequestQueue): Promise<void> {
@@ -334,10 +368,16 @@ if (typeof global !== 'undefined') {
 	if (!global['__nanium__']) {
 		global['__nanium__'] = new CNanium();
 	}
-} else {
+} else if (typeof window !== 'undefined') {
 	if (!window['__nanium__']) {
 		window['__nanium__'] = new CNanium();
 	}
+} else if (typeof globalThis !== 'undefined') {
+	if (!globalThis['__nanium__']) {
+		globalThis['__nanium__'] = new CNanium();
+	}
 }
 
-export const Nanium: CNanium = typeof global !== 'undefined' ? global['__nanium__'] : window['__nanium__'];
+export const Nanium: CNanium = typeof global !== 'undefined' ? global['__nanium__'] : (
+	typeof window !== 'undefined' ? window['__nanium__'] : globalThis['__nanium__']);
+

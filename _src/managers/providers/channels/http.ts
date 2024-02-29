@@ -9,9 +9,11 @@ import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { ConstructorType, genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../../objects';
-import { NaniumStream } from '../../../interfaces/naniumStream';
+import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
+import { ConstructorType, genericTypesSymbol } from '../../../objects';
+import { NaniumStream } from '../../../interfaces/naniumStream';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -20,9 +22,14 @@ export interface NaniumHttpChannelConfig extends ChannelConfig {
 	longPollingRequestTimeoutInSeconds?: number;
 }
 
+const LPR_TIMEOUT_MS: number = 3000;
+
 export class NaniumHttpChannel implements Channel {
-	private serviceRepository: NaniumRepository;
+	manager: ServiceProviderManager;
+	onClientRemoved: ((clientId) => void)[] = [];
+
 	private readonly config: NaniumHttpChannelConfig;
+	private serviceRepository: NaniumRepository;
 	private readonly streamPath: string;
 	private readonly longPollingResponses: { [clientId: string]: ServerResponse } = {};
 	private readonly requestStreams: {
@@ -34,8 +41,8 @@ export class NaniumHttpChannel implements Channel {
 		}
 	} = {}; // todo: streams: cleanup to remove streams of finished/canceled requests
 	private readonly responseStreams: { [id: string]: { s: NaniumStream, t: ConstructorType } } = {}; // todo: streams: cleanup to remove streams of finished/canceled requests
-
-	public eventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
+	private lastLongPollingContact: { [clientId: string]: number } = {};
+	private pendingEvents: { [clientId: string]: { eventName: string, event: Event }[] } = {};
 
 	constructor(config: NaniumHttpChannelConfig) {
 		this.config = {
@@ -52,9 +59,17 @@ export class NaniumHttpChannel implements Channel {
 		this.streamPath = this.config.apiPath + (this.config.apiPath.endsWith('/') ? +'/stream/' : '/stream/');
 	}
 
-	async init(serviceRepository: NaniumRepository): Promise<void> {
+	private getRootUrl(url) {
+		let result = url.split('?')[0].split('#')[0]?.toLowerCase();
+		if (result.endsWith('/')) {
+			result = result.slice(0, -1);
+		}
+		return result;
+	}
+
+	async init(serviceRepository: NaniumRepository, manager: ServiceProviderManager): Promise<void> {
 		this.serviceRepository = serviceRepository;
-		this.eventSubscriptions = {};
+		this.manager = manager;
 
 		const handleFunction: (req: IncomingMessage, res: ServerResponse, next?: Function) => Promise<void> =
 			async (
@@ -63,20 +78,20 @@ export class NaniumHttpChannel implements Channel {
 				if (res.writableFinished) {
 					return;
 				}
-				const url: string = req['originalUrl'] || req.url;
+				let url: string = this.getRootUrl(req['originalUrl'] || req.url);
 
 				// event subscriptions
-				if ((url).split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath) {
+				if (url === this.config.eventPath) {
 					await this.handleIncomingEventSubscription(req, res);
 				}
 
 				// event unsubscriptions
-				else if (url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.eventPath + '/delete') {
+				else if (url === this.config.eventPath + '/delete') {
 					await this.handleIncomingEventUnsubscription(req, res);
 				}
 
 				// service requests
-				else if (req.method.toLowerCase() === 'post' && url.split('?')[0].split('#')[0]?.toLowerCase() === this.config.apiPath) {
+				else if (req.method.toLowerCase() === 'post' && url === this.config.apiPath) {
 					await this.handleIncomingServiceRequest(req, res);
 				}
 
@@ -113,13 +128,26 @@ export class NaniumHttpChannel implements Channel {
 	private async handleIncomingServiceRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
 		const data: any[] = [];
 		await new Promise<void>((resolve: Function, reject: Function) => {
-			req.on('data', (chunk: any) => {
-				data.push(chunk);
+			let deserialized: NaniumHttpChannelBody;
+			let request: any;
+			let parser: MultipartParser;
+
+			const isMultipart = req.headers['content-type']?.startsWith('multipart/form-data');
+			if (isMultipart) {
+				parser = new MultipartParser(req.headers['content-type'], this.config, this.serviceRepository);
+			}
+			req.on('data', (chunk: Buffer) => {
+				isMultipart ? parser.parsePart(chunk) : data.push(chunk);
 			}).on('end', async () => {
 				try {
-					const body: string = Buffer.concat(data).toString();
-					const deserialized: NaniumHttpChannelBody = this.config.serializer.deserialize(body);
-					await this.process(deserialized, res);
+					if (isMultipart) {
+						[request, deserialized] = await parser.getResult();
+					} else {
+						const body: string = Buffer.concat(data).toString();
+						deserialized = this.config.serializer.deserialize(body);
+						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
+					}
+					await this.process(request, res, deserialized.streamed);
 					if (!deserialized.streamed) {
 						res.end();
 						resolve();
@@ -131,22 +159,16 @@ export class NaniumHttpChannel implements Channel {
 		});
 	}
 
-	async process(deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
-		return await this.processCore(this.config, this.serviceRepository, deserialized, res);
+	async process(request: any, res: ServerResponse, isStreamed?: boolean): Promise<any> {
+		return await this.processCore(this.config, this.serviceRepository, request, res, isStreamed);
 	}
 
-	async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, deserialized: NaniumHttpChannelBody, res: ServerResponse): Promise<any> {
-		const serviceName: string = deserialized.serviceName;
+	async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, res: ServerResponse, isStreamed?: boolean): Promise<any> {
+		const serviceName: string = request.constructor.serviceName;
 		if (!serviceRepository[serviceName]) {
 			throw new Error(`nanium: unknown service ${serviceName}`);
 		}
-		const request: any = NaniumObject.create(
-			deserialized.request,
-			serviceRepository[serviceName].Request,
-			serviceRepository[serviceName].Request[genericTypesSymbol]
-		);
-		NaniumStream.forEachStream(request, (s, t) => this.requestStreams[s.id] = { stream: s, type: t });
-		if (deserialized.streamed) {
+		if (isStreamed) {
 			if (!request.stream) {
 				res.statusCode = 500;
 				res.write(config.serializer.serialize('the service does not support result streaming'));
@@ -160,12 +182,11 @@ export class NaniumHttpChannel implements Channel {
 			res.statusCode = 200;
 			result.subscribe({
 				next: async (value: any): Promise<void> => {
-					if (serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer) {
-						if (value instanceof Buffer || value instanceof Uint8Array) {
-							res.write(value);
-						} else {
-							res.write(new Uint8Array(value instanceof ArrayBuffer ? value : value.buffer));
-						}
+					if (
+						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
+						(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
+					) {
+						res.write(await NaniumBuffer.as(Uint8Array, value));
 					} else {
 						res.write(config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
 					}
@@ -186,12 +207,11 @@ export class NaniumHttpChannel implements Channel {
 				res.setHeader('Content-Type', config.serializer.mimeType);
 				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 				if (result !== undefined && result !== null) {
-					if (serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer) {
-						if (result instanceof Buffer || result instanceof Uint8Array) {
-							res.write(result);
-						} else {
-							res.write(new Uint8Array(result instanceof ArrayBuffer ? result : result.buffer));
-						}
+					if (
+						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
+						(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
+					) {
+						res.write(await NaniumBuffer.as(Uint8Array, result));
 					} else {
 						NaniumStream.forEachStream(result, (s, t) => this.responseStreams[s.id] = { s, t });
 						res.write(config.serializer.serialize(result));
@@ -252,7 +272,7 @@ export class NaniumHttpChannel implements Channel {
 							try {
 								await Nanium.receiveSubscription(subscriptionData);
 							} catch (e) {
-								Nanium.logger.error(e);
+								Nanium.logger.warn(e);
 								res.statusCode = 400;
 								const responseBody: string | ArrayBuffer = this.config.serializer.serialize(e.message);
 								res.write(responseBody);
@@ -260,10 +280,7 @@ export class NaniumHttpChannel implements Channel {
 								resolve();
 								return;
 							}
-							this.eventSubscriptions[subscriptionData.eventName] = this.eventSubscriptions[subscriptionData.eventName] ?? [];
-							this.eventSubscriptions[subscriptionData.eventName].push(subscriptionData);
 							res.end();
-							Nanium.logger.info('channel http: event subscription successful');
 							resolve();
 						}
 
@@ -276,6 +293,12 @@ export class NaniumHttpChannel implements Channel {
 								// todo: self cleaning: delete this.longPollingResponses[subscriptionData.clientId];
 							});
 							this.longPollingResponses[subscriptionData.clientId] = res;
+							this.lastLongPollingContact[subscriptionData.clientId] = Date.now();
+							if (Nanium.communicators?.length) {
+								for (const com of Nanium.communicators) {
+									com.broadcast({ type: 'long_polling_response_received', clientId: subscriptionData.clientId }).then();
+								}
+							}
 							Nanium.logger.info('channel http: open long-polling requests from clientId ', subscriptionData.clientId);
 						}
 					} catch (e) {
@@ -287,7 +310,7 @@ export class NaniumHttpChannel implements Channel {
 	}
 
 	private async handleIncomingEventUnsubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
-		if (!this.eventSubscriptions || req.method.toLowerCase() !== 'post') {
+		if (req.method.toLowerCase() !== 'post') {
 			return;
 		}
 
@@ -306,13 +329,7 @@ export class NaniumHttpChannel implements Channel {
 					// 	{'TData': this.config.subscriptionDataConstructor}
 					// );
 
-					if (!this.eventSubscriptions[subscriptionData.eventName]) {
-						resolve();
-					}
-					const idx: number = this.eventSubscriptions[subscriptionData.eventName].findIndex(s => s.clientId === subscriptionData.clientId);
-					if (idx >= 0) {
-						this.eventSubscriptions[subscriptionData.eventName].splice(idx, 1);
-					}
+					await Nanium.unsubscribe(subscriptionData);
 					resolve();
 				} catch (e) {
 					reject(e);
@@ -325,29 +342,41 @@ export class NaniumHttpChannel implements Channel {
 
 	async emitEvent(event: any, subscription?: EventSubscription): Promise<void> {
 		Nanium.logger.info('channel http: emitEvent: ', event, subscription);
-		const promises: Promise<void>[] = [];
-		promises.push(this.emitEventCore(event, subscription));
-		await Promise.all(promises);
+		await this.emitEventCore(event, subscription);
+		//todo: ### change response to boolean?
 	}
 
-	async emitEventCore(event: any, subscription?: EventSubscription, tryCount: number = 0): Promise<void> {
+	async emitEventCore(event: any, subscription: EventSubscription, tryStart?: number): Promise<boolean> {
 		// try later if there is no open long-polling response (e.g. because of a recent event transmission)
 		if (!this.longPollingResponses[subscription.clientId] || this.longPollingResponses[subscription.clientId].writableFinished) {
 			Nanium.logger.info('channel http: emitEventCore: no open long-polling response');
-			if (tryCount > 5) {
-				// client seams to be gone, so remove subscription from this client
-				for (const eventName in this.eventSubscriptions) {
-					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
-						Nanium.logger.info('channel http: emitEventCore: client seams to be gone, so remove subscription from client: ' + subscription.clientId);
-						this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter((s) => s.clientId !== subscription.clientId);
-					}
+
+			// if we've tried/waited enough
+			if (tryStart && timeDiff(tryStart) > LPR_TIMEOUT_MS) {
+				// if nobody had contact, or it is too long ago - remove client
+				if (
+					!this.lastLongPollingContact[subscription.clientId] ||
+					timeDiff(this.lastLongPollingContact[subscription.clientId]) > (LPR_TIMEOUT_MS * 2)
+					// if anyone has connection to the client he would use the lpr to send this event,
+					// so the client will start a new lpr request immediately and
+					// so the last contact can not be much longer ago than the waiting time for the new lpr
+					// if so - client has gone
+				) {
+					this.removeClient(subscription.clientId);
+					return;
 				}
-				delete this.longPollingResponses[subscription.clientId];
 				return;
 			}
-			return new Promise<void>((resolve: Function, _reject: Function) => {
+
+			// else remember current event and try again later
+			if (event) {
+				this.pendingEvents[subscription.clientId] = this.pendingEvents[subscription.clientId] ?? [];
+				this.pendingEvents[subscription.clientId].push({ event, eventName: subscription.eventName });
+			}
+			tryStart = tryStart ?? Date.now();
+			return new Promise<boolean>((resolve: Function, _reject: Function) => {
 				setTimeout(async () => {
-					resolve(await this.emitEventCore(event, subscription, ++tryCount));
+					resolve(await this.emitEventCore(undefined, subscription, tryStart));
 				}, 500);
 			});
 		}
@@ -356,16 +385,40 @@ export class NaniumHttpChannel implements Channel {
 		else {
 			Nanium.logger.info('channel http: emitEventCore: transmit the data and end the long-polling request');
 			try {
-				const responseBody: string | ArrayBuffer = this.config.serializer.serialize({
-					eventName: event.constructor.eventName,
-					event
-				});
+				let responseBody: string | ArrayBuffer;
+				// if events are waiting for an open long-polling-request send them together with the current event as array
+				if (this.pendingEvents[subscription.clientId]?.length) {
+					if (event) {
+						this.pendingEvents[subscription.clientId].push({ eventName: subscription.eventName, event });
+					}
+					responseBody = this.config.serializer.serialize(this.pendingEvents[subscription.clientId]);
+				} else {
+					responseBody = this.config.serializer.serialize({ eventName: subscription.eventName, event });
+				}
 				this.longPollingResponses[subscription.clientId].setHeader('Content-Type', 'application/json; charset=utf-8');
 				this.longPollingResponses[subscription.clientId].statusCode = 200;
 				this.longPollingResponses[subscription.clientId].write(responseBody);
 				this.longPollingResponses[subscription.clientId].end();
+				delete this.longPollingResponses[subscription.clientId];
+				delete this.pendingEvents[subscription.clientId];
 			} catch (e) {
 			}
+			return false;
+		}
+	}
+
+	receiveCommunicatorMessage(msg: CommunicatorMessage): void {
+		if (msg.type === 'long_polling_response_received') {
+			this.lastLongPollingContact[msg.clientId] = Date.now();
+		}
+	};
+
+	removeClient?(clientId: string) {
+		delete this.longPollingResponses[clientId];
+		delete this.pendingEvents[clientId];
+		delete this.lastLongPollingContact[clientId];
+		for (const handler of this.onClientRemoved) {
+			handler(clientId);
 		}
 	}
 
@@ -443,4 +496,152 @@ interface NaniumHttpChannelBody {
 	serviceName: string;
 	request: any;
 	streamed?: boolean;
+}
+
+export class MultipartParser {
+	private static fieldValueStart = Buffer.from('\r\n\r\n');
+	private static fieldValueEnd = Buffer.from('\r\n');
+	private static quote = 34;
+	private static space = 32;
+
+	private state: 'searchingBoundary' | 'readingFieldHeader' | 'readingRequest' | 'readingBinary' = 'searchingBoundary';
+	private boundary: Buffer;
+	private requestBuf: NaniumBuffer;
+	private currentBinary: NaniumBuffer;
+	private nameStart: number;
+	private fieldName: string;
+	private dataPortions: Buffer[] = [];
+
+	private tmp: NaniumBuffer = new NaniumBuffer();
+	private binaries: { [id: string]: NaniumBuffer } = {};
+
+	constructor(
+		private contentType: string,
+		private channelConfig: NaniumHttpChannelConfig,
+		private serviceRepository: any,
+	) {
+		this.boundary = Buffer.from(new TextEncoder().encode(
+			'--' + contentType.split('multipart/form-data; boundary=')[1]
+		));
+	}
+
+	async parsePart(data: Buffer) {
+		// this.dataPortions prevents parallel parsing of multiple data portions if e.g. the second portion arrives
+		// and parsePart is called while the first call of parsePart is waiting of some async operation but is not yet ready
+		this.dataPortions.push(data);
+		if (this.dataPortions.length > 1) {
+			return;
+		}
+
+		while (this.dataPortions.length > 0) {
+			data = this.dataPortions[0];
+			this.tmp.write(data);
+			let buf: Buffer;
+			let i = 0;
+			let valueStart: number;
+			if (this.state === 'searchingBoundary' && this.tmp.length < this.boundary.length) {
+				return;
+			}
+			buf = await this.tmp.as(Buffer);
+			while (i < buf.length) {
+				if (this.state === 'searchingBoundary') {
+					if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) {
+						i += this.boundary.length;
+						this.state = 'readingFieldHeader';
+						this.boundary = Buffer.concat([MultipartParser.fieldValueEnd, this.boundary]);
+					} else {
+						i++;
+					}
+				} else if (this.state === 'readingFieldHeader') {
+					if (buf.slice(i, i + 4).compare(MultipartParser.fieldValueStart) === 0) {
+						i += 4;
+						if (this.fieldName === 'request') {
+							this.requestBuf = new NaniumBuffer();
+							this.state = this.state = 'readingRequest';
+						} else {
+							this.state = 'readingBinary';
+							this.currentBinary = new NaniumBuffer();
+							this.binaries[this.fieldName] = this.currentBinary;
+						}
+						this.fieldName = undefined;
+					} else if (buf[i] === MultipartParser.space && buf.slice(i, i + 7).toString() === ' name="') { // name (names including " are currently nor allowed)
+						this.nameStart = i + 7;
+						i += 7;
+					} else if (this.nameStart && buf[i] === MultipartParser.quote) { // end of name
+						this.fieldName = buf.slice(this.nameStart, i).toString();
+						this.nameStart = undefined;
+						i++;
+					} else {
+						i++;
+					}
+				} else if (this.state === 'readingRequest' || this.state === 'readingBinary') {
+					// noinspection JSUnusedAssignment
+					valueStart = valueStart ?? i;
+					if (buf[i] === this.boundary[0] && Buffer.compare(this.boundary, buf.slice(i, i + this.boundary.length)) === 0) { // next boundary
+						if (this.state === 'readingRequest') {
+							this.requestBuf.write(buf.slice(valueStart, i));
+						} else {
+							this.currentBinary.write(buf.slice(valueStart, i));
+						}
+						valueStart = undefined;
+						i += this.boundary.length;
+						this.state = 'readingFieldHeader';
+					} else if (
+						buf[i] === this.boundary[0] &&
+						(i + this.boundary.length) > buf.length &&
+						Buffer.compare(this.boundary.slice(0, buf.length - i), buf.slice(i, i + buf.length)) === 0
+					) {
+						// ends with something that looks like a boundary
+						// keep the rest in tmp buffer, as prefix of next data portion and stop for current data portion
+						if (this.state === 'readingRequest') {
+							this.requestBuf.write(buf.slice(valueStart, i));
+						} else {
+							this.currentBinary.write(buf.slice(valueStart, i));
+						}
+						this.tmp = new NaniumBuffer(buf.slice(i));
+						buf = undefined;
+						break;
+					} else {
+						i++;
+					}
+				}
+			}
+			if (this.nameStart && buf) {
+				this.tmp = new NaniumBuffer(buf.slice(this.nameStart));
+			}
+			if (this.state === 'readingRequest' && valueStart && buf) {
+				this.requestBuf.write(buf.slice(valueStart));
+				this.tmp = new NaniumBuffer();
+			}
+			if (this.state === 'readingBinary' && valueStart && buf) {
+				this.currentBinary.write(buf.slice(valueStart));
+				this.tmp = new NaniumBuffer();
+			}
+			this.dataPortions.shift(); // remove current data portion, when all of it is parsed, so that the next portions can start
+		}
+	}
+
+	async getResult() {
+		const txt = await this.requestBuf.asString();
+		const deserialized = this.channelConfig.serializer.deserialize(txt);
+		const request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
+		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
+			if (
+				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
+				(parent[name[name.length - 1]]?.constructor && parent[name[name.length - 1]]?.constructor['naniumBufferInternalValueSymbol'])
+			) {
+				parent[name[name.length - 1]].write(this.binaries[parent[name[name.length - 1]].id]);
+			}
+		});
+		return [request, deserialized];
+	}
+}
+
+class CommunicatorMessage {
+	type: 'long_polling_response_received';
+	clientId: string;
+}
+
+function timeDiff(timestamp: number) {
+	return Date.now() - timestamp;
 }

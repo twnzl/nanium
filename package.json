@@ -1,6 +1,6 @@
 {
   "name": "nanium",
-  "version": "1.18.3",
+  "version": "1.23.3",
   "description": "nanoservice based fullstack software architecture framework",
   "author": "twnzl",
   "license": "MIT",
@@ -28,12 +28,12 @@
   ],
   "scripts": {
     "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
-    "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates",
+    "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates && cd _src/tests/test-server && tsc",
     "test": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest && cd _src/tests/browser-client; npm test",
     "prepare": "",
     "publishlist": "npm publish --dry-run",
     "bundle": "npm run build && npm test && npm publish",
-    "cleanup": "rm -rf interfaces && rm -rf managers && rm -rf serializers && rm -rf tests && rm -rf tools"
+    "cleanup": "rm -rf interfaces && rm -rf managers && rm -rf serializers && rm -rf tests && rm -rf tools && rm -rf _src/tests/test-server/dst"
   },
   "files": [
     "README.md",
@@ -43,6 +43,8 @@
     "objects.d.ts",
     "helper.js",
     "helper.d.ts",
+    "communicators/**/*.js",
+    "communicators/**/*.ts",
     "interfaces/**/*.js",
     "interfaces/**/*.ts",
     "serializers/**/*.js",
@@ -53,7 +55,9 @@
     "queues/**/*.ts",
     "tools/**/*.js",
     "tools/**/*.ts",
-    "tools/**/*.template"
+    "tools/**/*.template",
+    "!**/*.spec.js",
+    "!**/*.spec.d.ts"
   ],
   "dependencies": {
     "recursive-readdir": "^2.2.2",
@@ -62,16 +66,16 @@
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "^1.0.5",
-    "@types/jest-expect-message": "^1.0.3",
     "@types/jest": "^27.4.1",
-    "ts-jest": "^27.1.4",
+    "@types/jest-expect-message": "^1.0.3",
     "@types/node": "14.17.17",
-    "jest": "^27.5.1",
     "@types/recursive-readdir": "^2.2.0",
     "@types/shelljs": "^0.8.5",
     "@types/typescript": "^2.0.0",
+    "jest": "^27.5.1",
+    "ts-jest": "^27.1.4",
     "ts-node": "^8.3.0",
     "tslint": "^5.18.0",
-    "typescript": "^4.4.3"
+    "typescript": "^4.9.5"
   }
 }

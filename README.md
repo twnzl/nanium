@@ -256,6 +256,10 @@ export class Stuff<TStuffSubType> extends NaniumObject<Stuff<TStuffSubType>> {
 
 	@Type(Object, Boolean) aBooleanDictionary: { [key: string]: Boolean };
 
+	// the type of property 'config' is determined dynamically using the given arrow function   
+	@Type(String) configType: 'a' | 'b';
+	@Type((p: Stuff<any>) => a.configType === 'a' ? A : B) config: A | B;
+
 	get aCalculatedProperty(): string {
 		return this.aStringArray?.join(' ');
 	}
@@ -503,25 +507,56 @@ Nanium.addManager(
 ### Binary data
 
 Regardless of which serializer you use, binary data is always treated specially. If you define the result type of a
-service as ArrayBuffer, the data is not serialized or deserialized, but transported to the client as it is.
+service as NaniumBuffer, the data is not serialized or deserialized, but transported to the client as it
+is.
 
 ```ts
 // contract
 @RequestType({
-	responseType: ArrayBuffer,
+	responseType: NaniumBuffer,
 	scope: 'public'
 })
-export class TestGetBinaryRequest extends SimpleServiceRequestBase<void, ArrayBuffer> {
+export class TestGetBinaryRequest extends SimpleServiceRequestBase<void, NaniumBuffer> {
 	static serviceName: string = 'NaniumTest:test/getBinary';
 }
 
 // executor
-export class TestGetBinaryExecutor implements ServiceExecutor<TestGetBinaryRequest, ArrayBuffer> {
+export class TestGetBinaryExecutor implements ServiceExecutor<TestGetBinaryRequest, NaniumBuffer> {
 	static serviceName: string = 'NaniumTest:test/getBinary';
 
-	async execute(request: TestGetBinaryRequest, executionContext: ServiceRequestContext): Promise<ArrayBuffer> {
-		const result = new TextEncoder().encode('this is a text that will be send as binary data');
-		return result.buffer;
+	async execute(request: TestGetBinaryRequest, executionContext: ServiceRequestContext): Promise<NaniumBuffer> {
+		return new NaniumBuffer('this is a text that will be send as binary data');
+	}
+}
+```
+
+NaniumBuffers can also be included as Properties of Requests. E.g. to send Files or other binary or large data together
+with other information like IDs or file names etc.
+
+```ts
+// contract
+import { NaniumBuffer } from './naniumBuffer';
+
+@RequestType({ responseType: String, scope: 'public' })
+export class TestMeasurementStoreRequest extends SimpleServiceRequestBase<void, string> {
+	static serviceName: string = 'NaniumTest:test/bigData/Store';
+
+	@Type(Date) startTime: Date;
+	@Type(Date) endTime: Date;
+	@Type(Array, String) enabledSensors: string[];
+	@Type(NaniumBuffer) sensorValues: NaniumBuffer;
+	@Type(NaniumBuffer) video: NaniumBuffer;
+}
+
+// executor
+export class TestMeasurementStoreExecutor implements ServiceExecutor<TestMeasurementStoreRequest, string> {
+	static serviceName: string = 'NaniumTest:test/bigData/Store';
+
+	async execute(request: TestMeasurementStoreRequest, executionContext: ServiceRequestContext): Promise<string> {
+		const id: string = randomUUID();
+		await fs.promises.writeFile(id + '.mp4', request.body.video.asUint8Array());
+		// ...
+		return id;
 	}
 }
 ```
@@ -559,10 +594,8 @@ export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest
 ```
 
 The overall result of this example service is a List of instances of class TestDto. But the server will return only one
-per
-second until 10. So the client can, for example, show a partial result list immediately by subscribing to the Observable
-to add
-each new record as soon as it arrives.
+per second until 10. So the client can, for example, show a partial result list immediately by subscribing to the
+Observable to add each new record as soon as it arrives.
 
 On client side, you can subscribe to the observable the *stream* function returns.
 Within the *next* function, you can do some work, whenever an item of the overall result array arrives.
@@ -593,25 +626,25 @@ const result: TestDto[] = await new TestQueryRequest(
 
 ### Binary streaming
 
-For streaming the same applies as for the normal version. Regardless of which serializer you use, binary data is always
-treated specially. If you define the result type of a service as ArrayBuffer, the data is not serialized or
-deserialized, but transported to the client as it is.
+For streaming of binary data the same applies as for the normal version. Regardless of which serializer you use, binary
+data is always treated specially. If you define the result type of a service as NaniumBuffer, the data
+is not serialized or deserialized, but transported to the client as it is.
 
 ```ts
 // the contract
 @RequestType({
-	responseType: ArrayBuffer,
+	responseType: NaniumBuffer,
 	scope: 'public'
 })
-export class TestGetStreamedArrayBufferRequest extends ServiceRequestBase<void, ArrayBuffer> {
-	static serviceName: string = 'NaniumTest:test/getStreamedArrayBuffer';
+export class TestGetStreamedBufferRequest extends ServiceRequestBase<void, NaniumBuffer> {
+	static serviceName: string = 'NaniumTest:test/getStreamedBuffer';
 }
 
 // the executor
-export class TestGetStreamedArrayBufferExecutor implements StreamServiceExecutor<TestGetStreamedArrayBufferRequest, ArrayBuffer> {
-	static serviceName: string = 'NaniumTest:test/getStreamedArrayBuffer';
+export class TestGetStreamedBufferExecutor implements StreamServiceExecutor<TestGetStreamedBufferRequest, ArrayBuffer> {
+	static serviceName: string = 'NaniumTest:test/getStreamedBuffer';
 
-	stream(request: TestGetStreamedArrayBufferRequest, executionContext: ServiceRequestContext): Observable<ArrayBuffer> {
+	stream(request: TestGetStreamedBufferRequest, executionContext: ServiceRequestContext): Observable<ArrayBuffer> {
 		return new Observable((observer: Observer<ArrayBuffer>): void => {
 			const enc: TextEncoder = new TextEncoder();
 			const buf: ArrayBuffer = enc.encode('This is a string converted to a Uint8Array');
@@ -624,12 +657,13 @@ export class TestGetStreamedArrayBufferExecutor implements StreamServiceExecutor
 }
 
 // the client call
-new TestGetStreamedArrayBufferRequest(undefined, { token: '1234' }).stream().subscribe({
-	next: (part: ArrayBuffer): void => {
-		console.log(new TextDecoder().decode(part));
+new TestGetStreamedBufferRequest(undefined, { token: '1234' }).stream().subscribe({
+	next: (part: NaniumBuffer): void => {
+		console.log(part.asString());
 		// output:
-		// This is a string con
-		// verted to a Uint8Array
+		// This
+		//  is a string convert
+		// ed to a Uint8Array
 	}
 });
 ```

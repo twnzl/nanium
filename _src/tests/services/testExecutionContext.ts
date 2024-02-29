@@ -1,11 +1,12 @@
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { ExecutionScope } from '../../interfaces/executionScope';
 
-export class ServiceRequestContext implements ExecutionContext {
+export class TestExecutionContext implements ExecutionContext {
 	scope?: ExecutionScope;
-	user: any;
+	user?: string;
+	tenant?: string;
 
-	constructor(data: Partial<ServiceRequestContext>) {
+	constructor(data: Partial<TestExecutionContext>) {
 		Object.assign(this, data);
 	}
 }

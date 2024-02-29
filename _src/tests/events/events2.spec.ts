@@ -1,28 +1,30 @@
-import { ServiceRequestContext } from '../services/serviceRequestContext';
+import { TestExecutionContext } from '../services/testExecutionContext';
 import { TestHelper } from '../testHelper';
-import { StuffCreatedEvent } from './test/stuffCreated.event';
+import { StuffEvent } from './test/stuffEvent';
 import { AsyncHelper } from '../../helper';
-import { TestEventSubscriptionReceiveInterceptor, TestEventSubscriptionSendInterceptor } from './test.interceptor';
+import {
+	TestEventSubscriptionReceiveInterceptor
+} from '../interceptors/server/test.receive-event-subscription.interceptor';
+import { session } from '../session';
 
-
-const executionContext: ServiceRequestContext = new ServiceRequestContext({ scope: 'private' });
+const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 
 describe('events \n', function (): void {
 
 	describe('consumer (http) subscribes and provider emits the event\n with interceptor\n interceptor rejects subscription\n', () => {
-		const sendEvent: StuffCreatedEvent = new StuffCreatedEvent(42, ':-)', new Date(2021, 12, 6));
-		let receivedEvent: StuffCreatedEvent;
+		const sendEvent: StuffEvent = new StuffEvent(42, ':-)', new Date(2021, 12, 6));
+		let receivedEvent: StuffEvent;
 
 		it('--> subscribed handler should not have been executed\n', async () => {
 			await TestHelper.shutdown();
 			await TestHelper.initClientServerScenario('http', false);
 			receivedEvent = undefined;
 			TestHelper.provider.config.eventSubscriptionReceiveInterceptors = [TestEventSubscriptionReceiveInterceptor];
-			TestEventSubscriptionSendInterceptor.tenant = 'WrongCompany';
+			session.tenant = 'WrongCompany';
 			try {
-				await StuffCreatedEvent.subscribe((e: StuffCreatedEvent) => {
+				await StuffEvent.subscribe((e: StuffEvent) => {
 					receivedEvent = e;
-				});
+				}, TestHelper.consumer);
 			} catch (e) {
 				expect(e?.message).toBe('unauthorized');
 			}

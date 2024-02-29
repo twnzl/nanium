@@ -75,25 +75,51 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	async execute<T>(serviceName: string, request: any): Promise<any> {
+	async execute<T>(serviceName: string, request: any, executionContext?: ExecutionContext): Promise<any> {
 
 		// execute request interceptors
 		if (this.config.requestInterceptors?.length) {
+			let result: any;
 			for (const interceptor of this.config.requestInterceptors) {
-				await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
+				result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, executionContext ?? {});
+				// if an interceptor returns an object other than the request it is a result and the execution shall be
+				// finished with this result
+				if (result !== undefined && result !== request) {
+					return result;
+				}
 			}
 		}
 
 		// execute the request
-		return await this.httpCore.sendRequest(serviceName, request);
+		const response = await this.httpCore.sendRequest(serviceName, request);
+
+		// execute response interceptors
+		if (this.config.responseInterceptors?.length) {
+			let responseFromInterceptor: any;
+			for (const interceptor of this.config.responseInterceptors) {
+				responseFromInterceptor = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, response);
+				// if an interceptor returns an object other than the original response instance, the returned value will replace the original response;
+				if (responseFromInterceptor !== undefined && responseFromInterceptor !== response) {
+					return responseFromInterceptor;
+				}
+			}
+		}
+
+		return response;
 	}
 
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
 			const core: Function = async (): Promise<void> => {
 				// interceptors
+				let result: any;
 				for (const interceptor of this.config.requestInterceptors) {
-					await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
+					result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
+					// if an interceptor returns an object other than the request it is a result and the execution shall be
+					// finished with this result
+					if (result && result !== request) {
+						return result;
+					}
 				}
 
 				// transmission
@@ -133,8 +159,11 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 											return;
 										}
 										try {
-											if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
-												observer.next(value);
+											if (
+												request.constructor[responseTypeSymbol] === ArrayBuffer ||
+												(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
+											) {
+												observer.next(value.constructor['naniumBufferInternalValueSymbol'] ? value : new NaniumBuffer(value));
 											} else {
 												deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 												if (deserialized.data?.length) {
@@ -177,8 +206,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		return await this.httpCore.subscribe(eventConstructor, handler);
 	}
 
-	async unsubscribe(subscription?: EventSubscription): Promise<void> {
-		await this.httpCore.unsubscribe(subscription);
+	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
+		await this.httpCore.unsubscribe(subscription, eventName);
 	}
 
 	emit(eventName: string, event: any, context: ExecutionContext): any {
@@ -192,7 +221,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		throw new Error('not implemented');
 	}
 
-	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any): Promise<ArrayBuffer> {
+	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any): Promise<ArrayBuffer> {
 		return new Promise<ArrayBuffer>((resolve: Function, reject: Function) => {
 			// transmission
 			const abortController: AbortController = new AbortController();
@@ -205,11 +234,11 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			});
 			fetch(req)
 				.then(async (response) => {
+					const data: ArrayBuffer = await response.arrayBuffer();
 					if (response.ok) {
-						const data: ArrayBuffer = await response.arrayBuffer();
 						resolve(data);
 					} else {
-						reject(await response.arrayBuffer());
+						reject(data);
 					}
 				})
 				.catch((error) => {

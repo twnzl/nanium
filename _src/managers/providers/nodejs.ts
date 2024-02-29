@@ -29,7 +29,8 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	servicePath?: string = 'services';
 
 	/**
-	 * array of transport adaptors
+	 * array of channels for incoming requests
+	 * !do not change this collection after the manager has been initialized (that means after calling Nanium.addManager())!
 	 */
 	channels?: Channel[] = [];
 
@@ -74,7 +75,7 @@ export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 
 export class NaniumProviderNodejs implements ServiceProviderManager {
 	repository: NaniumRepository;
-	internalEventSubscriptions: { [eventName: string]: ((event: any) => void)[] } = {};
+	eventSubscriptions: { [eventName: string]: EventSubscription[] } = {};
 	config: NaniumNodejsProviderConfig = {
 		servicePath: 'services',
 		requestInterceptors: [],
@@ -103,6 +104,13 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			Executor: executorClass,
 			Request: requestClass
 		};
+	}
+
+	addChannel<T>(channel: Channel): void {
+		channel.init(this.repository, this).then();
+		channel.onClientRemoved.push(clientId => this.removeClient(clientId));
+		this.config.channels = this.config.channels ?? [];
+		this.config.channels.push(channel);
 	}
 
 	async init(): Promise<void> {
@@ -138,7 +146,8 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		// init channels over which requests can come from public scope
 		if (this.config.channels && this.config.channels.length) {
 			for (const channel of this.config.channels) {
-				await channel.init(this.repository);
+				await channel.init(this.repository, this);
+				channel.onClientRemoved.push(clientId => this.removeClient(clientId));
 			}
 		}
 	}
@@ -270,28 +279,13 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		const interceptors: EventEmissionSendInterceptor<any>[] = this.config.eventEmissionSendInterceptors?.map(
 			(instanceOrClass) => typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass
 		) ?? [];
-		for (const channel of this.config.channels) { // channels
-			if (!channel.eventSubscriptions) {
-				continue;
-			}
-			Nanium.logger.info('provider nodejs emit: event ', eventName, channel.eventSubscriptions[eventName]?.length ?? 0);
-			Nanium.logger.info('provider nodejs emit: active subscriptions. ', channel.eventSubscriptions[eventName]?.length ?? 0);
-			for (const subscription of channel.eventSubscriptions[eventName] ?? []) { // subscriptions
-				emissionOk = true;
-				for (const interceptor of interceptors) { // interceptors
-					emissionOk = await interceptor.execute(event, executionContext, subscription);
-					if (!emissionOk) {
-						break;
-					}
-				}
-				if (emissionOk) {
-					channel.emitEvent(event, subscription).then();
-				}
-			}
-		}
-		// internal
-		if (this.internalEventSubscriptions[eventName]?.length) {
-			const subscription: EventSubscription = new EventSubscription('', eventName);
+		// for (const channel of this.config.channels ?? []) { // channels
+		// if (!channel.eventSubscriptions) {
+		// 	continue;
+		// }
+		// Nanium.logger.info('provider nodejs emit: event ', eventName, channel.eventSubscriptions[eventName]?.length ?? 0);
+		// Nanium.logger.info('provider nodejs emit: active subscriptions. ', channel.eventSubscriptions[eventName]?.length ?? 0);
+		for (const subscription of this.eventSubscriptions[eventName] ?? []) { // subscriptions
 			emissionOk = true;
 			for (const interceptor of interceptors) { // interceptors
 				emissionOk = await interceptor.execute(event, executionContext, subscription);
@@ -300,41 +294,94 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				}
 			}
 			if (emissionOk) {
-				for (const handler of this.internalEventSubscriptions[eventName]) {
-					handler(event);
+				if (subscription.handler) { // server internal
+					subscription.handler(event);
+				} else {
+					for (const channel of this.config.channels ?? []) { // channels
+						channel.emitEvent(event, subscription).then();
+					}
 				}
 			}
 		}
+		// internal
+		// if (this.eventSubscriptions[eventName]?.length) {
+		// 	const internal = this.eventSubscriptions[eventName].filter(s => s.handler);
+		// 	if (emissionOk) {
+		// 		for (const subscription of this.eventSubscriptions[eventName]) {
+		// 			emissionOk = true;
+		// 			for (const interceptor of interceptors) { // interceptors
+		// 				emissionOk = await interceptor.execute(event, executionContext, subscription);
+		// 				if (!emissionOk) {
+		// 					break;
+		// 				}
+		// 			}
+		// 			if (subscription.handler) {
+		// 				subscription.handler(event);
+		// 			}
+		// 		}
+		// 	}
+		// }
 	}
 
 	async isResponsibleForEvent(eventName: string, context?: any): Promise<number> {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new() => any, handler: EventHandler): Promise<EventSubscription> {
+	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = (eventConstructor as any).eventName;
-		this.internalEventSubscriptions[eventName] =
-			this.internalEventSubscriptions[eventName] ?? [];
-		this.internalEventSubscriptions[eventName].push(handler);
-		return new EventSubscription('', eventName, handler);
+		const subscription = new EventSubscription('', eventName, handler);
+		this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName] ?? [];
+		this.eventSubscriptions[eventName].push(subscription);
+		return subscription;
 	}
 
-	async unsubscribe(eventConstructor: any, handler?: (data: any) => Promise<void>): Promise<void> {
-		const eventName: string = eventConstructor.eventName;
-		if (handler) {
-			this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName].filter(h => h !== handler);
-		} else {
-			delete this.internalEventSubscriptions[eventName];
-		}
-	}
-
-	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
+		eventName = subscription?.eventName ?? eventName;
 		if (this.config.eventSubscriptionReceiveInterceptors?.length) {
 			let interceptor: EventSubscriptionReceiveInterceptor<any>;
 			for (const instanceOrClass of this.config.eventSubscriptionReceiveInterceptors) {
 				interceptor = typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass;
-				await interceptor.execute(subscriptionData);
+				await interceptor.execute(subscription);
 			}
+		}
+		if (subscription) {
+			if (eventName in this.eventSubscriptions) {
+				this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName]
+					.filter(s => s.id !== subscription.id);
+				if (!this.eventSubscriptions[eventName].length) {
+					delete this.eventSubscriptions[eventName];
+				}
+			}
+		} else {
+			delete this.eventSubscriptions[eventName];
+		}
+	}
+
+	async receiveSubscription(subscription: EventSubscription): Promise<void> {
+		if (this.config.eventSubscriptionReceiveInterceptors?.length) {
+			let interceptor: EventSubscriptionReceiveInterceptor<any>;
+			for (const instanceOrClass of this.config.eventSubscriptionReceiveInterceptors) {
+				interceptor = typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass;
+				await interceptor.execute(subscription);
+			}
+		}
+		this.eventSubscriptions[subscription.eventName] = this.eventSubscriptions[subscription.eventName] ?? [];
+		this.eventSubscriptions[subscription.eventName].push(subscription);
+	}
+
+	receiveCommunicatorMessage(msg: any, from: string | number): void {
+		if (msg.type === 'long_polling_response_received') {
+			this.config.channels.forEach(c => {
+				if (c.receiveCommunicatorMessage) {
+					c.receiveCommunicatorMessage(msg);
+				}
+			});
+		}
+	}
+
+	removeClient(clientId: string): void {
+		for (const eventName of Object.keys(this.eventSubscriptions)) {
+			this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter(s => s.clientId !== clientId);
 		}
 	}
 }
