@@ -21,7 +21,6 @@ import { TestGetNaniumBufferRequest } from '../../../services/test/getNaniumBuff
 import { TestNoIORequest } from '../../../services/test/noIO.contract';
 import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
 import { TimeRequest } from '../../../services/test/time.contract';
-import { StuffCreatedEvent } from '../../../events/test/stuffCreated.event';
 import { TestMeasurementDataConvertRequest } from '../../../services/test/measurement/data/convert.contract';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../../interfaces/naniumStream';
@@ -113,12 +112,12 @@ describe('basic browser client tests', () => {
 
 		it('execute service with Binary (ArrayBuffer) response', async () => {
 			const result = await new TestGetBinaryRequest().execute();
-			expect(new TextDecoder().decode(result.asUint8Array())).toBe('this is a text that will be send as binary data');
+			expect(new TextDecoder().decode(await result.asUint8Array())).toBe('this is a text that will be send as binary data');
 		});
 
 		it('execute service with Binary (NaniumBuffer) response', async () => {
 			const result: NaniumBuffer = await new TestGetNaniumBufferRequest().execute();
-			expect(new TextDecoder().decode(result.asUint8Array())).toBe('this is a text that will be send as NaniumBuffer');
+			expect(new TextDecoder().decode(await result.asUint8Array())).toBe('this is a text that will be send as NaniumBuffer');
 		});
 
 		it('response as json stream', async () => {
@@ -381,11 +380,11 @@ describe('basic browser client tests', () => {
 
 					// stream data of the two streams
 					// request.body.values.next(1);
-					request.body.video.next(new NaniumBuffer('123'));
+					request.body.video.next(new NaniumBuffer(new TextEncoder().encode('123')));
 					// request.body.values.next(2);
-					request.body.video.next(new NaniumBuffer(['45', '6']));
+					request.body.video.next(new NaniumBuffer([new TextEncoder().encode('45'), new TextEncoder().encode('6')]));
 					// request.body.values.next(3);
-					request.body.video.next(new NaniumBuffer('789'));
+					request.body.video.next(new NaniumBuffer(new TextEncoder().encode('789')));
 					request.body.video.complete();
 
 					// receive data of the two response streams and when ready test the result
@@ -409,9 +408,9 @@ describe('basic browser client tests', () => {
 						next: (part) => {
 							resultVideo.write(part);
 						},
-						complete: () => {
+						complete: async () => {
 							expect(resultVideo.length).toBe(10);
-							expect(new TextDecoder().decode(resultVideo.asUint8Array())).toBe('2345678910');
+							expect(new TextDecoder().decode(await resultVideo.asUint8Array())).toBe('2345678910');
 							if (resultValuesReady) {
 								resolve();
 							}

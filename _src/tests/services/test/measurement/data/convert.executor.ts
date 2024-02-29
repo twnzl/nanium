@@ -1,13 +1,13 @@
 import { TestMeasurementDataConvertRequest, TestMeasurementDataConvertResponse } from './convert.contract';
-import { ServiceRequestContext } from '../../../serviceRequestContext';
 import { ServiceExecutor } from '../../../../../interfaces/serviceExecutor';
 import { NaniumBuffer } from '../../../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../../../interfaces/naniumStream';
+import { ExecutionContext } from '../../../../../interfaces/executionContext';
 
 export class TestMeasurementDataConvertExecutor implements ServiceExecutor<TestMeasurementDataConvertRequest, TestMeasurementDataConvertResponse> {
 	static serviceName: string = 'NaniumTest:test/measurement/data/convert';
 
-	async execute(request: TestMeasurementDataConvertRequest, executionContext: ServiceRequestContext): Promise<TestMeasurementDataConvertResponse> {
+	async execute(request: TestMeasurementDataConvertRequest, executionContext: ExecutionContext): Promise<TestMeasurementDataConvertResponse> {
 		const id = request.body.measurementId;
 		const response = new TestMeasurementDataConvertResponse({
 			measurementId: id + '*',
@@ -24,8 +24,8 @@ export class TestMeasurementDataConvertExecutor implements ServiceExecutor<TestM
 		// 	}
 		// });
 		request.body.video.subscribe({
-			next: (val: NaniumBuffer) => {
-				const text = new TextDecoder().decode(val.asUint8Array());
+			next: async (val: NaniumBuffer) => {
+				const text = new TextDecoder().decode(await val.asUint8Array());
 				const result: string[] = [];
 				for (let i = 0; i < text.length; i++) {
 					result.push((parseInt(text[i]) + 1).toString());

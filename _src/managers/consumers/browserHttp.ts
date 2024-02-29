@@ -270,17 +270,17 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 				}
 				// collect multiple parts if they are small and send bigger but fewer packages (important for streaming non-binary data)
 				if (requestStream[requestStreamingBufferSymbol].length >= this.config.requestStreamingBufferSize) {
-					this.httpRequest('POST', url + '/' + (++partIdx), (requestStream[requestStreamingBufferSymbol] as NaniumBuffer).asUint8Array()).then();
+					this.httpRequest('POST', url + '/' + (++partIdx), await (requestStream[requestStreamingBufferSymbol] as NaniumBuffer).asUint8Array()).then();
 					(requestStream[requestStreamingBufferSymbol] as NaniumBuffer).clear();
 				}
 			},
 			error: () => {
 				// todo: streams: something to do?
 			},
-			complete: () => {
+			complete: async () => {
 				// if there are collected parts left that have not yet been sent, send it.
 				if (requestStream[requestStreamingBufferSymbol].length) {
-					this.httpRequest('POST', url + '/' + (++partIdx), (requestStream[requestStreamingBufferSymbol] as NaniumBuffer).asUint8Array()).then();
+					this.httpRequest('POST', url + '/' + (++partIdx), await (requestStream[requestStreamingBufferSymbol] as NaniumBuffer).asUint8Array()).then();
 				}
 				this.httpRequest('POST', url + '/' + (++partIdx), null).then();
 				requestStream.unsubscribe(observer);
