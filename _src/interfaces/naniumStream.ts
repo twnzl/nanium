@@ -15,12 +15,6 @@ const onDataHandlerSymbol: symbol = Symbol.for('NaniumStream_OnDataHandlerSymbol
 const onErrorHandlerSymbol: symbol = Symbol.for('NaniumStream_OnErrorHandlerSymbol');
 const onEndHandlerSymbol: symbol = Symbol.for('NaniumStream_OnEndHandlerSymbol');
 
-const STREAM_STATE = {
-	PENDING: 'PENDING',
-	FULFILLED: 'FULFILLED',
-	REJECTED: 'REJECTED',
-};
-
 export class NaniumStream<T = any> { //implements Promise<T> {
 	@Type(String) id: string;
 	@Type(Boolean) isBinary: boolean;
@@ -60,65 +54,6 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 			}
 		});
 	}
-
-	// state = STREAM_STATE.PENDING;
-	// value = undefined;
-	// [Symbol.toStringTag]: string;
-	//
-	// private onFinally: Function[] = [];
-	// private onRejected: Function[] = [];
-	// private onFulfilled: Function[] = [];
-	//
-	// then<TResult1 = T, TResult2 = never>(
-	// 	onFulfilled?: (value: T) => TResult1 | PromiseLike<TResult1>,
-	// 	onRejected?: (reason: any) => TResult2 | PromiseLike<TResult2>
-	// ): Promise<TResult1 | TResult2> {
-	// 	this.onFulfilled.push(onFulfilled);
-	// 	this.onRejected.push(onRejected);
-	// 	setTimeout(() => {
-	// 		try {
-	// 			if (this.id === '99') {
-	// 				throw 11;
-	// 			} else {
-	// 				this.state = STREAM_STATE.FULFILLED;
-	// 				this.value = 12;
-	// 				this.onFulfilled.forEach(fn => fn(this.value));
-	// 			}
-	// 		} catch (e) {
-	// 			this.state = STREAM_STATE.REJECTED;
-	// 			this.onRejected.forEach(fn => fn(e));
-	// 		} finally {
-	// 			this.onFinally.forEach(fn => fn());
-	// 		}
-	// 	});
-	// 	// ...this.on('data', ...buffer);
-	// 	// ...this.on('end'), ...resolve);
-	// 	// ...this.on('error'), ...reject);
-	// 	return this as NaniumStream;
-	// }
-	//
-	// catch<TResult = never>(onRejected?: (reason: any) => TResult | PromiseLike<TResult>): Promise<T | TResult> {
-	// 	this.onRejected.push(onRejected);
-	// 	return this;
-	// }
-	//
-	// finally(onFinally?: () => void): Promise<T> {
-	// 	this.onFinally.push(onFinally);
-	// 	return this;
-	// }
-	//
-	//#endregion Promise
-
-	//#region Stream
-	// private handlers: {[ event: string]: Function[] } = {
-	// 	'data': [],
-	// 	'error': [],
-	// 	'end': [],
-	// };
-	// on(event: 'data' | 'error' | 'end', handler: Function) {
-	// 	this.handlers[event].push(handler);
-	// }
-
 
 	//#region readable
 	onData(handler: (chunk: T extends NaniumBuffer ? DataSource : T | T[]) => void) {

@@ -3,47 +3,48 @@ import { DataSource, NaniumBuffer } from './naniumBuffer';
 import { TestDto } from '../tests/services/test/query.contract';
 
 describe('NaniumStream', function (): void {
-	// test('Promise.then', async function (): Promise<void> {
-	// 	const s = new NaniumStream();
-	// 	const result = await s;
-	// 	expect(result).toBe(12);
-	// });
-	//
-	// test('Promise.catch', async function (): Promise<void> {
-	// 	const s = new NaniumStream();
-	// 	s.id = '99';
-	// 	try {
-	// 		await s;
-	// 		expect(1).toBe(2);
-	// 	} catch (e) {
-	// 		expect(e).toBe(11);
-	// 	}
-	// });
-	//
-	// test('Promise.finally', async function (): Promise<void> {
-	// 	const s = new NaniumStream();
-	// 	s.finally(() => {
-	// 		expect(1).toBe(1);
-	// 	});
-	// });
-
-	test('Promise.then', async function (): Promise<void> {
+	test('Promise: then & finally', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
 		setTimeout(() => {
 			s.write([new TestDto('1', 1), new TestDto('2', 2)]);
 			s.write(new TestDto('3', 3));
 			s.end();
 		});
-		const result = await s.toPromise();
-		expect(result.length).toBe(3);
-		expect(result[0].a).toBe('1');
-		expect(result[0].b).toBe(1);
+		let result: TestDto[];
+		try {
+			result = await s.toPromise();
+			expect(result.length).toBe(3);
+			expect(result[0].a).toBe('1');
+			expect(result[0].b).toBe(1);
+		} finally {
+			result = undefined;
+		}
+		expect(result).toBeUndefined();
+	});
+
+	test('Promise: catch & finally', async function (): Promise<void> {
+		const s = new NaniumStream(TestDto);
+		setTimeout(() => {
+			s.write([new TestDto('1', 1), new TestDto('2', 2)]);
+			s.error(':-(');
+			s.end();
+		});
+		let result: TestDto[];
+		try {
+			result = await s.toPromise();
+			expect(1).toBe(2);
+		} catch (e) {
+			expect(e).toBe(':-(');
+		} finally {
+			result = undefined;
+		}
+		expect(result).toBeUndefined();
 	});
 
 	test('on data: objects', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
 		let result = [];
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: Function, _reject: Function) => {
 			s.onData((chunk: any[]) => {
 				result.push(chunk);
 			});
@@ -67,7 +68,7 @@ describe('NaniumStream', function (): void {
 	test('on data: binary', async function (): Promise<void> {
 		const s = new NaniumStream(NaniumBuffer);
 		const result: NaniumBuffer = new NaniumBuffer();
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: Function, _reject: Function) => {
 			s.onData((chunk: DataSource) => {
 				result.write(chunk);
 			});
