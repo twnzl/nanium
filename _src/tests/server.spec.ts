@@ -9,6 +9,8 @@ import { TestExecutionContext } from './services/testExecutionContext';
 import { TimeRequest } from './services/test/time.contract';
 import { TestLogger } from './testLogger';
 import { LogLevel } from '../interfaces/logger';
+import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
+import { TestStreamedQueryExecutor } from './services/test/streamedQuery.executor';
 
 describe('execute TestRequest on server \n', function (): void {
 	let request: TestGetRequest;
@@ -138,6 +140,31 @@ describe('execute TestRequest on server \n', function (): void {
 			expect(dtoList.length, 'length of result list should be correct').toBe(999);
 			expect(dtoList[0].a, 'property a of first result should be correct').toBe('1');
 			expect(dtoList[0].b, 'property b of first result should be correct').toBe(1);
+		});
+	});
+
+	describe('stream as service response', function (): void {
+		test('-->', async function (): Promise<void> {
+			const dtoList: TestDto[] = [];
+			let portions = 0;
+			await new Promise(async (resolve: Function): Promise<void> => {
+				const response = await new TestStreamedQueryExecutor()
+					.execute(new TestStreamedQueryRequest(3, { token: '1234' }));
+				response.onData((values: TestDto[]): void => {
+					portions++;
+					values.forEach(v => dtoList.push(v));
+				});
+				response.onEnd(() => {
+					resolve();
+				});
+				response.onError((err: Error) => {
+					Nanium.logger.error(err.message, err.stack);
+				});
+			});
+			expect(portions, 'result array should be returned in multiple portions').toBe(3);
+			expect(dtoList.length, 'length of result list should be correct').toBe(3);
+			expect(dtoList[0].formatted()).toBe('1:1');
+			expect(dtoList[2].formatted()).toBe('3:3');
 		});
 	});
 
