@@ -149,11 +149,11 @@ describe('execute TestRequest on server \n', function (): void {
 			const dtoList: TestDto[] = [];
 			let portions = 0;
 			await new Promise(async (resolve: Function): Promise<void> => {
-				const response: NaniumStream<TestDto[]> = await new TestStreamedQueryExecutor()
-					.execute(new TestStreamedQueryRequest({ amount: 3, msGapTime: 100 }, { token: '1234' }));
-				response.onData((values: TestDto[]): void => {
+				const response: NaniumStream<TestDto> = await new TestStreamedQueryExecutor()
+					.execute(new TestStreamedQueryRequest({ amount: 6, msGapTime: 100 }, { token: '1234' }));
+				response.onData((value: TestDto): void => {
 					portions++;
-					values.forEach(v => dtoList.push(v));
+					dtoList.push(value);
 				});
 				response.onEnd(() => {
 					resolve();
@@ -162,8 +162,8 @@ describe('execute TestRequest on server \n', function (): void {
 					Nanium.logger.error(err.message, err.stack);
 				});
 			});
-			expect(portions, 'result array should be returned in multiple portions').toBe(3);
-			expect(dtoList.length, 'length of result list should be correct').toBe(3);
+			expect(portions, 'result array should be returned in multiple portions').toBe(6);
+			expect(dtoList.length, 'length of result list should be correct').toBe(6);
 			expect(dtoList[0].formatted()).toBe('1:1');
 			expect(dtoList[2].formatted()).toBe('3:3');
 		});

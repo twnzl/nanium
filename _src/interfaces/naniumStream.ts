@@ -78,7 +78,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	//#endregion readable
 
 	//#region writable
-	write(chunk: T extends NaniumBuffer ? DataSource : T) {
+	write(chunk: T extends NaniumBuffer ? DataSource : T | T[]) {
 		// if (NaniumBuffer.isNaniumBuffer(chunk)) {
 		// 	this.buffer.write(chunk);
 		// } else {
