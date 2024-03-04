@@ -82,7 +82,6 @@ export class AppComponent implements OnInit {
 		// const result = await stream.toPromise();
 		const result: TestDto[] = [];
 		(stream as NaniumStream).onData(dto => {
-			// todo: !!! entscheiden ob nur T oder auch T[]
 			result.push(dto as TestDto);
 			console.log(JSON.stringify(dto));
 		}).onEnd(() => {
