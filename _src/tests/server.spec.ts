@@ -11,6 +11,7 @@ import { TestLogger } from './testLogger';
 import { LogLevel } from '../interfaces/logger';
 import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
 import { TestStreamedQueryExecutor } from './services/test/streamedQuery.executor';
+import { NaniumStream } from '../interfaces/naniumStream';
 
 describe('execute TestRequest on server \n', function (): void {
 	let request: TestGetRequest;
@@ -148,8 +149,8 @@ describe('execute TestRequest on server \n', function (): void {
 			const dtoList: TestDto[] = [];
 			let portions = 0;
 			await new Promise(async (resolve: Function): Promise<void> => {
-				const response = await new TestStreamedQueryExecutor()
-					.execute(new TestStreamedQueryRequest(3, { token: '1234' }));
+				const response: NaniumStream<TestDto[]> = await new TestStreamedQueryExecutor()
+					.execute(new TestStreamedQueryRequest({ amount: 3, msGapTime: 100 }, { token: '1234' }));
 				response.onData((values: TestDto[]): void => {
 					portions++;
 					values.forEach(v => dtoList.push(v));

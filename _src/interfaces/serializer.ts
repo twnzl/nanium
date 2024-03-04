@@ -1,6 +1,8 @@
 export interface NaniumSerializer {
 	serialize(obj: any): string | ArrayBuffer;
 
+	serializePartial(obj: any): string | ArrayBuffer;
+
 	deserialize(raw: string | ArrayBuffer): any;
 
 	deserializePartial(

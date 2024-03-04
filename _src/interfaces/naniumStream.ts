@@ -20,7 +20,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	@Type(Boolean) isBinary: boolean;
 
 	constructor(itemConstructor?: ConstructorType, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
-		this[responseTypeSymbol] = itemConstructor;
+		this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
 		this[genericTypesSymbol] = genericTypeInfo;
 
 		this.isBinary = itemConstructor?.name === NaniumBuffer.name;
@@ -56,16 +56,19 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	}
 
 	//#region readable
-	onData(handler: (chunk: T extends NaniumBuffer ? DataSource : T | T[]) => void) {
+	onData(handler: (chunk: T extends NaniumBuffer ? NaniumBuffer : T) => void) {
 		this[onDataHandlerSymbol].push(handler);
+		return this;
 	}
 
 	onError(handler: (err: any) => void) {
 		this[onErrorHandlerSymbol].push(handler);
+		return this;
 	}
 
 	onEnd(handler: () => void) {
 		this[onEndHandlerSymbol].push(handler);
+		return this;
 	}
 
 	// pipeTo()
@@ -75,11 +78,15 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	//#endregion readable
 
 	//#region writable
-	write(chunk: T extends NaniumBuffer ? DataSource : T | T[]) {
-		// if (Array.isArray(chunk)) {
-		this[onDataHandlerSymbol].forEach(fn => fn(chunk));
+	write(chunk: T extends NaniumBuffer ? DataSource : T) {
+		// if (NaniumBuffer.isNaniumBuffer(chunk)) {
+		// 	this.buffer.write(chunk);
 		// } else {
-		// this.buffer.write(buffer);
+		if (Array.isArray(chunk)) {
+			chunk.forEach(item => this[onDataHandlerSymbol].forEach(fn => fn(item)));
+		} else {
+			this[onDataHandlerSymbol].forEach(fn => fn(chunk));
+		}
 		// }
 	}
 

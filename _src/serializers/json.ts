@@ -24,6 +24,10 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 		return JSON.stringify(obj);
 	}
 
+	serializePartial(obj: any): string | ArrayBuffer {
+		return JSON.stringify(obj) + this.packageSeparator;
+	}
+
 	deserializePartial(
 		raw: string | ArrayBuffer,
 		restFromLastTime?: string,

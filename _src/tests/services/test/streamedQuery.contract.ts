@@ -1,12 +1,17 @@
 import { RequestType } from '../../../objects';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { TestDto } from './query.contract';
-import { ServiceRequestBase } from '../serviceRequestBase';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
+
+export class TestStreamedQueryRequestBody {
+	amount?: number;
+	msGapTime?: number;
+}
 
 @RequestType({
-	responseType: NaniumStream,
+	responseType: [NaniumStream, TestDto],
 	scope: 'public'
 })
-export class TestStreamedQueryRequest extends ServiceRequestBase<number, NaniumStream<TestDto>> {
+export class TestStreamedQueryRequest extends SimpleServiceRequestBase<TestStreamedQueryRequestBody, NaniumStream<TestDto>> {
 	static serviceName: string = 'NaniumTest:test/streamedQuery';
 }

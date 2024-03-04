@@ -10,6 +10,10 @@ import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browse
 import { StuffEvent } from '../../../events/test/stuffEvent';
 import { Stuff2Event } from '../../../events/test/stuff2Event';
 import { AsyncHelper } from '../../../../helper';
+import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
+import { TestDto } from '../../../services/test/query.contract';
+import { NaniumStream } from '../../../../interfaces/naniumStream';
+import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
 
 @Component({
 	selector: 'app-root',
@@ -72,4 +76,36 @@ export class AppComponent implements OnInit {
 	}
 
 	// execute request via the consumer
+	async objectResponseStream() {
+		this.testService.init();
+		const stream = await new TestStreamedQueryRequest({ amount: 6, msGapTime: 500 }).execute();
+		// const result = await stream.toPromise();
+		const result: TestDto[] = [];
+		(stream as NaniumStream).onData(dto => {
+			// todo: !!! entscheiden ob nur T oder auch T[]
+			result.push(dto as TestDto);
+			console.log(JSON.stringify(dto));
+		}).onEnd(() => {
+			console.log(JSON.stringify(result));
+		});
+	}
+
+	async objectResponseStreamPromise() {
+		this.testService.init();
+		const result = await (await new TestStreamedQueryRequest({ amount: 3, msGapTime: 10 }).execute()).toPromise();
+		console.log(JSON.stringify(result));
+	}
+
+	async binaryResponseStream() {
+		this.testService.init();
+		const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
+		const result: NaniumBuffer = new NaniumBuffer();
+		stream.onData(async (chunk) => {
+			result.write(chunk);
+			const text = await chunk.asString();
+			console.log(text);
+		}).onEnd(async () => {
+			console.log(await result.asString());
+		});
+	}
 }

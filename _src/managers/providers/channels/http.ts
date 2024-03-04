@@ -12,6 +12,7 @@ import { EventSubscription } from '../../../interfaces/eventSubscription';
 import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
+import { NaniumStream } from '../../../interfaces/naniumStream';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -125,7 +126,11 @@ export class NaniumHttpChannel implements Channel {
 						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
 					}
 					await this.process(request, res, deserialized.streamed);
-					if (!deserialized.streamed) {
+					if (
+						!deserialized.streamed &&
+						this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]?.name !== NaniumStream.name &&
+						this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]?.[0]?.name !== NaniumStream.name
+					) {
 						res.end();
 						resolve();
 					}
@@ -190,6 +195,27 @@ export class NaniumHttpChannel implements Channel {
 						(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
 					) {
 						res.write(await NaniumBuffer.as(Uint8Array, result));
+					} else if (
+						serviceRepository[serviceName].Request[responseTypeSymbol]?.name === NaniumStream.name ||
+						serviceRepository[serviceName].Request[responseTypeSymbol]?.[0]?.name === NaniumStream.name
+					) {
+						const stream: NaniumStream = (result as NaniumStream);
+						stream
+							.onData(chunk => {
+								if (NaniumBuffer.isNaniumBuffer(serviceRepository[serviceName].Request[responseTypeSymbol]?.[1])) {
+									res.write(chunk);
+								} else {
+									res.write(config.serializer.serializePartial(chunk));
+								}
+							})
+							.onError(err => {
+								res.statusCode = 500;
+								res.write(config.serializer.serializePartial(err));
+							})
+							.onEnd(() => {
+								res.end();
+							});
+						// res.write(config.serializer.serialize(result) + 'response_end\0');
 					} else {
 						res.write(config.serializer.serialize(result));
 					}

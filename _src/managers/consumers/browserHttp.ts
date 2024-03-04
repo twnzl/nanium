@@ -8,6 +8,7 @@ import { HttpCore } from './http.core';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+import { NaniumStream } from '../../interfaces/naniumStream';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -80,7 +81,15 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		}
 
 		// execute the request
-		const response = await this.httpCore.sendRequest(serviceName, request);
+		let response: any;
+		if (
+			request.constructor[responseTypeSymbol]?.name === NaniumStream.name ||
+			request.constructor[responseTypeSymbol]?.[0]?.name === NaniumStream.name
+		) {
+			response = await this.stream_new(serviceName, request);
+		} else {
+			response = await this.httpCore.sendRequest(serviceName, request);
+		}
 
 		// execute response interceptors
 		if (this.config.responseInterceptors?.length) {
@@ -95,6 +104,93 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		}
 
 		return response;
+	}
+
+	async stream_new<T = any>(serviceName: string, request: any): Promise<NaniumStream<T>> {
+		const streamItemConstructor = request.constructor[responseTypeSymbol]?.[1];
+		const resultStream: NaniumStream<T> = new NaniumStream(streamItemConstructor);
+
+		// interceptors
+		let result: any;
+		for (const interceptor of this.config.requestInterceptors) {
+			result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
+			// if an interceptor returns an object other than the request it is a result and the execution shall be
+			// finished with this result
+			if (result && result !== request) {
+				return result;
+			}
+		}
+
+		// transmission
+		const abortController: AbortController = new AbortController();
+		this.activeRequests.push(abortController);
+		const req: Request = new Request(this.config.apiUrl + '?' + serviceName, {
+			method: 'post',
+			mode: 'cors',
+			redirect: 'follow',
+			body: this.config.serializer.serialize({ serviceName, request }),
+			signal: abortController.signal // make the request abortable
+		});
+
+		fetch(req)
+			.then((response) => response.body)
+			.then((rb) => {
+				const reader: ReadableStreamDefaultReader<Uint8Array> = rb.getReader();
+
+				let restFromLastTime: any;
+				let deserialized: {
+					data: any;
+					rest: any;
+				};
+
+				return new ReadableStream({
+					cancel: (reason?: any): void => {
+						resultStream.error(reason);
+						this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+					},
+					start: (controller: ReadableStreamDefaultController<any>): void => {
+						const push: () => void = () => {
+							reader.read().then(({ done, value }) => {
+								if (done) {
+									controller.close();
+									resultStream.end();
+									this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+									return;
+								}
+								try {
+									if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
+										resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : new NaniumBuffer(value) as any);
+									} else {
+										deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
+										if (deserialized.data?.length) {
+											for (const data of deserialized.data) {
+												resultStream.write(NaniumObject.create(
+													data,
+													streamItemConstructor,
+													request.constructor[genericTypesSymbol]
+												));
+											}
+										}
+										restFromLastTime = deserialized.rest;
+									}
+								} catch (e) {
+									this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+									controller.close();
+									resultStream.error(e);
+								}
+
+								// read next portion from stream
+								push();
+							});
+						};
+
+						// start reading from stream
+						push();
+					},
+				});
+			});
+
+		return resultStream;
 	}
 
 	stream(serviceName: string, request: any): Observable<any> {

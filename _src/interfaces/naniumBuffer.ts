@@ -1,4 +1,4 @@
-import { NaniumObject, Type } from '../objects';
+import { ConstructorType, NaniumObject, Type } from '../objects';
 
 let uuidCounter: number = 0;
 
@@ -298,6 +298,11 @@ export class NaniumBuffer {
 
 	async readUInt32LE(idx: number) {
 		return (await this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).as(Uint32Array))[0];
+	}
+
+	static isNaniumBuffer(objectOrConstructor: ConstructorType | object): boolean {
+		return objectOrConstructor['naniumBufferInternalValueSymbol'] != undefined ||
+			objectOrConstructor.constructor?.['naniumBufferInternalValueSymbol'] != undefined;
 	}
 }
 
