@@ -114,6 +114,7 @@ export class CNanium {
 	}
 
 	stream<TResult = any>(request: any, serviceName?: string, context?: ExecutionContext): Observable<TResult> {
+		console.warn('generate stream service is deprecated, please use normal service with response type: Promise<NaniumStream<ObjectType>> for object streaming or Promise<NaniumStream<NaniumBuffer>> for binary streaming');
 		serviceName = serviceName || request.constructor.serviceName;
 		const managerPromise: Promise<ServiceManager> = this.getResponsibleManager(request, serviceName);
 		return new Observable((observer: Observer<any>): void => {

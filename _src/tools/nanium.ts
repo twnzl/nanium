@@ -44,8 +44,6 @@ nanium init
 		generate nanium.json service+event directory and the nanium base classes
 nanium g {directory/}*{service name} {private|public} {namespace}
 		generate files for a new service (contract + executor)
-nanium gs {directory/}*{service name} {private|public} {namespace}
-		generate files for a new streamed service (contract + executor)
 nanium ge {directory/}*{event name} {private|public} {namespace}
 		generate file for a new event
 nanium rm {file or folder}
@@ -163,8 +161,8 @@ async function generateService([servicePath, scope, namespace]: [string, string,
 	});
 }
 
-function generateStreamService([servicePath, scope, namespace]: [string, string, string]): void {
-	generateServiceCore('streamContract.ts.template', 'streamExecutor.ts.template', servicePath, scope, namespace);
+function generateStreamService(): void {
+	console.error('generate stream service is deprecated, please use normal service with response type: Promise<NaniumStream<ObjectType>> for object streaming or Promise<NaniumStream<NaniumBuffer>> for binary streaming');
 }
 
 function generateServiceCore(
@@ -328,10 +326,6 @@ function init(): void {
 	// serviceRequestBase.ts
 	fileContent = fromTemplate('serviceRequestBase.ts.template');
 	fs.writeFileSync(path.join(config.serviceDirectory, 'serviceRequestBase.ts'), fileContent);
-
-	// streamServiceRequestBase.ts
-	fileContent = fromTemplate('streamServiceRequestBase.ts.template');
-	fs.writeFileSync(path.join(config.serviceDirectory, 'streamServiceRequestBase.ts'), fileContent);
 
 	// serviceRequestHead.ts
 	fileContent = fromTemplate('serviceRequestHead.ts.template');
