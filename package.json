@@ -29,7 +29,9 @@
   "scripts": {
     "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates && cd _src/tests/test-server && tsc",
-    "test": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest && cd _src/tests/browser-client; npm test",
+    "test:server": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest",
+    "test:client": "cd _src/tests/browser-client; npm test; cd ../../..",
+    "test": "npm run test:server && npm run test:client",
     "prepare": "",
     "publishlist": "npm publish --dry-run",
     "bundle": "npm run build && npm test && npm publish",

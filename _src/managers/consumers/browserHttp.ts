@@ -110,17 +110,6 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		const streamItemConstructor = request.constructor[responseTypeSymbol]?.[1];
 		const resultStream: NaniumStream<T> = new NaniumStream(streamItemConstructor);
 
-		// interceptors
-		let result: any;
-		for (const interceptor of this.config.requestInterceptors) {
-			result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
-			// if an interceptor returns an object other than the request it is a result and the execution shall be
-			// finished with this result
-			if (result && result !== request) {
-				return result;
-			}
-		}
-
 		// transmission
 		const abortController: AbortController = new AbortController();
 		this.activeRequests.push(abortController);

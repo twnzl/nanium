@@ -108,7 +108,8 @@ describe('execute TestRequest on server \n', function (): void {
 		});
 	});
 
-	describe('streamed successful response \n', function (): void {
+	/* stream function is deprecated: NaniumStream is used now */
+	xdescribe('streamed successful response \n', function (): void {
 		const dtoList: TestDto[] = [];
 
 		beforeEach(async function (): Promise<void> {
@@ -125,12 +126,13 @@ describe('execute TestRequest on server \n', function (): void {
 			});
 		});
 
-		it('-->  \n', async function (): Promise<void> {
+		xit('-->  \n', async function (): Promise<void> {
 			expect(dtoList.length, 'length of result list should be correct').toBe(999);
 		});
 	});
 
-	describe('streamed service as Promise \n', function (): void {
+	/* stream function is deprecated: NaniumStream is used now */
+	xdescribe('streamed service as Promise \n', function (): void {
 		let dtoList: TestDto[];
 
 		beforeEach(async function (): Promise<void> {

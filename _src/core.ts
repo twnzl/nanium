@@ -110,7 +110,8 @@ export class CNanium {
 		if (!manager) {
 			throw new Error('no responsible manager for Service "' + serviceName + '" found');
 		}
-		return await manager.execute(serviceName, request, context);
+		const result = await manager.execute(serviceName, request, context);
+		return result;
 	}
 
 	stream<TResult = any>(request: any, serviceName?: string, context?: ExecutionContext): Observable<TResult> {

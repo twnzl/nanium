@@ -14,6 +14,7 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { Nanium } from '../../core';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+import { NaniumStream } from '../../interfaces/naniumStream';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -134,10 +135,103 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			}
 		}
 
-		return await this.httpCore.sendRequest(serviceName, request);
+		// execute the request
+		let response: any;
+		if (
+			request.constructor[responseTypeSymbol]?.name === NaniumStream.name ||
+			request.constructor[responseTypeSymbol]?.[0]?.name === NaniumStream.name
+		) {
+			response = await this.stream_new(serviceName, request);
+		} else {
+			response = await this.httpCore.sendRequest(serviceName, request);
+		}
+
+		// execute response interceptors
+		if (this.config.responseInterceptors?.length) {
+			let responseFromInterceptor: any;
+			for (const interceptor of this.config.responseInterceptors) {
+				responseFromInterceptor = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, response);
+				// if an interceptor returns an object other than the original response instance, the returned value will replace the original response;
+				if (responseFromInterceptor !== undefined && responseFromInterceptor !== response) {
+					return responseFromInterceptor;
+				}
+			}
+		}
+
+		return response;
 	}
 
-	// todo: with node version 8 (fetch-api) this can be the same code as in browserHttp
+	async stream_new<T = any>(serviceName: string, request: any): Promise<NaniumStream<T>> {
+		const streamItemConstructor = request.constructor[responseTypeSymbol]?.[1];
+		const resultStream: NaniumStream<T> = new NaniumStream(streamItemConstructor);
+
+		// transmission
+		return new Promise<NaniumStream<T>>((resolve: Function) => {
+
+			// transmission
+			const uri: URL = new URL(this.config.apiUrl);
+			let req: ClientRequest;
+			try {
+				const options: HttpRequestOptions | HttpsRequestOptions = {
+					...{
+						host: uri.hostname,
+						path: uri.pathname + '#' + serviceName,
+						port: uri.port,
+						method: 'POST',
+						protocol: uri.protocol
+					},
+					...this.config.options
+				};
+				let restFromLastTime: any;
+				let deserialized: {
+					data: any;
+					rest: any;
+				};
+				const requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest
+					= uri.protocol.startsWith('https') ? https.request : http.request;
+				req = requestFn(options, (response) => {
+					response.on('end', () => {
+						resultStream.end();
+						return;
+					});
+					response.on('data', async (chunk: Buffer) => {
+						try {
+							if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
+								resultStream.write(NaniumBuffer.isNaniumBuffer(chunk) ? chunk : new NaniumBuffer(chunk) as any);
+							} else {
+								deserialized = this.config.serializer.deserializePartial(chunk, restFromLastTime);
+								if (deserialized.data?.length) {
+									for (const data of deserialized.data) {
+										resultStream.write(NaniumObject.create(
+											data,
+											streamItemConstructor,
+											request.constructor[genericTypesSymbol]
+										));
+									}
+								}
+								restFromLastTime = deserialized.rest;
+							}
+						} catch (e) {
+							this.activeRequests = this.activeRequests.filter(r => r !== req);
+							resultStream.error(e);
+						}
+					});
+					response.on('error', err => {
+						resultStream.error(err);
+					});
+				});
+				this.activeRequests.push(req);
+				req.write(this.config.serializer.serialize({ serviceName, request }));
+				req.end();
+			} catch (e) {
+				this.activeRequests = this.activeRequests.filter(r => r !== req);
+				resultStream.error(e);
+			}
+
+			resolve(resultStream);
+		});
+	}
+
 	stream(serviceName: string, request: any): Observable<any> {
 		return new Observable<any>((observer: Observer<any>): void => {
 			let restFromLastTime: any;

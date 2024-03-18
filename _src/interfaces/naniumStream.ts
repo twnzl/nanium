@@ -71,7 +71,11 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 		return this;
 	}
 
-	// pipeTo()
+	pipeTo(s: NaniumStream<T>) {
+		this.onData(chunk => s.write(chunk));
+		this.onEnd(() => s.end());
+		this.onError((err: Error) => s.error(err));
+	}
 
 	// pipeThrough()
 

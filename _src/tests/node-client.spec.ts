@@ -10,13 +10,14 @@ import { AnonymousRequest } from './services/test/anonymous.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
 import { TimeRequest } from './services/test/time.contract';
 import { TestNoIORequest } from './services/test/noIO.contract';
-import { TestDto, TestQueryRequest } from './services/test/query.contract';
+import { TestDto } from './services/test/query.contract';
 import { Nanium } from '../core';
-import { TestGetStreamedArrayBufferRequest } from './services/test/getStreamedArrayBuffer.contract';
 import { TestGetBinaryRequest } from './services/test/getBinary.contract';
 import { NaniumBuffer } from '../interfaces/naniumBuffer';
-import { TestGetStreamedNaniumBufferRequest } from './services/test/getStreamedNaniumBuffer.contract';
 import { TestGetNaniumBufferRequest } from './services/test/getNaniumBuffer.contract';
+import { NaniumStream } from '../interfaces/naniumStream';
+import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
+import { TestStreamedBinaryRequest } from './services/test/streamedBinary.contract';
 
 let request: TestGetRequest;
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
@@ -89,64 +90,38 @@ describe('host services via http \n', function (): void {
 		it('response as json stream', async () => {
 			const dtoList: TestDto[] = [];
 			let portions = 0;
-			await new Promise((resolve: Function): void => {
-				new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
-					next: (value: TestDto): void => {
-						dtoList.push(value);
-						portions++;
-					},
-					complete: (): void => resolve(),
-					error: (err: Error) => {
-						Nanium.logger.error(err.message, err.stack);
-					}
+			await new Promise(async (resolve: Function): Promise<void> => {
+				const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
+					{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
+				response.onData((value: TestDto): void => {
+					portions++;
+					dtoList.push(value);
+				});
+				response.onEnd(() => {
+					resolve();
+				});
+				response.onError((err: Error) => {
+					Nanium.logger.error(err.message, err.stack);
 				});
 			});
-			expect(portions, 'result array should be returned in multiple portions').toBe(999);
-			expect(dtoList.length, 'length of result list should be correct').toBe(999);
+			expect(portions, 'result array should be returned in multiple portions').toBe(6);
+			expect(dtoList.length, 'length of result list should be correct').toBe(6);
 			expect(dtoList[0].formatted()).toBe('1:1');
+			expect(dtoList[2].formatted()).toBe('3:3');
 		});
 
 		it('response as binary stream', async () => {
-			const bufferPieces: ArrayBuffer[] = [];
-			await new Promise((resolve: Function): void => {
-				new TestGetStreamedArrayBufferRequest(undefined, { token: '1234' }).stream().subscribe({
-					next: (value: ArrayBuffer): void => {
-						bufferPieces.push(value);
-					},
-					complete: (): void => resolve(),
-					error: (err: Error) => {
-						Nanium.logger.error(err.message, err.stack);
-					}
+			const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
+			const result: NaniumBuffer = new NaniumBuffer();
+			await new Promise((resolve: Function) => {
+				stream.onData(async (chunk) => {
+					result.write(chunk);
+				}).onEnd(async () => {
+					expect(await result.asString()).toBe('1.2.3.');
+					resolve();
 				});
 			});
-			expect(bufferPieces.length, 'length of result list should be correct').toBe(3);
-			const fullBuffer: NaniumBuffer = new NaniumBuffer(bufferPieces);
-			const float32Array = await fullBuffer.as(Float32Array);
-			expect(float32Array[0]).toBe(1);
-			expect(float32Array[1]).toBe(2);
-			expect(float32Array[4]).toBe(5);
 		});
-
-		it('response as NaniumBuffer stream', async () => {
-			const buffer: NaniumBuffer = new NaniumBuffer();
-			await new Promise((resolve: Function): void => {
-				new TestGetStreamedNaniumBufferRequest(undefined, { token: '1234' }).stream().subscribe({
-					next: (value: NaniumBuffer): void => {
-						buffer.write(value);
-					},
-					complete: (): void => resolve(),
-					error: (err: Error) => {
-						Nanium.logger.error(err.message, err.stack);
-					}
-				});
-			});
-			expect(buffer.length, 'length of result list should be correct').toBe(40);
-			const float32View = new DataView((await buffer.asUint8Array()).buffer);
-			expect(float32View.getFloat32(0, true)).toBe(1);
-			expect(float32View.getFloat32(1 * 4, true)).toBe(2);
-			expect(float32View.getFloat32(4 * 4, true)).toBe(5);
-		});
-
 	});
 
 
