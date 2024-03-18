@@ -118,7 +118,7 @@ describe('basic browser client tests', () => {
 			const result: NaniumBuffer = await new TestGetNaniumBufferRequest().execute();
 			expect(await result.asString()).toBe('this is a text that will be send as NaniumBuffer');
 		});
-		
+
 		it('response as json stream', async () => {
 			const dtoList: TestDto[] = [];
 			let portions = 0;
@@ -137,6 +137,15 @@ describe('basic browser client tests', () => {
 				});
 			});
 			expect(portions).withContext('result array should be returned in multiple portions').toBe(6);
+			expect(dtoList.length).withContext('length of result list should be correct').toBe(6);
+			expect(dtoList[0].formatted()).toBe('1:1');
+			expect(dtoList[2].formatted()).toBe('3:3');
+		});
+
+		it('response as json stream toPromise()', async () => {
+			const responseStream: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
+				{ amount: 6, msGapTime: 0 }, { token: '1234' }).execute();
+			const dtoList: TestDto[] = await responseStream.toPromise();
 			expect(dtoList.length).withContext('length of result list should be correct').toBe(6);
 			expect(dtoList[0].formatted()).toBe('1:1');
 			expect(dtoList[2].formatted()).toBe('3:3');

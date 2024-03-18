@@ -29,7 +29,7 @@ describe('NaniumStream', function (): void {
 			s.error(':-(');
 			s.end();
 		});
-		let result: TestDto[] = [];
+		let result: TestDto[];
 		try {
 			await s.toPromise();
 			expect(1).toBe(2);
@@ -45,7 +45,7 @@ describe('NaniumStream', function (): void {
 		const s = new NaniumStream(TestDto);
 		let result = [];
 		await new Promise<void>((resolve: Function, _reject: Function) => {
-			s.onData((chunk: any[]) => {
+			s.onData((chunk: TestDto) => {
 				result.push(chunk);
 			});
 			s.onEnd(() => {
@@ -70,7 +70,7 @@ describe('NaniumStream', function (): void {
 		const s2 = new NaniumStream(TestDto);
 		let result = [];
 		await new Promise<void>((resolve: Function, _reject: Function) => {
-			s2.onData((chunk: any[]) => {
+			s2.onData((chunk: TestDto) => {
 				result.push(chunk);
 			});
 			s2.onEnd(() => {

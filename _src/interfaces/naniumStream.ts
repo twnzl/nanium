@@ -19,7 +19,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	@Type(String) id: string;
 	@Type(Boolean) isBinary: boolean;
 
-	constructor(itemConstructor?: ConstructorType, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
+	constructor(itemConstructor?: new (...data: any) => T, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
 		this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
 		this[genericTypesSymbol] = genericTypeInfo;
 
@@ -31,8 +31,8 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	}
 
 	//#region Promise
-	toPromise(): Promise<T> {
-		return new Promise<T>((resolve: Function, reject: Function) => {
+	toPromise(): Promise<T extends NaniumBuffer ? NaniumBuffer : T[]> {
+		return new Promise<T extends NaniumBuffer ? NaniumBuffer : T[]>((resolve: Function, reject: Function) => {
 			try {
 				const objectList: any[] = [];
 				const buffer: NaniumBuffer = new NaniumBuffer();
