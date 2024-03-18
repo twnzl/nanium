@@ -1,3 +1,13 @@
+# 1.24.0
+
+- streamed responses are now possible with normal RequestBase. Instead of an separate stream() function the execute
+  function should return an instance of NaniumStream. The consumer side can use the onData/onEnd/onError functions to
+  register handler functions for these events. Alternatively the consumer can also use the toPromise() function to await
+  the whole result as one Object-Array (object stream) or NaniumBuffer (binary stream).
+- when using the old way of streaming via the separate stream function a deprecation warning will be printed. The old
+  functionality will be removed soon.
+- the cli command "nanium gs" will no longer work but print a deprecation hint
+
 # 1.23.3
 
 - added class AnySimple: to allow any simple type in function @Type()
