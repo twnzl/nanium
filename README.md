@@ -563,72 +563,42 @@ export class TestMeasurementStoreExecutor implements ServiceExecutor<TestMeasure
 
 ## Streaming
 
-If you want a service executor to provide the possibility to return partial results, you can create a streamed service
-by:
-
-```bash
-nanium gs stuff/query public
-```
-
-The generated service will have a stream function that must return an Observable. The base class will automatically add
-the execute function that returns a promise, so the caller is free to use both.
+If you want a service executor to provide the possibility to return partial results, you can use NaniumStream as a
+service result
 
 ```ts
-export class TestQueryExecutor implements StreamServiceExecutor<TestQueryRequest, TestDto> {
-	static serviceName: string = 'NaniumTest:test/query';
-	intervalHandle: any;
-
-	stream(request: TestQueryRequest, executionContext: ServiceRequestContext): Observable<TestDto> {
-		let i: number = 1;
-		return new Observable((observer: Observer<TestDto>): void => {
-			this.interval = setInterval(() => {
-				observer.next({ aNumber: i++ });
-			}, 1000);
-			if (i >= 11) {
-				clearInterval(intervalHandle);
-				observer.complete();
-			}
-		});
-	}
+@RequestType({
+	responseType: [NaniumStream, TestDto],
+	scope: 'public'
+})
+export class TestStreamedQueryRequest extends SimpleServiceRequestBase<TestStreamedQueryRequestBody, NaniumStream<TestDto>> {
+	static serviceName: string = 'NaniumTest:test/streamedQuery';
 }
 ```
 
-The overall result of this example service is a List of instances of class TestDto. But the server will return only one
-per second until 10. So the client can, for example, show a partial result list immediately by subscribing to the
-Observable to add each new record as soon as it arrives.
-
-On client side, you can subscribe to the observable the *stream* function returns.
-Within the *next* function, you can do some work, whenever an item of the overall result array arrives.
-Of course, you can also use the rxjs pipes.
+The example shows an object stream. Result type NaniumStream<NaniumBuffer> would be a binary stream. On the callers side
+the result can be consumed in small parts using the onData() function:
 
 ```ts
-const result: TestDto[] = [];
-new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
-	next: (value: TestDto): void => {
-		result.push(value);
-		// todo: maybe calculate some progress or something else
-	},
-	complete: (): void => resolve(),
-	error: (err: Error) => {
-		console.log(err.message);
-	}
-});
+const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest().execute();
+response.onData((value: TestDto): void => dtoList.push(value));
+response.onEnd(() => resolve());
+response.onError((err: Error) => console.error(err));
 ```
 
-Or if you want the server to stream the result, but want the client to just wait for the whole result, use the
-*execute* function.
+It is also possible to consume the result as whole package using the toPromise() function.
+Even in this case nanium will at least use the benefits of streaming internally - e.g. parallelism of
+data transmission and deserialization.
 
 ```ts
-const result: TestDto[] = await new TestQueryRequest(
-	{ input: 1 }, { token: '1234' }
-).execute();
+const responseStream: NaniumStream<TestDto> = await new TestStreamedQueryRequest().execute();
+const dtoList: TestDto[] = await responseStream.toPromise();
 ```
 
-### Binary streaming
+### Binary data
 
-For streaming of binary data the same applies as for the normal version. Regardless of which serializer you use, binary
-data is always treated specially. If you define the result type of a service as NaniumBuffer, the data
-is not serialized or deserialized, but transported to the client as it is.
+Regardless of which serializer you use, binary data is always treated specially. If you define the result-type of a
+service as NaniumBuffer, the data is not serialized or deserialized, but transported to the client as it is.
 
 ```ts
 // the contract
@@ -802,7 +772,7 @@ nanium sdk p
 ```
 
 Using the option "p", will publish it directly to the npm registry. So, after using "npm i nanium <your-sdk>" in the
-other project, you will have all you need to create and execute requests of the oder project/domain. Just use the __
+other project, you will have all you need to create and execute requests of the other project/domain. Just use the __
 isResponsible__ property to adjust which nanium-provider or nanium-consumer is responsible for which services. Most of
 the time, the namespace of the services should be enough to distinguish that.
 
