@@ -48,7 +48,7 @@ export interface ServiceRequestQueue {
 	 * create an execution context for a specific entry. It will be used for the execution of the request
 	 * @param entry
 	 */
-	getExecutionContext(entry: ServiceRequestQueueEntry): Promise<ExecutionContext>;
+	getExecutionContext(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<ExecutionContext>;
 
 	/**
 	 * update an entry

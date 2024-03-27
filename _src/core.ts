@@ -280,7 +280,7 @@ export class CNanium {
 			entry.response = await this.execute(
 				entry.request,
 				entry.serviceName,
-				await requestQueue.getExecutionContext(entry));
+				await requestQueue.getExecutionContext(entry, requestQueue));
 			entry.state = 'done';
 			entry.endDate = new Date();
 			await requestQueue.updateEntry(entry);

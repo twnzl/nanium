@@ -1,3 +1,8 @@
+# 1.24.1
+
+- ServiceRequestQueue.getExecutionContext gets the queue as the second parameter now. This may also help to determine
+  the executionContext for an entry
+
 # 1.24.0
 
 - streamed responses are now possible with normal RequestBase. Instead of an separate stream() function the execute
