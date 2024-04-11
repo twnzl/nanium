@@ -83,8 +83,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		// execute the request
 		let response: any;
 		if (
-			request.constructor[responseTypeSymbol]?.name === NaniumStream.name ||
-			request.constructor[responseTypeSymbol]?.[0]?.name === NaniumStream.name
+			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]) ||
+			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]?.[0])
 		) {
 			response = await this.stream_new(serviceName, request);
 		} else {

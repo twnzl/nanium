@@ -128,8 +128,8 @@ export class NaniumHttpChannel implements Channel {
 					await this.process(request, res, deserialized.streamed);
 					if (
 						!deserialized.streamed &&
-						this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]?.name !== NaniumStream.name &&
-						this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]?.[0]?.name !== NaniumStream.name
+						!NaniumStream.isNaniumStream(this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]) &&
+						!NaniumStream.isNaniumStream(this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]?.[0])
 					) {
 						res.end();
 						resolve();
@@ -196,8 +196,8 @@ export class NaniumHttpChannel implements Channel {
 					) {
 						res.write(await NaniumBuffer.as(Uint8Array, result));
 					} else if (
-						serviceRepository[serviceName].Request[responseTypeSymbol]?.name === NaniumStream.name ||
-						serviceRepository[serviceName].Request[responseTypeSymbol]?.[0]?.name === NaniumStream.name
+						NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]) ||
+						NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]?.[0])
 					) {
 						const stream: NaniumStream = (result as NaniumStream);
 						stream

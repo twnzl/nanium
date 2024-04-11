@@ -1,4 +1,5 @@
 import { NaniumBuffer } from './naniumBuffer';
+import { NaniumStream } from './naniumStream';
 
 describe('NaniumBuffer', function (): void {
 	const arrayBuffer: ArrayBuffer = new TextEncoder().encode('abc').buffer;
@@ -7,6 +8,12 @@ describe('NaniumBuffer', function (): void {
 	const float32Array: Float32Array = new Float32Array(new TextEncoder().encode('mnop').buffer);
 	const buffer32 = Buffer.from(new Float32Array(new TextEncoder().encode('qrst')));
 	// Blob is tested in browser app.component.spec.ts
+
+	test('isNaniumBuffer', async function (): Promise<void> {
+		expect(NaniumBuffer.isNaniumBuffer(NaniumBuffer)).toBeTruthy();
+		expect(NaniumBuffer.isNaniumBuffer(new NaniumBuffer())).toBeTruthy();
+		expect(NaniumBuffer.isNaniumBuffer(new NaniumStream())).toBeFalsy();
+	});
 
 	describe('asString', function (): void {
 		it('with different types in constructor', async function (): Promise<void> {

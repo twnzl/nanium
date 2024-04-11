@@ -301,8 +301,8 @@ export class NaniumBuffer {
 	}
 
 	static isNaniumBuffer(objectOrConstructor: ConstructorType | object): boolean {
-		return objectOrConstructor['naniumBufferInternalValueSymbol'] != undefined ||
-			objectOrConstructor.constructor?.['naniumBufferInternalValueSymbol'] != undefined;
+		return objectOrConstructor?.['naniumBufferInternalValueSymbol'] != undefined ||
+			objectOrConstructor?.constructor?.['naniumBufferInternalValueSymbol'] != undefined;
 	}
 }
 

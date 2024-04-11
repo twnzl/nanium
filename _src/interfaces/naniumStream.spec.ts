@@ -3,6 +3,12 @@ import { DataSource, NaniumBuffer } from './naniumBuffer';
 import { TestDto } from '../tests/services/test/query.contract';
 
 describe('NaniumStream', function (): void {
+	test('isNaniumStream', async function (): Promise<void> {
+		expect(NaniumStream.isNaniumStream(NaniumStream)).toBeTruthy();
+		expect(NaniumStream.isNaniumStream(new NaniumStream())).toBeTruthy();
+		expect(NaniumStream.isNaniumStream(new NaniumBuffer())).toBeFalsy();
+	});
+
 	test('Promise: then & finally', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
 		setTimeout(() => {

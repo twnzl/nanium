@@ -1,3 +1,8 @@
+# 1.24.2
+
+- fixing broken detektion of NaniumStream instances and constructors, in minified code by the new function
+  NaniumStream.isNaniumStream()
+
 # 1.24.1
 
 - ServiceRequestQueue.getExecutionContext gets the queue as the second parameter now. This may also help to determine
