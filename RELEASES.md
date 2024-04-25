@@ -1,3 +1,7 @@
+# 1.24.3
+
+- browser provider now ensures that request has correct type e.g. if passed as a common object to Nanium.execute().
+
 # 1.24.2
 
 - fixing broken detektion of NaniumStream instances and constructors, in minified code by the new function

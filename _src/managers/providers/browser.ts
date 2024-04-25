@@ -7,6 +7,7 @@ import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { Channel } from '../../interfaces/channel';
+import { NaniumObject } from '../../objects';
 
 export class NaniumBrowserProviderConfig {
 	/**
@@ -67,7 +68,7 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 	}
 
 	addChannel<T>(channel: Channel): void {
-		throw('channels not supported by this provider');
+		throw ('channels not supported by this provider');
 	}
 
 	async init(): Promise<void> {
@@ -91,12 +92,16 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 			if (!this.repository.hasOwnProperty(serviceName)) {
 				return await this.config.handleError(new Error('unknown service ' + serviceName), serviceName, request, context);
 			}
+			const requestConstructor: any = this.repository[serviceName].Request;
 			if (context?.scope === 'public') {  // private is the default, all adaptors have to set the scope explicitly
-				const requestConstructor: any = this.repository[serviceName].Request;
 				if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
 					return await this.config.handleError(new Error('unauthorized'), serviceName, request, context);
 				}
 			}
+			if (request.constructor !== requestConstructor) {
+				request = NaniumObject.create(request, requestConstructor);
+			}
+
 
 			// interceptors
 			if (this.config.requestInterceptors?.length) {
