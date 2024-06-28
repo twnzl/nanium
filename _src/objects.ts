@@ -239,8 +239,21 @@ export class NaniumObject<T> {
 		core(obj, fn, []);
 	}
 
-	static createJsonSchemas(_c: ConstructorType, baseURI: string, knownSchemas?: JSONSchema[]): JSONSchema[] {
-		const results: JSONSchema[] = knownSchemas ?? [];
+	/**
+	 * generate a list of JSON schemas using the Type() annotations of NaniumObject
+	 * @param type constructor function for which the schemas schall be generated
+	 * @param baseURI base URI for all generated schemas (the last part is the type name)
+	 * @param knownSchemas already known Schemas
+	 * @param fileMatch if set, the fileMatch property will be set to the main schema (the one for the given constructor function)
+	 */
+	static createJsonSchemas(type: ConstructorType, baseURI: string, knownSchemas: JSONSchema[] = [], fileMatch?: string[]): JSONSchema[] {
+		const results: JSONSchema[] = [];
+		if (!baseURI) {
+			throw new Error('baseURI missing');
+		}
+		if (!baseURI.endsWith('/')) {
+			baseURI += '/';
+		}
 
 		function trySetSimpleProperty(
 			c: ConstructorType,
@@ -267,7 +280,9 @@ export class NaniumObject<T> {
 				const schemaPart: any = { type: 'object' };
 				if (info?.localGenerics !== Object && info?.localGenerics?.name) {
 					if (!trySetSimpleProperty(info.localGenerics as ConstructorType, info, 'additionalProperties', schemaPart)) {
-						schemaPart.additionalProperties = { $ref: baseURI + (info.localGenerics as ConstructorType).name + '.schema.json' };
+						schemaPart.patternProperties = {
+							'^.*$': { type: 'object', $ref: baseURI + (info.localGenerics as ConstructorType).name + '.schema.json' }
+						};
 						createJsonSchema(info.localGenerics as ConstructorType);
 					}
 				}
@@ -286,7 +301,7 @@ export class NaniumObject<T> {
 
 			// scheme for this type is already in results array
 			const uri: string = baseURI + c.name + '.schema.json';
-			if (results.some(s => s.uri === uri)) {
+			if (results.some(s => s.uri === uri) || knownSchemas.some(s => s.uri === uri)) {
 				return;
 			}
 
@@ -314,7 +329,15 @@ export class NaniumObject<T> {
 			}
 		}
 
-		createJsonSchema(_c);
+		createJsonSchema(type);
+
+		if (knownSchemas?.length) {
+			knownSchemas.forEach(s => results.push(s));
+		}
+
+		if (fileMatch) {
+			results[0].fileMatch = fileMatch;
+		}
 
 		return results;
 	}
@@ -442,8 +465,10 @@ export interface LocalGenerics {
 
 export interface JSONSchemaCore {
 	type?: string | string[];
+	required?: string[];
 	items?: JSONSchemaCore;
 	properties?: { [key: string]: JSONSchemaCore };
+	patternProperties?: { [key: string]: JSONSchemaCore };
 	additionalProperties?: boolean | JSONSchemaCore;
 	$ref?: string;
 }

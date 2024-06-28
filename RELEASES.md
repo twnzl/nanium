@@ -1,3 +1,8 @@
+# 1.24.4
+
+- createJsonSchemas: add optional parameter fileMatch '*'. Will be set at the main schema
+- createJsonSchemas: better way to define dictionary properties (object with any properties but defined values)
+
 # 1.24.3
 
 - browser provider now ensures that request has correct type e.g. if passed as a common object to Nanium.execute().

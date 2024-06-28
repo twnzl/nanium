@@ -336,6 +336,7 @@ describe('nanium objects', function (): void {
 	describe('createJsonSchema', function (): void {
 		const expected: JSONSchema[] = [
 			{
+				'fileMatch': ['*'],
 				'uri': 'https://syscore.io/MyTestClass3.schema.json',
 				'schema': {
 					'type': 'object',
@@ -394,8 +395,11 @@ describe('nanium objects', function (): void {
 						},
 						'dict': {
 							'type': 'object',
-							'additionalProperties': {
-								'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+							'patternProperties': {
+								'^.*$': {
+									'type': 'object',
+									'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+								}
 							}
 						},
 						'anObjectArray': {
@@ -435,8 +439,11 @@ describe('nanium objects', function (): void {
 						},
 						'aDictionary': {
 							'type': 'object',
-							'additionalProperties': {
-								'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+							'patternProperties': {
+								'^.*$': {
+									'type': 'object',
+									'$ref': 'https://syscore.io/MyTestClass2.schema.json'
+								}
 							}
 						}
 					}
@@ -445,21 +452,17 @@ describe('nanium objects', function (): void {
 		];
 
 		it('MyTestClass3 with no types already known', async function (): Promise<void> {
-			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/');
-			// console.log(JSON.stringify(schema, null, '  '));
+			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', undefined, ['*']);
 			expect(schema).toEqual(expected);
 		});
 
 		it('MyTestClass3 with one type already known', async function (): Promise<void> {
-			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', [expected[2]]);
-			// console.log(JSON.stringify(schema, null, '  '));
-			schema.push(schema.shift());
+			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', [expected[2]], ['*']);
 			expect(schema).toEqual(expected);
 		});
 
 		it('MyTestClass3 with all types already known', async function (): Promise<void> {
-			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', expected);
-			// console.log(JSON.stringify(schema, null, '  '));
+			const schema: any = NaniumObject.createJsonSchemas(MyTestClass3, 'https://syscore.io/', expected, ['*']);
 			expect(schema).toEqual(expected);
 		});
 
@@ -477,10 +480,13 @@ describe('nanium objects', function (): void {
 								}
 							},
 							'dic': {
-								'additionalProperties': {
-									'$ref': 'https://syscore.io/MyTestClass4.schema.json',
-								},
 								'type': 'object',
+								'patternProperties': {
+									'^.*$': {
+										'type': 'object',
+										'$ref': 'https://syscore.io/MyTestClass4.schema.json',
+									}
+								}
 							},
 						}
 					}

@@ -6,7 +6,6 @@
     "inlineSourceMap": false,
     "declaration": true,
     "outDir": ".",
-    "watch": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,

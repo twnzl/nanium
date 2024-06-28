@@ -6,12 +6,8 @@
     "inlineSourceMap": false,
     "declaration": true,
     "outDir": "dst",
-    "watch": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "types": [
-      "node"
-    ],
     "moduleResolution": "Node",
     "typeRoots": [
       "node_modules/@types"
