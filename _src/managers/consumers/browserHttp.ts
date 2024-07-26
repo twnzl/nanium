@@ -9,6 +9,7 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -276,8 +277,9 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	}
 
-	async subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription> {
-		return await this.httpCore.subscribe(eventConstructor, handler);
+	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
+		const eventName: string = typeof eventNameOrConstructor === 'string' ? eventNameOrConstructor : eventNameOrConstructor.eventName;
+		return await this.httpCore.subscribe(eventNameOrConstructor, handler);
 	}
 
 	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {

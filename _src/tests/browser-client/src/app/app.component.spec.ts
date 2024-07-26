@@ -181,7 +181,7 @@ describe('basic browser client tests', () => {
 			expect(result.body).toBe(undefined);
 		});
 
-		it('ody = Date\n', async function (): Promise<void> {
+		it('body = Date\n', async function (): Promise<void> {
 			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute();
 			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 		});
@@ -470,4 +470,15 @@ describe('events and inter-process communication via cluster communicator', () =
 		expect(event2).withContext('event 2 should be undefined (not raised for second subscription because it was made as a different tenant)').toBeUndefined();
 	});
 
+	it('subscribe to event using the event name instead of the event constructor', async function (): Promise<void> {
+		// session.token = '1234'; // reset right credentials
+		const manager1 = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
+		const subscription1 = await Nanium.subscribe(StuffEvent.eventName, async (event) => {
+			await subscription1.unsubscribe();
+			expect(event.aNumber).withContext('aNumber should be correct').toBe(9);
+			expect(event.aString).withContext('aString should be correct').toBe('10');
+			expect(event.aDate as any).withContext('aDate is an ISOString because subscription without event constructor does not support real types').toBe(new Date(2011, 11, 11).toISOString());
+		}, manager1);
+		await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffEvent
+	});
 });

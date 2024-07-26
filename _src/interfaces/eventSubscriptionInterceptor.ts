@@ -1,9 +1,11 @@
 import { ExecutionContext } from './executionContext';
 import { EventSubscription } from './eventSubscription';
+import { EventNameOrConstructor } from './eventConstructor';
 
 export interface EventSubscriptionSendInterceptor<TEvent, TSubscriptionData> {
 	execute(
-		eventClass: new(data?: any) => TEvent, subscription: EventSubscription<TSubscriptionData>
+		eventNameOrConstructor: EventNameOrConstructor,
+		subscription: EventSubscription<TSubscriptionData>
 	): Promise<void>;
 }
 

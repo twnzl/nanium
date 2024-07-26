@@ -2,6 +2,7 @@ import { Observable } from 'rxjs';
 import { ExecutionContext } from './executionContext';
 import { EventHandler } from './eventHandler';
 import { EventSubscription } from './eventSubscription';
+import { EventNameOrConstructor } from './eventConstructor';
 
 export interface ServiceManager {
 
@@ -57,10 +58,10 @@ export interface ServiceManager {
 
 	/**
 	 * subscribe to a specific eventType
-	 * @param eventConstructor
+	 * @param eventNameOrConstructor
 	 * @param handler
 	 */
-	subscribe(eventConstructor: new () => any, handler: EventHandler): Promise<EventSubscription>;
+	subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler): Promise<EventSubscription>;
 
 	/**
 	 * unsubscribe from a specific eventType

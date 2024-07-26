@@ -15,6 +15,7 @@ import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../obje
 import { Nanium } from '../../core';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -314,8 +315,8 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new () => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
-		return await this.httpCore.subscribe(eventConstructor, handler);
+	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
+		return await this.httpCore.subscribe(eventNameOrConstructor, handler);
 	}
 
 	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {

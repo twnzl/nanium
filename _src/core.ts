@@ -8,6 +8,7 @@ import { DateHelper } from './helper';
 import { EventSubscription } from './interfaces/eventSubscription';
 import { Logger, LogLevel } from './interfaces/logger';
 import { NaniumCommunicator } from './interfaces/communicator';
+import { EventNameOrConstructor } from './interfaces/eventConstructor';
 
 declare var global: any;
 
@@ -167,22 +168,23 @@ export class CNanium {
 	}
 
 	async subscribe(
-		eventConstructor: any,
+		eventNameOrConstructor: EventNameOrConstructor,
 		handler: (data: any) => Promise<void>,
 		managerOrData?: ServiceManager | Omit<any, 'subscribe'>
 	): Promise<EventSubscription> {
 		let manager: ServiceManager;
 		let data: any;
+		const eventName: string = typeof eventNameOrConstructor === 'string' ? eventNameOrConstructor : eventNameOrConstructor.eventName;
 		if (managerOrData && (managerOrData as ServiceManager).subscribe) {
 			manager = managerOrData as ServiceManager;
 		} else {
 			data = managerOrData;
-			manager = await this.getResponsibleManagerForEvent(eventConstructor.eventName, data);
+			manager = await this.getResponsibleManagerForEvent(eventName, data);
 		}
 		if (!manager) {
-			throw new Error('no responsible manager for event "' + eventConstructor.eventName + '" found');
+			throw new Error('no responsible manager for event "' + eventName + '" found');
 		}
-		const subscription: EventSubscription = await manager.subscribe(eventConstructor, handler);
+		const subscription: EventSubscription = await manager.subscribe(eventNameOrConstructor, handler);
 		subscription[managerSymbol] = manager;
 		return subscription;
 	}

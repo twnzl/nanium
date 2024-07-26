@@ -1,11 +1,12 @@
 import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
 import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../objects';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { Nanium } from '../../core';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { ExecutionContext } from '../../interfaces/executionContext';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
 
 interface NaniumEventResponse {
 	eventName: string;
@@ -15,7 +16,7 @@ interface NaniumEventResponse {
 
 interface ConsumerEventSubscription {
 	eventName: string;
-	eventConstructor: new (data?: any) => any;
+	eventConstructor?: ((new(data?: any) => any) & { eventName: string });
 	eventHandlers: Map<number, EventHandler>;
 }
 
@@ -107,7 +108,9 @@ export class HttpCore {
 		}
 	}
 
-	async subscribe(eventConstructor: any, handler: EventHandler): Promise<EventSubscription> {
+
+	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler): Promise<EventSubscription> {
+		const eventName: string = typeof eventNameOrConstructor === 'string' ? eventNameOrConstructor : eventNameOrConstructor.eventName;
 		return await new Promise<EventSubscription>(async (resolve: Function, reject: Function) => {
 			// if not yet done, open long-polling request to receive events, do not use await because it is a long-polling request ;-)
 			if (!this.eventSubscriptions) {
@@ -127,17 +130,17 @@ export class HttpCore {
 						return;
 					}
 				}
-				const subscription: EventSubscription = new EventSubscription(this.id, eventConstructor.eventName);
+				const subscription: EventSubscription = new EventSubscription(this.id, eventName);
 
 				// add basics to eventSubscriptions for this eventName and inform the server
-				if (!this.eventSubscriptions.hasOwnProperty(eventConstructor.eventName)) {
-					this.eventSubscriptions[eventConstructor.eventName] = {
-						eventName: eventConstructor.eventName,
-						eventConstructor: eventConstructor,
+				if (!this.eventSubscriptions.hasOwnProperty(eventName)) {
+					this.eventSubscriptions[eventName] = {
+						eventName: eventName,
+						eventConstructor: typeof eventNameOrConstructor === 'string' ? undefined : eventNameOrConstructor,
 						eventHandlers: new Map<number, EventHandler>()
 					};
-					this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
-					this.sendEventSubscription(eventConstructor, subscription).then(
+					this.eventSubscriptions[eventName].eventHandlers.set(subscription.id, handler);
+					this.sendEventSubscription(eventNameOrConstructor, subscription).then(
 						() => resolve(subscription),
 						(e) => reject(e)
 					);
@@ -145,7 +148,7 @@ export class HttpCore {
 
 				// if server has already been informed, just add the new handler locally
 				else {
-					this.eventSubscriptions[eventConstructor.eventName].eventHandlers.set(subscription.id, handler);
+					this.eventSubscriptions[eventName].eventHandlers.set(subscription.id, handler);
 					resolve(subscription);
 				}
 			};
@@ -182,7 +185,7 @@ export class HttpCore {
 			for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
 				const interceptor: EventSubscriptionSendInterceptor<any, any>
 					= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
-				await interceptor.execute(this.eventSubscriptions[eventName].eventConstructor, subscription);
+				await interceptor.execute(this.eventSubscriptions[eventName].eventConstructor ?? eventName, subscription);
 			}
 			const requestBody: string | ArrayBuffer = this.config.serializer.serialize({
 				clientId: this.id,
@@ -230,7 +233,7 @@ export class HttpCore {
 				for (const eventName in this.eventSubscriptions) {
 					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
 						subscription = new EventSubscription(this.id, eventName);
-						await this.sendEventSubscription(this.eventSubscriptions[eventName].eventConstructor, subscription);
+						await this.sendEventSubscription(this.eventSubscriptions[eventName].eventConstructor ?? eventName, subscription);
 					}
 				}
 				await this.config.onServerConnectionRestored();
@@ -267,17 +270,20 @@ export class HttpCore {
 					responseItems = [eventResponse];
 				}
 				for (const responseItem of responseItems) {
-					const eventConstructor: any = this.eventSubscriptions[responseItem.eventName]?.eventConstructor;
-					if (eventConstructor) {
-						// type-save deserialization
-						const event = NaniumObject.create(
-							responseItem.event,
-							eventConstructor,
-							eventConstructor[genericTypesSymbol]
-						);
+					if (this.eventSubscriptions[responseItem.eventName]) {
+						const eventConstructor: any = this.eventSubscriptions[responseItem.eventName].eventConstructor;
+						let event = responseItem.event;
+						if (eventConstructor) {
+							// type-save deserialization
+							event = NaniumObject.create(
+								responseItem.event,
+								eventConstructor,
+								eventConstructor[genericTypesSymbol]
+							);
+						}
 						// call registered handlers
 						if (event) {
-							for (const handler of this.eventSubscriptions[eventConstructor.eventName].eventHandlers.values()) {
+							for (const handler of this.eventSubscriptions[responseItem.eventName].eventHandlers.values()) {
 								await handler(event);
 							}
 						}

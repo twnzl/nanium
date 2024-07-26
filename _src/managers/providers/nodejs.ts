@@ -324,8 +324,10 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
-		const eventName: string = (eventConstructor as any).eventName;
+	async subscribe(eventConstructor: {
+		eventName: string
+	} | string, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
+		const eventName: string = typeof eventConstructor === 'string' ? eventConstructor : eventConstructor.eventName;
 		const subscription = new EventSubscription('', eventName, handler);
 		this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName] ?? [];
 		this.eventSubscriptions[eventName].push(subscription);

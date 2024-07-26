@@ -8,6 +8,7 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { Channel } from '../../interfaces/channel';
 import { NaniumObject } from '../../objects';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 
 export class NaniumBrowserProviderConfig {
 	/**
@@ -176,8 +177,8 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: new() => any, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
-		const eventName: string = (eventConstructor as any).eventName;
+	async subscribe(eventConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
+		const eventName: string = typeof eventConstructor === 'string' ? eventConstructor : eventConstructor.eventName;
 		const subscription = new EventSubscription('', eventName, handler);
 		this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName] ?? [];
 		this.internalEventSubscriptions[eventName].push(subscription);

@@ -12,7 +12,7 @@ export class EventBase<T = any> extends NaniumObject<T> {
 	}
 
 	static async subscribe(handler: EventHandler, managerOrData?: ServiceManager | any): Promise<EventSubscription> {
-		return await Nanium.subscribe(this, handler, managerOrData);
+		return await Nanium.subscribe(this as any, handler, managerOrData);
 	}
 
 	static async unsubscribe(subscription?: EventSubscription): Promise<void> {

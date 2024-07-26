@@ -1,3 +1,10 @@
+# 1.25.0
+
+- It is now also possible to use the event name instead of the constructor for event subscriptions via Nanium.subscribe.
+  This should be used carefully, because subscriptions via event name do not support the conversion of event objects to
+  its real type. The event object passed to the handler will just be what the serializer produces.
+- event constructor type is defined more precise.
+
 # 1.24.4
 
 - createJsonSchemas: add optional parameter fileMatch '*'. Will be set at the main schema
