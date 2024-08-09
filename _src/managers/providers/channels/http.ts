@@ -13,6 +13,7 @@ import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
 import { NaniumStream } from '../../../interfaces/naniumStream';
+import { Message } from '../../../interfaces/communicator';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -33,7 +34,7 @@ export class NaniumHttpChannel implements Channel {
 	private lastLongPollingContact: { [clientId: string]: number } = {};
 	private pendingEvents: { [clientId: string]: { eventName: string, event: Event }[] } = {};
 
-	constructor(config: NaniumHttpChannelConfig) {
+	constructor(public id: string, config: NaniumHttpChannelConfig) {
 		this.config = {
 			...{
 				server: undefined,
@@ -260,7 +261,7 @@ export class NaniumHttpChannel implements Channel {
 					try {
 						// deserialize subscription info
 						const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
-						subscriptionData.channel = this;
+						subscriptionData.channelId = this.id;
 						//todo: create real instances of EventSubscription and additionalData  e.g:
 						// const subscriptionData: EventSubscription = NaniumObject.create(
 						// 	this.config.serializer.deserialize(Buffer.concat(data).toString()),
@@ -410,9 +411,18 @@ export class NaniumHttpChannel implements Channel {
 		}
 	}
 
-	receiveCommunicatorMessage(msg: CommunicatorMessage): void {
-		if (msg.type === 'long_polling_response_received') {
-			this.lastLongPollingContact[msg.clientId] = Date.now();
+	receiveCommunicatorMessage(msg: Message): void {
+		if (msg.type === 'event_subscribe') {
+			const eventMessage = msg as Message<EventSubscription>;
+			Nanium.receiveSubscription(eventMessage.data, false).then();
+		} else if (msg.type === 'event_unsubscribe') {
+			const eventMessage = msg as Message<EventSubscription>;
+			Nanium.unsubscribe(eventMessage.data, undefined, false).then();
+		} else if (msg.type === 'generic') {
+			const message = msg.data as CommunicatorMessage;
+			if (message.type === 'long_polling_response_received') {
+				this.lastLongPollingContact[message.clientId] = Date.now();
+			}
 		}
 	};
 

@@ -26,7 +26,7 @@ import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.c
 import { NaniumStream } from '../../../../interfaces/naniumStream';
 import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
 
-function initNanium(baseUrl: string = 'http://localhost:8080', responsibility: number = 1): void {
+async function initNanium(baseUrl: string = 'http://localhost:8080', responsibility: number = 1): Promise<void> {
 	const serializer = new NaniumJsonSerializer();
 	serializer.packageSeparator = '\0';
 	const naniumConsumer = new NaniumConsumerBrowserHttp({
@@ -41,7 +41,7 @@ function initNanium(baseUrl: string = 'http://localhost:8080', responsibility: n
 			throw { handleError: err };
 		}
 	});
-	Nanium.addManager(naniumConsumer).then();
+	await Nanium.addManager(naniumConsumer);
 }
 
 describe('basic browser client tests', () => {
@@ -50,7 +50,7 @@ describe('basic browser client tests', () => {
 	beforeEach(async () => {
 		session.token = '1234';
 		session.tenant = 'Company1';
-		initNanium();
+		await initNanium();
 	});
 
 	afterEach(async () => {
@@ -326,7 +326,7 @@ describe('test browser client with mocked server', () => {
 	});
 
 	beforeEach(async () => {
-		initNanium();
+		await initNanium();
 		Nanium.addManager(mockServerProvider).then();
 	});
 

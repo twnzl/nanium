@@ -11,5 +11,5 @@ export interface ServiceProviderManager extends ServiceManager {
 
 	addChannel<T>(channel: Channel): void;
 
-	receiveCommunicatorMessage?(msg: Message, from: string | number): void;
+	receiveCommunicatorMessage?(msg: Message): void;
 }

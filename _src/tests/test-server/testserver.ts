@@ -21,7 +21,10 @@ async function runPrimary(workerCount: number) {
 		cluster.fork();
 	}
 
-	Nanium.communicators = [new ClusterCommunicator()];
+	Nanium.communicators = [new ClusterCommunicator(
+		(context) => context,
+		(context) => context,
+	)];
 
 	cluster.on('exit', (worker) => {
 		console.log(`worker ${worker.process.pid} died`);
@@ -63,18 +66,21 @@ async function runWorker() {
 	const serializer = new NaniumJsonSerializer();
 	serializer.packageSeparator = '\0';
 
-	Nanium.communicators = [new ClusterCommunicator()];
+	Nanium.communicators = [new ClusterCommunicator(
+		(context) => context,
+		(context) => context),
+	];
 
 	await Nanium.addManager(new NaniumProviderNodejs({
 		servicePath: path.resolve(path.join(__dirname, '..', '..', '..', '..', '..', '..', 'tests', 'services')),
 		channels: [
-			new NaniumHttpChannel({
+			new NaniumHttpChannel('1', {
 				apiPath: '/api',
 				eventPath: '/events',
 				server: httpServer,
 				serializer: serializer,
 			}),
-			new NaniumWebsocketChannel({
+			new NaniumWebsocketChannel('2', {
 				eventPath: '/events',
 				server: httpServer,
 				serializer: serializer,

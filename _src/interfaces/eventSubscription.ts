@@ -1,7 +1,6 @@
 import { Nanium } from '../core';
 import { EventHandler } from './eventHandler';
 import { Type } from '../objects';
-import { Channel } from './channel';
 
 export class EventSubscription<TData = any, TContext = any> {
 	private static nextId: number = 0;
@@ -11,9 +10,9 @@ export class EventSubscription<TData = any, TContext = any> {
 	@Type(Object) context: TContext;
 	@Type(String) eventName?: string;
 	@Type('TData') additionalData?: TData;
+	@Type(String) channelId?: string;
 
 	handler?: EventHandler;
-	channel?: Channel;
 
 	constructor(
 		clientId: string,

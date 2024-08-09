@@ -34,7 +34,7 @@ export class AppComponent implements OnInit {
 
 	async test1(): Promise<void> {
 		try {
-			this.testService.init();
+			await this.testService.init();
 			this.testGetResponse = await new TestGetRequest({ input1: 'hello world' }).execute();
 		} catch (e) {
 			this.error = e;
@@ -43,7 +43,7 @@ export class AppComponent implements OnInit {
 
 	async test2(): Promise<void> {
 		try {
-			this.testService.init();
+			await this.testService.init();
 			const request = new TestBufferRequest({
 				id: '1',
 				buffer1: new NaniumBuffer(new TextEncoder().encode('123')),
@@ -61,7 +61,7 @@ export class AppComponent implements OnInit {
 	}
 
 	async unsubscribeWithoutParameters(): Promise<{ event1: StuffEvent, event2: Stuff2Event }> {
-		this.testService.init();
+		await this.testService.init();
 		session.token = '1234'; // reset right credentials
 		const manager = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
 		let event1: StuffEvent;
@@ -77,7 +77,7 @@ export class AppComponent implements OnInit {
 
 	// execute request via the consumer
 	async objectResponseStream() {
-		this.testService.init();
+		await this.testService.init();
 		const stream = await new TestStreamedQueryRequest({ amount: 6, msGapTime: 500 }).execute();
 		// const result = await stream.toPromise();
 		const result: TestDto[] = [];
@@ -90,13 +90,13 @@ export class AppComponent implements OnInit {
 	}
 
 	async objectResponseStreamPromise() {
-		this.testService.init();
+		await this.testService.init();
 		const result = await (await new TestStreamedQueryRequest({ amount: 3, msGapTime: 10 }).execute()).toPromise();
 		console.log(JSON.stringify(result));
 	}
 
 	async binaryResponseStream() {
-		this.testService.init();
+		await this.testService.init();
 		const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
 		const result: NaniumBuffer = new NaniumBuffer();
 		stream.onData(async (chunk) => {

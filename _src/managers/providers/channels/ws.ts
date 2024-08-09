@@ -26,7 +26,7 @@ export class NaniumWebsocketChannel implements Channel {
 	private wss: WebSocket.Server;
 	private clientSubscriptionInfo: Map<string, ClientSubscriptionInfo> = new Map(); // first client ID
 
-	constructor(config: NaniumWebsocketChannelConfig) {
+	constructor(public id: string, config: NaniumWebsocketChannelConfig) {
 		this.config = {
 			...{
 				server: undefined,
@@ -100,7 +100,7 @@ export class NaniumWebsocketChannel implements Channel {
 		// ask the manager to execute interceptors and to decide if the subscription is accepted or not
 		try {
 			const subscription: EventSubscription = message.content;
-			subscription.channel = this;
+			subscription.channelId = this.id;
 			await Nanium.receiveSubscription(subscription);
 			ws[clientIdSymbol] ??= message.content.clientId;
 			if (!this.clientSubscriptionInfo.has(subscription.clientId)) {

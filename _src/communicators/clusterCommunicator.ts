@@ -8,11 +8,14 @@ import { ServiceProviderManager } from '../interfaces/serviceProviderManager';
 export class ClusterCommunicator implements NaniumCommunicator {
 	private primaryMessageListenerInstalled: { [key: string]: boolean } = {};
 
-	constructor() {
+	constructor(
+		private toTransferableContext: (context: ExecutionContext) => any,
+		private fromTransferableContext: (data: any) => ExecutionContext,
+	) {
 		if (cluster.isMaster) {
 			cluster.on('exit', (worker, code, signal) => {
 				Nanium.logger.info(`worker ${worker.id} died (${signal || code}).`);
-				this.primaryMessageListenerInstalled[worker.id] = false;
+				delete this.primaryMessageListenerInstalled[worker.id];
 			});
 			cluster.on('fork', (worker) => {
 				if (!this.primaryMessageListenerInstalled[worker.id]) {
@@ -37,20 +40,17 @@ export class ClusterCommunicator implements NaniumCommunicator {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': receive message ', msg.type);
 				if (msg.type === 'event_emit') {
 					const eventMessage = msg as Message<EmitEventMessage>;
-					Nanium.emit(eventMessage.data.event, eventMessage.data.eventName, eventMessage.data.context, false);
-				} else if (msg.type === 'event_subscribe') {
-					const eventMessage = msg as Message<EventSubscription>;
-					await Nanium.receiveSubscription(eventMessage.data, false);
-				} else if (msg.type === 'event_unsubscribe') {
-					const eventMessage = msg as Message<EventSubscription>;
-					await Nanium.unsubscribe(eventMessage.data, undefined, false);
-				} else if (msg.type === 'generic') {
-					await Nanium.managers?.forEach(m => {
-						if ((m as ServiceProviderManager).receiveCommunicatorMessage) {
-							(m as ServiceProviderManager).receiveCommunicatorMessage(msg.data, msg.from);
-						}
-					});
+					Nanium.emit(eventMessage.data.event, eventMessage.data.eventName,
+						this.fromTransferableContext(eventMessage.data.context), false);
 				}
+				// events must always be emitted in all processes.
+				// For all other messages the managers and channels have to decide what to do,
+				// because action depends on the special implementations and used technologies
+				Nanium.managers?.forEach(m => {
+					if ((m as ServiceProviderManager).receiveCommunicatorMessage) {
+						(m as ServiceProviderManager).receiveCommunicatorMessage(msg);
+					}
+				});
 			});
 		}
 	}
@@ -74,7 +74,11 @@ export class ClusterCommunicator implements NaniumCommunicator {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_emit message to primary ');
 				process.send(
-					new Message<EmitEventMessage>('event_emit', { event, eventName, context }, cluster.worker.id),
+					new Message<EmitEventMessage>('event_emit', {
+						event,
+						eventName,
+						context: this.toTransferableContext(context)
+					}, cluster.worker.id),
 					undefined, undefined,
 					e => (e ? reject(e) : resolve())
 				);
@@ -87,7 +91,7 @@ export class ClusterCommunicator implements NaniumCommunicator {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_subscribe message to primary ');
 				process.send(
-					new Message<EventSubscription>('event_subscribe', subscription, cluster.worker.id),
+					new Message<Partial<EventSubscription>>('event_subscribe', subscription, cluster.worker.id),
 					undefined, undefined,
 					e => (e ? reject(e) : resolve())
 				);
@@ -100,7 +104,7 @@ export class ClusterCommunicator implements NaniumCommunicator {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
 				process.send(
-					new Message<EventSubscription>('event_unsubscribe', subscription, cluster.worker.id),
+					new Message<Partial<EventSubscription>>('event_unsubscribe', subscription, cluster.worker.id),
 					undefined, undefined,
 					e => (e ? reject(e) : resolve())
 				);

@@ -68,7 +68,7 @@ export class TestHelper {
 		this.provider = new NaniumProviderNodejs({
 			servicePath: 'tests/services',
 			channels: [
-				new NaniumHttpChannel({
+				new NaniumHttpChannel('hc1', {
 					apiPath: '/api',
 					eventPath: '/events',
 					server: TestHelper.httpServer,

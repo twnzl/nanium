@@ -19,6 +19,7 @@ import {
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject } from '../../objects';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { Message } from '../../interfaces/communicator';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -294,7 +295,8 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				if (subscription.handler) { // subscription on server internally
 					subscription.handler(event);
 				} else { // subscription of remote client - send through channel
-					subscription.channel.emitEvent(event, subscription).then();
+					this.config.channels.find(c => c.id === subscription.channelId)
+						?.emitEvent(event, subscription).then();
 				}
 			}
 		}
@@ -346,7 +348,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		this.eventSubscriptions[subscription.eventName].push(subscription);
 	}
 
-	receiveCommunicatorMessage(msg: any, from: string | number): void {
+	receiveCommunicatorMessage(msg: Message): void {
 		this.config.channels.forEach(c => {
 			if (c.receiveCommunicatorMessage) {
 				c.receiveCommunicatorMessage(msg);
