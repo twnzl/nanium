@@ -38,6 +38,11 @@ export class WebSocketClient {
 	close(): void {
 		this.closedOnPurpose = true;
 		this.socket.close();
+		if (this.connectedResolve) {
+			this.connectedResolve();
+			this.connectedResolve = undefined;
+		}
+		this.connected = undefined;
 	}
 
 	send(data: string | ArrayBuffer): void {

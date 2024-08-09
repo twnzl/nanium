@@ -77,7 +77,7 @@ export class ConsumerBase<TConfig extends ServiceConsumerConfig> {
 			for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
 				const interceptor: EventSubscriptionSendInterceptor<any, any>
 					= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
-				await interceptor.execute(this.eventSubscriptions[eventName].eventConstructor ?? eventName, subscription);
+				await interceptor.execute(this.eventSubscriptions[eventName]?.eventConstructor ?? eventName, subscription);
 			}
 			delete this.eventSubscriptions[eventName];
 		}

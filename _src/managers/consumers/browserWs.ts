@@ -94,19 +94,21 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
 		await super.unsubscribeLocal(subscription, eventName);
-		await this.websocket.connected;
-		// no mor handlers for this event registered - so unsubscribe on server
-		if (!this.eventSubscriptions[subscription.eventName]?.eventHandlers?.size) {
-			const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
-				type: 'unsubscribe_event',
-				content: {
-					clientId: this.id,
-					eventName: eventName,
-					additionalData: subscription.additionalData,
-					id: subscription.id
-				}
-			});
-			this.websocket.send(content);
+		if (this.websocket?.connected) {
+			await this.websocket.connected;
+			// no mor handlers for this event registered - so unsubscribe on server
+			if (!this.eventSubscriptions[subscription.eventName]?.eventHandlers?.size) {
+				const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
+					type: 'unsubscribe_event',
+					content: {
+						clientId: this.id,
+						eventName: eventName,
+						additionalData: subscription.additionalData,
+						id: subscription.id
+					}
+				});
+				this.websocket.send(content);
+			}
 		}
 	}
 

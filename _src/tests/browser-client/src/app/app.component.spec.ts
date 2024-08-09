@@ -25,8 +25,9 @@ import { AnonymousRequest } from '../../../services/test/anonymous.contract';
 import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
 import { NaniumStream } from '../../../../interfaces/naniumStream';
 import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
+import { NaniumConsumerBrowserWebsocket } from '../../../../managers/consumers/browserWs';
 
-async function initNanium(baseUrl: string = 'http://localhost:8080', responsibility: number = 1): Promise<void> {
+async function addHttpConsumer(baseUrl: string = 'http://localhost:8080', serviceResponsibility: number = 1, eventResponsibility: number = 1): Promise<void> {
 	const serializer = new NaniumJsonSerializer();
 	serializer.packageSeparator = '\0';
 	const naniumConsumer = new NaniumConsumerBrowserHttp({
@@ -36,7 +37,26 @@ async function initNanium(baseUrl: string = 'http://localhost:8080', responsibil
 		requestInterceptors: [TestClientRequestInterceptor],
 		responseInterceptors: [TestClientResponseInterceptor],
 		eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
-		isResponsible: () => Promise.resolve(responsibility),
+		isResponsible: () => Promise.resolve(serviceResponsibility),
+		isResponsibleForEvent: () => Promise.resolve(eventResponsibility),
+		handleError: async (err: any): Promise<any> => {
+			throw { handleError: err };
+		}
+	});
+	await Nanium.addManager(naniumConsumer);
+}
+
+async function addWebsocketConsumer(baseUrl: string = 'http://localhost:8080', serviceResponsibility: number = 1, eventResponsibility: number = 1): Promise<void> {
+	const serializer = new NaniumJsonSerializer();
+	serializer.packageSeparator = '\0';
+	const naniumConsumer = new NaniumConsumerBrowserWebsocket({
+		apiEventUrl: baseUrl + '/events',
+		serializer: serializer,
+		requestInterceptors: [TestClientRequestInterceptor],
+		responseInterceptors: [TestClientResponseInterceptor],
+		eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
+		isResponsible: () => Promise.resolve(serviceResponsibility),
+		isResponsibleForEvent: () => Promise.resolve(eventResponsibility),
 		handleError: async (err: any): Promise<any> => {
 			throw { handleError: err };
 		}
@@ -50,7 +70,7 @@ describe('basic browser client tests', () => {
 	beforeEach(async () => {
 		session.token = '1234';
 		session.tenant = 'Company1';
-		await initNanium();
+		await addHttpConsumer();
 	});
 
 	afterEach(async () => {
@@ -298,7 +318,7 @@ describe('test browser client with wrong api url', () => {
 	jasmine.DEFAULT_TIMEOUT_INTERVAL = 100000;
 
 	beforeEach(async () => {
-		initNanium('https://not.available');
+		await addHttpConsumer('https://not.available');
 	});
 
 	afterEach(async () => {
@@ -326,7 +346,7 @@ describe('test browser client with mocked server', () => {
 	});
 
 	beforeEach(async () => {
-		await initNanium();
+		await addHttpConsumer();
 		Nanium.addManager(mockServerProvider).then();
 	});
 
@@ -360,18 +380,12 @@ describe('test browser client with mocked server', () => {
 });
 
 describe('events and inter-process communication via cluster communicator', () => {
-	beforeEach(async () => {
-		session.token = '1234';
-		session.tenant = 'Company1';
-		initNanium('http://localhost:8080');
-		initNanium('http://localhost:8081');
-	});
 
 	afterEach(async () => {
 		await Nanium.shutdown();
 	});
 
-	it('subscribe with wrong auth token', async function (): Promise<void> {
+	async function withWrongAuthToken() {
 		const manager = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
 		let subscription;
 		try {
@@ -386,9 +400,9 @@ describe('events and inter-process communication via cluster communicator', () =
 			subscription?.unsubscribe();
 			session.token = '1234'; // reset right credentials
 		}
-	});
+	}
 
-	it('event should also be received by clients that are connected to other server processes', async function (): Promise<void> {
+	async function enterProcessEventEmission() {
 		let subscription1: EventSubscription;
 		let subscription2: EventSubscription;
 		session.token = '1234'; // reset right credentials
@@ -419,9 +433,9 @@ describe('events and inter-process communication via cluster communicator', () =
 		expect(event2.aNumber).withContext('aNumber should be correct').toBe(9);
 		expect(event2.aString).withContext('aString should be correct').toBe('10');
 		expect(event2.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
-	});
+	}
 
-	it('unsubscribe without parameters', async function (): Promise<void> {
+	async function unsubscribeWithoutParameters() {
 		session.token = '1234'; // reset right credentials
 		let event1: StuffEvent;
 		let event2: Stuff2Event;
@@ -435,9 +449,9 @@ describe('events and inter-process communication via cluster communicator', () =
 		expect(event1.aString).withContext('aString should be correct').toBe('10');
 		expect(event1.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
 		expect(event2).toBeUndefined();
-	});
+	}
 
-	it('event should not be received users of other tenants than me, because of the TestEventEmissionSendInterceptor on server side', async function (): Promise<void> {
+	async function eventEmissionInterceptor() {
 		let subscription1: EventSubscription;
 		let subscription2: EventSubscription;
 		session.token = '1234'; // reset right credentials
@@ -468,9 +482,9 @@ describe('events and inter-process communication via cluster communicator', () =
 		expect(event1.aDate?.toISOString()).withContext('aDate should be correct').toBe(new Date(2011, 11, 11).toISOString());
 		expect(subscription2).withContext('subscription 2 should be defined').toBeDefined();
 		expect(event2).withContext('event 2 should be undefined (not raised for second subscription because it was made as a different tenant)').toBeUndefined();
-	});
+	}
 
-	it('subscribe to event using the event name instead of the event constructor', async function (): Promise<void> {
+	async function subscribeEventByName() {
 		// session.token = '1234'; // reset right credentials
 		const manager1 = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
 		const subscription1 = await Nanium.subscribe(StuffEvent.eventName, async (event) => {
@@ -480,5 +494,65 @@ describe('events and inter-process communication via cluster communicator', () =
 			expect(event.aDate as any).withContext('aDate is an ISOString because subscription without event constructor does not support real types').toBe(new Date(2011, 11, 11).toISOString());
 		}, manager1);
 		await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffEvent
+	}
+
+	describe('events over http channel', function (): void {
+		beforeEach(async () => {
+			session.token = '1234';
+			session.tenant = 'Company1';
+			await addHttpConsumer('http://localhost:8080');
+			await addHttpConsumer('http://localhost:8081');
+		});
+
+		it('subscribe with wrong auth token', async function (): Promise<void> {
+			await withWrongAuthToken();
+		});
+
+		it('event should also be received by clients that are connected to other server processes', async function (): Promise<void> {
+			await enterProcessEventEmission();
+		});
+
+		it('unsubscribe without parameters', async function (): Promise<void> {
+			await unsubscribeWithoutParameters();
+		});
+
+		it('event should not be received users of other tenants than me, because of the TestEventEmissionSendInterceptor on server side', async function (): Promise<void> {
+			await eventEmissionInterceptor();
+		});
+
+		it('subscribe to event using the event name instead of the event constructor', async function (): Promise<void> {
+			await subscribeEventByName();
+		});
+	});
+
+	describe('events over websocket channel', function (): void {
+		beforeEach(async () => {
+			session.token = '1234';
+			session.tenant = 'Company1';
+			await addHttpConsumer('http://localhost:8080', 1, 1);
+			await addHttpConsumer('http://localhost:8081', 1, 2);
+			await addWebsocketConsumer('ws://localhost:8080');
+			await addWebsocketConsumer('ws://localhost:8081');
+		});
+
+		it('subscribe with wrong auth token', async function (): Promise<void> {
+			await withWrongAuthToken();
+		});
+
+		it('event should also be received by clients that are connected to other server processes', async function (): Promise<void> {
+			await enterProcessEventEmission();
+		});
+
+		it('unsubscribe without parameters', async function (): Promise<void> {
+			await unsubscribeWithoutParameters();
+		});
+
+		it('event should not be received users of other tenants than me, because of the TestEventEmissionSendInterceptor on server side', async function (): Promise<void> {
+			await eventEmissionInterceptor();
+		});
+
+		it('subscribe to event using the event name instead of the event constructor', async function (): Promise<void> {
+			await subscribeEventByName();
+		});
 	});
 });
