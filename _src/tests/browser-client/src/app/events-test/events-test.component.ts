@@ -15,7 +15,10 @@ export class EventsTestComponent implements OnInit {
 	log: string[] = [];
 	port: 8080 | 8081;
 	mySession = session;
-	subscriptions: EventSubscription[] = [];
+	subscriptions: { http: EventSubscription[], ws: EventSubscription[] } = {
+		http: [],
+		ws: []
+	};
 	eventNumber: number = 1;
 
 	constructor(
@@ -40,24 +43,24 @@ export class EventsTestComponent implements OnInit {
 		}
 	}
 
-	async subscribe() {
+	async subscribe(kind: 'http' | 'ws') {
 		try {
 			this.log.push('subscribe event');
-			this.subscriptions.push(
+			this.subscriptions[kind].push(
 				await StuffEvent.subscribe((event: StuffEvent) => {
 					this.log.push('event received: ' + event.aNumber);
-				}, this.testService.naniumConsumer)
+				}, kind === 'ws' ? this.testService.naniumConsumerWs : this.testService.naniumConsumerHttp)
 			);
 		} catch (e) {
 			this.log.push('error: ' + (e?.message ?? e));
 		}
 	}
 
-	async unsubscribe(subscription: EventSubscription) {
+	async unsubscribe(kind: 'http' | 'ws', subscription: EventSubscription) {
 		try {
 			this.log.push('unsubscribe event ' + subscription.id);
 			await subscription.unsubscribe();
-			this.subscriptions = this.subscriptions.filter(s => s.id !== subscription.id);
+			this.subscriptions[kind] = this.subscriptions[kind].filter(s => s.id !== subscription.id);
 		} catch (e) {
 			this.log.push('error: ' + (e?.message ?? e));
 		}

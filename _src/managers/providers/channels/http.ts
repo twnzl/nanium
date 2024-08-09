@@ -260,7 +260,7 @@ export class NaniumHttpChannel implements Channel {
 					try {
 						// deserialize subscription info
 						const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
-
+						subscriptionData.channel = this;
 						//todo: create real instances of EventSubscription and additionalData  e.g:
 						// const subscriptionData: EventSubscription = NaniumObject.create(
 						// 	this.config.serializer.deserialize(Buffer.concat(data).toString()),

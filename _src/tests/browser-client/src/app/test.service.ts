@@ -10,6 +10,7 @@ import { Nanium } from '../../../../core';
 import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
 import { ServiceRequestBase } from '../../../services/serviceRequestBase';
 import { ClientServiceExecutionContext } from '../services/clientServiceExecutionContext';
+import { NaniumConsumerBrowserWebsocket } from '../../../../managers/consumers/browserWs';
 
 @Injectable({
 	providedIn: 'root'
@@ -32,13 +33,14 @@ export class TestService {
 
 	jsonSerializer = new NaniumJsonSerializer('\0');
 
-	naniumConsumer: NaniumConsumerBrowserHttp;
+	naniumConsumerHttp: NaniumConsumerBrowserHttp;
+	naniumConsumerWs: NaniumConsumerBrowserWebsocket;
 
 	constructor() {
 	}
 
-	init(apiPort: 8080 | 8081 = 8080, eventPort: 8080 | 8081 = 8080): void {
-		this.naniumConsumer = new NaniumConsumerBrowserHttp({
+	async init(apiPort: 8080 | 8081 = 8080, eventPort: 8080 | 8081 = 8080): Promise<void> {
+		this.naniumConsumerHttp = new NaniumConsumerBrowserHttp({
 			apiUrl: `http://localhost:${apiPort}/api`,
 			apiEventUrl: `http://localhost:${eventPort}/events`,
 			serializer: this.jsonSerializer,
@@ -55,7 +57,24 @@ export class TestService {
 				return eventName.startsWith('NaniumTest:') ? 2 : 0;
 			},
 		});
-		Nanium.addManager(this.naniumConsumer).then();
+		this.naniumConsumerWs = new NaniumConsumerBrowserWebsocket({
+			apiEventUrl: `ws://localhost:${eventPort}`,
+			serializer: this.jsonSerializer,
+			requestInterceptors: [TestClientRequestInterceptor],
+			responseInterceptors: [TestClientResponseInterceptor],
+			eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
+			handleError: async (err: any): Promise<any> => {
+				throw { handleError: err };
+			},
+			isResponsible: async (request, serviceName) => {
+				return 0;
+			},
+			isResponsibleForEvent: async (eventName) => {
+				return eventName.startsWith('NaniumTest:') ? 1 : 0;
+			},
+		});
+		Nanium.addManager(this.naniumConsumerHttp).then();
+		Nanium.addManager(this.naniumConsumerWs).then();
 		Nanium.addManager(this.browserProvider).then();
 	}
 

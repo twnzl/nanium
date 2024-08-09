@@ -10,4 +10,6 @@ export interface Channel {
 	receiveCommunicatorMessage?(msg: any): void;
 
 	onClientRemoved: ((clientId) => void)[];
+
+	terminate?(): Promise<void>;
 }

@@ -12,6 +12,7 @@ import { TestEventEmissionSendInterceptor } from '../interceptors/server/test.se
 import {
 	TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
+import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws';
 
 async function runPrimary(workerCount: number) {
 	console.log(`Primary ${process.pid} is running`);
@@ -54,7 +55,7 @@ async function runWorker() {
 		}
 		//#endregion route to check if server is running
 	});
-	// each worker has its own port, just du make sure to connect to different processes in the tests
+	// each worker has its own port, just tu make sure to connect to different processes in the tests
 	const port = cluster.worker.id % 2 === 0 ? 8080 : 8081;
 	httpServer.listen(port);
 	console.log(`Worker ${process.pid} is listening on port ${port}`);
@@ -69,6 +70,11 @@ async function runWorker() {
 		channels: [
 			new NaniumHttpChannel({
 				apiPath: '/api',
+				eventPath: '/events',
+				server: httpServer,
+				serializer: serializer,
+			}),
+			new NaniumWebsocketChannel({
 				eventPath: '/events',
 				server: httpServer,
 				serializer: serializer,

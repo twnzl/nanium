@@ -8,6 +8,7 @@
     "outDir": "dst",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "skipLibCheck": true,
     "moduleResolution": "Node",
     "typeRoots": [
       "node_modules/@types"

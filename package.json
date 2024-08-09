@@ -1,6 +1,6 @@
 {
   "name": "nanium",
-  "version": "1.25.0",
+  "version": "1.26.0",
   "description": "nanoservice based fullstack software architecture framework",
   "author": "twnzl",
   "license": "MIT",
@@ -28,7 +28,9 @@
   ],
   "scripts": {
     "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
-    "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates && cd _src/tests/test-server && tsc",
+    "build:testserver": "cd _src/tests/test-server && tsc && cd ../../..",
+    "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates && npm run build:testserver",
+    "run:testserver": "cd _src/tests/test-server && node dst/tests/test-server/testserver.js && cd ../../..",
     "test:server": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest",
     "test:client": "cd _src/tests/browser-client; npm test; cd ../../..",
     "test": "npm run test:server && npm run test:client",
@@ -64,7 +66,8 @@
   "dependencies": {
     "recursive-readdir": "^2.2.2",
     "rxjs": "^6.6.7",
-    "shelljs": "^0.8.5"
+    "shelljs": "^0.8.5",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "^1.0.5",
@@ -74,6 +77,7 @@
     "@types/recursive-readdir": "^2.2.0",
     "@types/shelljs": "^0.8.5",
     "@types/typescript": "^2.0.0",
+    "@types/ws": "^8.5.12",
     "jest": "^27.5.1",
     "ts-jest": "^27.1.4",
     "ts-node": "^8.3.0",

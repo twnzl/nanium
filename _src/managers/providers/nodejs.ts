@@ -18,6 +18,7 @@ import {
 } from '../../interfaces/eventSubscriptionInterceptor';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { genericTypesSymbol, NaniumObject } from '../../objects';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -153,6 +154,11 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 	}
 
 	async terminate(): Promise<void> {
+		for (const channel of this.config.channels ?? []) {
+			if (typeof channel.terminate === 'function') {
+				await channel.terminate();
+			}
+		}
 	}
 
 	private static findClassWithServiceNameProperty(module: any): any {
@@ -276,12 +282,6 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		const interceptors: EventEmissionSendInterceptor<any>[] = this.config.eventEmissionSendInterceptors?.map(
 			(instanceOrClass) => typeof instanceOrClass === 'function' ? new instanceOrClass() : instanceOrClass
 		) ?? [];
-		// for (const channel of this.config.channels ?? []) { // channels
-		// if (!channel.eventSubscriptions) {
-		// 	continue;
-		// }
-		// Nanium.logger.info('provider nodejs emit: event ', eventName, channel.eventSubscriptions[eventName]?.length ?? 0);
-		// Nanium.logger.info('provider nodejs emit: active subscriptions. ', channel.eventSubscriptions[eventName]?.length ?? 0);
 		for (const subscription of this.eventSubscriptions[eventName] ?? []) { // subscriptions
 			emissionOk = true;
 			for (const interceptor of interceptors) { // interceptors
@@ -291,42 +291,20 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				}
 			}
 			if (emissionOk) {
-				if (subscription.handler) { // server internal
+				if (subscription.handler) { // subscription on server internally
 					subscription.handler(event);
-				} else {
-					for (const channel of this.config.channels ?? []) { // channels
-						channel.emitEvent(event, subscription).then();
-					}
+				} else { // subscription of remote client - send through channel
+					subscription.channel.emitEvent(event, subscription).then();
 				}
 			}
 		}
-		// internal
-		// if (this.eventSubscriptions[eventName]?.length) {
-		// 	const internal = this.eventSubscriptions[eventName].filter(s => s.handler);
-		// 	if (emissionOk) {
-		// 		for (const subscription of this.eventSubscriptions[eventName]) {
-		// 			emissionOk = true;
-		// 			for (const interceptor of interceptors) { // interceptors
-		// 				emissionOk = await interceptor.execute(event, executionContext, subscription);
-		// 				if (!emissionOk) {
-		// 					break;
-		// 				}
-		// 			}
-		// 			if (subscription.handler) {
-		// 				subscription.handler(event);
-		// 			}
-		// 		}
-		// 	}
-		// }
 	}
 
 	async isResponsibleForEvent(eventName: string, context?: any): Promise<number> {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	async subscribe(eventConstructor: {
-		eventName: string
-	} | string, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
+	async subscribe(eventConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = typeof eventConstructor === 'string' ? eventConstructor : eventConstructor.eventName;
 		const subscription = new EventSubscription('', eventName, handler);
 		this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName] ?? [];
@@ -369,13 +347,11 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 	}
 
 	receiveCommunicatorMessage(msg: any, from: string | number): void {
-		if (msg.type === 'long_polling_response_received') {
-			this.config.channels.forEach(c => {
-				if (c.receiveCommunicatorMessage) {
-					c.receiveCommunicatorMessage(msg);
-				}
-			});
-		}
+		this.config.channels.forEach(c => {
+			if (c.receiveCommunicatorMessage) {
+				c.receiveCommunicatorMessage(msg);
+			}
+		});
 	}
 
 	removeClient(clientId: string): void {

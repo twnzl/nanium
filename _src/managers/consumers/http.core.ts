@@ -157,11 +157,11 @@ export class HttpCore {
 		});
 	}
 
-	private async sendEventSubscription(eventConstructor: any, subscription: EventSubscription<any>): Promise<void> {
+	private async sendEventSubscription(eventNameOrConstructor: EventNameOrConstructor, subscription: EventSubscription<any>): Promise<void> {
 		for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
 			const interceptor: EventSubscriptionSendInterceptor<any, any>
 				= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
-			await interceptor.execute(eventConstructor, subscription);
+			await interceptor.execute(eventNameOrConstructor, subscription);
 		}
 		const requestBody: string | ArrayBuffer = this.config.serializer.serialize(subscription);
 		try {
