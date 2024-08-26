@@ -17,4 +17,15 @@ export class ServiceRequestContext implements ExecutionContext {
 			...{ scope: 'private' }
 		});
 	}
+
+	static toTransferableContext(context: ServiceRequestContext) {
+		// todo: remove not transferable objects like database connections
+		return { ...context };
+	}
+
+	static fromTransferableContext(data: any): ServiceRequestContext {
+		const result = new ServiceRequestContext(data);
+		// todo: add not transferable objects like database connections
+		return result;
+	}
 }

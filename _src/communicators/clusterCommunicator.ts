@@ -5,12 +5,12 @@ import { ExecutionContext } from '../interfaces/executionContext';
 import { EventSubscription } from '../interfaces/eventSubscription';
 import { ServiceProviderManager } from '../interfaces/serviceProviderManager';
 
-export class ClusterCommunicator implements NaniumCommunicator {
+export class ClusterCommunicator<TExecutionContext extends ExecutionContext> implements NaniumCommunicator {
 	private primaryMessageListenerInstalled: { [key: string]: boolean } = {};
 
 	constructor(
-		private toTransferableContext: (context: ExecutionContext) => any,
-		private fromTransferableContext: (data: any) => ExecutionContext,
+		private toTransferableContext: (context: TExecutionContext) => any,
+		private fromTransferableContext: (data: any) => TExecutionContext
 	) {
 		if (cluster.isMaster) {
 			cluster.on('exit', (worker, code, signal) => {
@@ -77,7 +77,7 @@ export class ClusterCommunicator implements NaniumCommunicator {
 					new Message<EmitEventMessage>('event_emit', {
 						event,
 						eventName,
-						context: this.toTransferableContext(context)
+						context: this.toTransferableContext(context as TExecutionContext)
 					}, cluster.worker.id),
 					undefined, undefined,
 					e => (e ? reject(e) : resolve())

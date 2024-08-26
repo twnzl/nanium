@@ -4,7 +4,8 @@ import { ServiceRequestHead } from './serviceRequestHead';
 import { NaniumObject, Type, ConstructorType } from 'nanium/objects';
 import { ExecutionContext } from 'nanium/interfaces/executionContext';
 
-export class ServiceRequestBase<TRequestBody, TResponse> {
+export abstract class ServiceRequestBase<TRequestBody, TResponse> {
+	static readonly serviceName: string;
 
 	@Type(ServiceRequestHead)	head?: ServiceRequestHead;
 	@Type('TRequestBody')	body: TRequestBody;

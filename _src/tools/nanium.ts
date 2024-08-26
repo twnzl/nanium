@@ -7,6 +7,7 @@ import * as findFiles from 'recursive-readdir';
 import * as util from 'util';
 import * as readline from 'readline';
 import { Interface } from 'readline';
+import * as zip from 'unzipper';
 
 export class NaniumToolConfig {
 	eventsDirectory: string;
@@ -20,6 +21,7 @@ export class NaniumToolConfig {
 
 // define dictionary with action-functions
 const actions: { [actionName: string]: Function } = {
+	new: create,
 	init: init,
 	g: generateService,
 	ge: generateEvent,
@@ -39,38 +41,51 @@ const rl: Interface = readline.createInterface({
 // arguments
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
 	console.log(`
+nanium new {folder} {namespace} 
+	generate a new client/server-app scaffold in folder {folder} and with nanium namespace {namespace} 
 nanium init
-		generate nanium.json service+event directory and the nanium base classes
+	generate nanium.json service+event directory and the nanium base classes within an existing app
 nanium g {directory/}*{service name} {private|public} {namespace}
-		generate files for a new service (contract + executor)
+	generate files for a new service (contract + executor)
 nanium ge {directory/}*{event name} {private|public} {namespace}
-		generate file for a new event
+	generate file for a new event
 nanium rm {file or folder}
-		removes the file or folder
+	removes the file or folder
 nanium cp {srcPath} {dstPath}
-  	creates the destination path (recursively) if it does not exist
-  	and copies files from srcPath recursively to dstPath
+	creates the destination path (recursively) if it does not exist
+	and copies files from srcPath recursively to dstPath
 nanium ccp {srcPath} {dstPath}
-	  creates the destination path (recursively) if it does not exist,
-	  removes old files in the destination path
-	  and than copies files from srcPath recursively to dstPath
+	creates the destination path (recursively) if it does not exist,
+	removes old files in the destination path
+	and than copies files from srcPath recursively to dstPath
 nanium namespace {namespace}
-		set namespace for all services that don't have a namespace
+	set namespace for all services that don't have a namespace
 nanium rsn
-		refresh service names. Set property serviceName of all requests and executors to the default (Namespace:RelativePath)
+	refresh service names. Set property serviceName of all requests and executors to the default (Namespace:RelativePath)
 nanium sdk {b|p|u}
-		with parameter b: bundle the contract files to a .tgz file
-		with parameter p: use npm publish and the information of nanium.json.sdkPackage to publish the contracts to npm repository
-		with parameter u: use npm publish and the information of nanium.json.sdkPackage to unpublish the contracts in npm repository
+	with parameter b: bundle the contract files to a .tgz file
+	with parameter p: use npm publish and the information of nanium.json.sdkPackage to publish the contracts to npm repository
+	with parameter u: use npm publish and the information of nanium.json.sdkPackage to unpublish the contracts in npm repository
 `);
 	process.exit(0);
 }
 
+// determine and execute action
+const command: string = process.argv[2];
+(async function (): Promise<void> {
+	await actions[command](...process.argv.slice(3));
+	process.exit();
+})();
+
+
 // read config file
 let root: string;
 
-function getNaniumConfig(dir?: string): NaniumToolConfig {
-	dir = dir ?? process.cwd();
+function writeNaniumConfig(dir: string = process.cwd()): void {
+	fs.writeFileSync(path.join(dir, 'nanium.json'), JSON.stringify(config, null, 2));
+}
+
+function getNaniumConfig(dir: string = process.cwd()): NaniumToolConfig {
 	let result: NaniumToolConfig;
 	if (fs.existsSync(path.join(dir, 'nanium.json'))) {
 		result = JSON.parse(fs.readFileSync(path.join(dir, 'nanium.json'), 'utf8'));
@@ -112,40 +127,26 @@ function getNaniumConfig(dir?: string): NaniumToolConfig {
 	return getNaniumConfig(path.resolve(path.join(dir, '..')));
 }
 
-const config: NaniumToolConfig = getNaniumConfig();
-const packageJson: any = require(path.join(root, 'package.json'));
-
-// determine and execute action
-const command: string = process.argv[2];
-
-
-(async function (): Promise<void> {
-	await actions[command](process.argv.slice(3));
-	process.exit();
-})();
+let config: NaniumToolConfig = getNaniumConfig();
 
 // action functions
-function copyFiles(args: string[]): void {
-	const src: string = args[0];
-	const dst: string = args[1];
+function copyFiles(src: string, dst: string): void {
 	shell.mkdir('-p', dst);
 	shell.cp('-R', src + '/*', dst);
 }
 
-function cleanAndCopyFiles(args: string[]): void {
-	const src: string = args[0];
-	const dst: string = args[1];
+function cleanAndCopyFiles(src: string, dst: string): void {
 	shell.mkdir('-p', dst);
 	shell.rm('-rf', dst);
 	shell.mkdir('-p', dst);
 	shell.cp('-R', src + '/*', dst);
 }
 
-function removeFiles(args: string[]): void {
-	console.log(shell.rm('-rf', args[0]).toString());
+function removeFiles(path: string): void {
+	console.log(shell.rm('-rf', path).toString());
 }
 
-async function generateService([servicePath, scope, namespace]: [string, string, string]): Promise<void> {
+async function generateService(servicePath: string, scope: string, namespace: string): Promise<void> {
 	return new Promise<void>(resolve => {
 		if (!scope) {
 			rl.question('Which scope shall the service have?\n  1: private\n  2: public\n[1]: ', (input: '1' | '2') => {
@@ -215,7 +216,7 @@ function generateServiceCore(
 	console.log('created: ' + contractFileName);
 }
 
-function generateEvent([eventsPath, scope, namespace]: [string, string, string]): void {
+function generateEvent(eventsPath: string, scope: string, namespace: string): void {
 	const cwdRelativeToEventsDirectory: string = process.cwd()
 		.replace(root, '')
 		.replace(config.eventsDirectory, '')
@@ -261,17 +262,29 @@ function generateEvent([eventsPath, scope, namespace]: [string, string, string])
 	console.log('created: ' + eventFileName);
 }
 
-// function renameService (args: string[]) {
-// 	let parts: string[];
-// 	if (args[0].indexOf('/') >= 0) {
-// 		parts = args[0].split('/');
-// 	} else {
-// 		parts = args[0].split('.');
-// 	}
-// }
+async function create(folder: string, namespace: string) {
+	if (!folder || !namespace) {
+		console.error('command create needs parameter folder and namespace: nanium crate <folder> <namespace>');
+		process.exit(1);
+	}
+	folder = path.join(process.cwd(), folder);
+	shell.mkdir('-p', folder);
+	const directory = await zip.Open.file(path.join(__dirname, 'templates/app.template.zip'));
+	await directory.extract({ path: folder });
+	shell.cd(folder);
+	config = getNaniumConfig(shell.pwd().stdout);
+	config.namespace = namespace;
+	writeNaniumConfig(shell.pwd().stdout);
+	init(namespace);
+	await setNamespace(namespace);
+	//await refreshServiceNames();
+	shell.exec('npm i');
+	shell.cd('src/client');
+	shell.exec('npm i');
+}
 
-function init(): void {
-	if (process.argv.length < 2) {
+function init(namespace: string): void {
+	if (!namespace) {
 		console.error('namespace is missing');
 		process.exit(1);
 	}
@@ -285,7 +298,7 @@ function init(): void {
 			serviceDirectory: 'src/server/services',
 			eventsDirectory: 'src/server/events',
 			indentString: '\t',
-			namespace: process.argv[1],
+			namespace: namespace,
 			outDir: 'sdk',
 			sdkPackage: {
 				name: 'myServices',
@@ -314,7 +327,8 @@ function init(): void {
 				}
 			}
 		},
-		...config
+		...config,
+		...{ namespace }
 	}, null, 2);
 	fs.writeFileSync(path.join(process.cwd(), 'nanium.json'), fileContent + '\n');
 
@@ -339,7 +353,7 @@ function init(): void {
 	fs.writeFileSync(path.join(config.eventsDirectory, 'eventBase.ts'), fileContent);
 }
 
-async function setNamespace([namespace]: [string]): Promise<void> {
+async function setNamespace(namespace: string): Promise<void> {
 	let fileContent: string;
 	const files: string[] = await findFiles(config.serviceDirectory,
 		[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.executor.ts') && !f.endsWith('.contract.ts')]);
@@ -377,7 +391,8 @@ function fromTemplate(name: string, data?: object): string {
 	}
 }
 
-async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
+async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
+	const packageJson = require(path.join(root, 'package.json'));
 	// output directory
 	const outDir: string = path.join(root, config.outDir ?? '');
 	if (!fs.existsSync(outDir)) {

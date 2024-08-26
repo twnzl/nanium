@@ -5,7 +5,8 @@ import { ExecutionContext } from 'nanium/interfaces/executionContext';
 import { EventSubscription } from 'nanium/interfaces/eventSubscription';
 import { ServiceManager } from 'nanium/interfaces/serviceManager';
 
-export class EventBase<T = any> extends NaniumObject<T> {
+export abstract class EventBase<T = any> extends NaniumObject<T> {
+	static readonly eventName: string;
 
 	emit(this: T, context?: ExecutionContext): void {
 		Nanium.emit(this, undefined, context);
@@ -16,6 +17,6 @@ export class EventBase<T = any> extends NaniumObject<T> {
 	}
 
 	static async unsubscribe(subscription?: EventSubscription): Promise<void> {
-		await Nanium.unsubscribe(subscription, this['eventName']);
+		await Nanium.unsubscribe(subscription, this.eventName);
 	}
 }

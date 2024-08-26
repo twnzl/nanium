@@ -41,53 +41,41 @@ if (response.isGoodStuff()) {
 
 - [Features](#Features)
 - [Short and sweet](#Short-and-sweet)
-- [Installation](#Installation)
-- [Documentation](#Documentation)
-    - [Video tutorials](#Video-tutorials)
-    - [Demo app](#Demo-app)
-    - [Initialization](#Initialization)
-        - [Init the server (nodejs)](#Init-the-server-(nodejs))
-        - [Init the client (browser)](#Init-the-client-(browser))
-    - [Services](#Services)
-        - [Create a service](#Create-a-service)
-        - [Execute a service](#Execute-a-service)
-        - [Prepare the contracts](#Prepare-the-contracts)
-    - [Interceptors](#Interceptors)
-    - [Serializers](#Serializers)
-    - [Streaming](#Streaming)
-    - [Queues](#Queues)
-    - [Events](#Events)
-    - [SDKs](#SDKs)
-    - [Tests](#Tests)
-    - [REST, GraphQL & Co](#REST,-GraphQL-&-Co)
-    - [Extensibility](#Extensibility)
+- [create a nanium based client/server-app](#create-a-nanium-based-clientserver-app)
+- [add nanium to an existing app](#add-nanium-to-an-existing-app)
+    - [Init the server (nodejs)](#Init-the-server-nodejs)
+    - [Init the client (browser)](#Init-the-client-browser)
+- [Services](#Services)
+    - [Create a service](#Create-a-service)
+    - [Execute a service](#Execute-a-service)
+    - [Prepare the contracts](#Prepare-the-contracts)
+- [Interceptors](#Interceptors)
+- [Serializers](#Serializers)
+- [Streaming](#Streaming)
+- [Queues](#Queues)
+- [Events](#Events)
+- [SDKs](#SDKs)
+- [Tests](#Tests)
+- [REST, GraphQL](#rest-graphql)
+- [Extensibility](#Extensibility)
 
-## Installation
+## create a nanium based client/server-app
 
 ```bash
-$ npm install nanium
+$ npx nanium new myAppName MyNameSpace
 ```
 
-## Documentation
+This will create a folder named "myAppName". It will contain a complete scaffold for a Node.js web-app server, including
+multi-process-handling and client hosting. And it will contain a simple vanilla typescript client. Normally you will
+replace the client immediately by the web-app-framework of your choice, but this simple basic client is there to
+demonstrate how to init and use nanium on client side.
 
-### Video tutorials
-
-The best way to get started is to watch the video tutorials at
-https://www.youtube.com/channel/UCV0pLzUzkdGazPXKJoGDjow
-
-### Demo app
-
-You can download a ready-to-take-off demo app via
-
-```bash
-$ git clone https://github.com/twnzl/nanium-demo.git
-```
-
-## Initialization
+## add nanium to an existing app
 
 ### Init the server (nodejs)
 
 ```bash
+$ npm i nanium
 $ nanium init
 ```
 
@@ -860,7 +848,7 @@ afterEach(async () => {
 });
 ```
 
-## REST, GraphQL & Co
+## REST, GraphQL
 
 Nanoservices, especially Nanium services, are not hardwired to a protocol or any kind of API. The backend programmer can
 just focus on implementing the logic and the frontend/client developer, while consuming the API, doesn't have to mess
