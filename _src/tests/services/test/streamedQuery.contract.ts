@@ -1,6 +1,6 @@
 import { RequestType } from '../../../objects';
 import { NaniumStream } from '../../../interfaces/naniumStream';
-import { TestDto } from './query.contract';
+import { TestDto } from './contractparts';
 import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
 
 export class TestStreamedQueryRequestBody {

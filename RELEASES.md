@@ -8,6 +8,7 @@
   they know what is needed. (e.g. http channel inform all workers about subscriptions,
   but websocket channel does not need this )
 - optimized types in EventBase - typescript knows the type of the event in the handler function of subscribe()
+- removed old streaming meachanism
 
 # 1.25.0
 

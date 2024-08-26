@@ -1,6 +1,5 @@
 import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
 import { Server as HttpsServer } from 'https';
-import { Observable } from 'rxjs';
 
 import { Nanium } from '../../../core';
 import { ChannelConfig } from '../../../interfaces/channelConfig';
@@ -126,9 +125,8 @@ export class NaniumHttpChannel implements Channel {
 						deserialized = this.config.serializer.deserialize(body);
 						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
 					}
-					await this.process(request, res, deserialized.streamed);
+					await this.process(request, res);
 					if (
-						!deserialized.streamed &&
 						!NaniumStream.isNaniumStream(this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]) &&
 						!NaniumStream.isNaniumStream(this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]?.[0])
 					) {
@@ -143,98 +141,62 @@ export class NaniumHttpChannel implements Channel {
 		});
 	}
 
-	async process(request: any, res: ServerResponse, isStreamed?: boolean): Promise<any> {
-		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, request, res, isStreamed);
+	async process(request: any, res: ServerResponse): Promise<any> {
+		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, request, res);
 	}
 
-	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, res: ServerResponse, isStreamed?: boolean): Promise<any> {
+	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, res: ServerResponse): Promise<any> {
 		const serviceName: string = request.constructor.serviceName;
 		if (!serviceRepository[serviceName]) {
 			throw new Error(`nanium: unknown service ${serviceName}`);
 		}
-		if (isStreamed) {
-			if (!request.stream) {
-				res.statusCode = 500;
-				res.write(config.serializer.serialize('the service does not support result streaming'));
-			}
-			res.setHeader('Cache-Control', 'no-cache');
-			res.setHeader('Content-Type', 'text/event-stream');
-			res.setHeader('Access-Control-Allow-Origin', '*');
-			res.setHeader('Connection', 'keep-alive');
-			res.flushHeaders(); // flush the headers to establish SSE with client
-			const result: Observable<any> = Nanium.stream(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
-			res.statusCode = 200;
-			result.subscribe({
-				next: async (value: any): Promise<void> => {
-					if (
-						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
-						(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
-					) {
-						res.write(await NaniumBuffer.as(Uint8Array, value));
-					} else {
-						res.write(config.serializer.serialize(value) + '\n' + config.serializer.packageSeparator);
-					}
-					if (res['flush']) { // if compression is enabled we have to call flush
-						res['flush']();
-					}
-				},
-				complete: (): void => {
-					res.end();
-				},
-				error: async (e: any): Promise<void> => {
-					res.statusCode = 500;
-					res.write(config.serializer.serialize(e));
-				}
-			});
-		} else {
-			try {
-				res.setHeader('Content-Type', config.serializer.mimeType);
-				const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
-				if (result !== undefined && result !== null) {
-					if (
-						serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
-						(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
-					) {
-						res.write(await NaniumBuffer.as(Uint8Array, result));
-					} else if (
-						NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]) ||
-						NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]?.[0])
-					) {
-						const stream: NaniumStream = (result as NaniumStream);
-						stream
-							.onData(chunk => {
-								if (NaniumBuffer.isNaniumBuffer(serviceRepository[serviceName].Request[responseTypeSymbol]?.[1])) {
-									res.write(chunk);
-								} else {
-									res.write(config.serializer.serializePartial(chunk));
-								}
-							})
-							.onError(err => {
-								res.statusCode = 500;
-								res.write(config.serializer.serializePartial(err));
-							})
-							.onEnd(() => {
-								res.end();
-							});
-						// res.write(config.serializer.serialize(result) + 'response_end\0');
-					} else {
-						res.write(config.serializer.serialize(result));
-					}
-				}
-				res.statusCode = 200;
-			} catch (e) {
-				res.statusCode = 500;
-				let serialized: string | ArrayBuffer;
-				if (e instanceof Error) {
-					serialized = config.serializer.serialize({
-						message: e.message,
-						// stack should not be sent out
-					});
+		try {
+			res.setHeader('Content-Type', config.serializer.mimeType);
+			const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
+			if (result !== undefined && result !== null) {
+				if (
+					serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
+					(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
+				) {
+					res.write(await NaniumBuffer.as(Uint8Array, result));
+				} else if (
+					NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]) ||
+					NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]?.[0])
+				) {
+					const stream: NaniumStream = (result as NaniumStream);
+					stream
+						.onData(chunk => {
+							if (NaniumBuffer.isNaniumBuffer(serviceRepository[serviceName].Request[responseTypeSymbol]?.[1])) {
+								res.write(chunk);
+							} else {
+								res.write(config.serializer.serializePartial(chunk));
+							}
+						})
+						.onError(err => {
+							res.statusCode = 500;
+							res.write(config.serializer.serializePartial(err));
+						})
+						.onEnd(() => {
+							res.end();
+						});
+					// res.write(config.serializer.serialize(result) + 'response_end\0');
 				} else {
-					serialized = config.serializer.serialize(e);
+					res.write(config.serializer.serialize(result));
 				}
-				res.write(serialized);
 			}
+			res.statusCode = 200;
+		} catch (e) {
+			res.statusCode = 500;
+			let serialized: string | ArrayBuffer;
+			if (e instanceof Error) {
+				serialized = config.serializer.serialize({
+					message: e.message,
+					// stack should not be sent out
+				});
+			} else {
+				serialized = config.serializer.serialize(e);
+			}
+			res.write(serialized);
 		}
 	}
 
@@ -441,7 +403,6 @@ export class NaniumHttpChannel implements Channel {
 interface NaniumHttpChannelBody {
 	serviceName: string;
 	request: any;
-	streamed?: boolean;
 }
 
 export class MultipartParser {

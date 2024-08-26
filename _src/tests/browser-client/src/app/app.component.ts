@@ -11,7 +11,7 @@ import { StuffEvent } from '../../../events/test/stuffEvent';
 import { Stuff2Event } from '../../../events/test/stuff2Event';
 import { AsyncHelper } from '../../../../helper';
 import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
-import { TestDto } from '../../../services/test/query.contract';
+import { TestDto } from '../../../services/test/contractparts';
 import { NaniumStream } from '../../../../interfaces/naniumStream';
 import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
 

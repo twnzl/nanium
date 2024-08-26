@@ -22,7 +22,6 @@ export class NaniumToolConfig {
 const actions: { [actionName: string]: Function } = {
 	init: init,
 	g: generateService,
-	gs: generateStreamService,
 	ge: generateEvent,
 	namespace: setNamespace,
 	rsn: refreshServiceNames,
@@ -159,10 +158,6 @@ async function generateService([servicePath, scope, namespace]: [string, string,
 			resolve();
 		}
 	});
-}
-
-function generateStreamService(): void {
-	console.error('generate stream service is deprecated, please use normal service with response type: Promise<NaniumStream<ObjectType>> for object streaming or Promise<NaniumStream<NaniumBuffer>> for binary streaming');
 }
 
 function generateServiceCore(
@@ -430,7 +425,6 @@ async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
 
 		// nanium basics
 		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src'));
-		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), path.join(tmpDir, 'src'));
 
 		// copy contract ts files to src dir
 		const files: string[] = await findFiles(serviceSrcDir, [(f: string, stats: Stats): boolean =>

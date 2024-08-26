@@ -1,4 +1,3 @@
-import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { NaniumJsonSerializer } from '../../serializers/json';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
@@ -87,7 +86,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]) ||
 			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]?.[0])
 		) {
-			response = await this.stream_new(serviceName, request);
+			response = await this.stream(serviceName, request);
 		} else {
 			response = await this.httpCore.sendRequest(serviceName, request);
 		}
@@ -107,7 +106,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		return response;
 	}
 
-	async stream_new<T = any>(serviceName: string, request: any): Promise<NaniumStream<T>> {
+	async stream<T = any>(serviceName: string, request: any): Promise<NaniumStream<T>> {
 		const streamItemConstructor = request.constructor[responseTypeSymbol]?.[1];
 		const resultStream: NaniumStream<T> = new NaniumStream(streamItemConstructor);
 
@@ -183,102 +182,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		return resultStream;
 	}
 
-	stream(serviceName: string, request: any): Observable<any> {
-		return new Observable<any>((observer: Observer<any>): void => {
-			const core: Function = async (): Promise<void> => {
-				// interceptors
-				let result: any;
-				for (const interceptor of this.config.requestInterceptors) {
-					result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
-					// if an interceptor returns an object other than the request it is a result and the execution shall be
-					// finished with this result
-					if (result && result !== request) {
-						return result;
-					}
-				}
-
-				// transmission
-				const abortController: AbortController = new AbortController();
-				this.activeRequests.push(abortController);
-				const req: Request = new Request(this.config.apiUrl + '?' + serviceName, {
-					method: 'post',
-					mode: 'cors',
-					redirect: 'follow',
-					body: this.config.serializer.serialize({ serviceName, streamed: true, request }),
-					signal: abortController.signal // make the request abortable
-				});
-
-				fetch(req)
-					.then((response) => response.body)
-					.then((rb) => {
-						const reader: ReadableStreamDefaultReader<Uint8Array> = rb.getReader();
-
-						let restFromLastTime: any;
-						let deserialized: {
-							data: any;
-							rest: any;
-						};
-
-						return new ReadableStream({
-							cancel: (reason?: any): void => {
-								observer.error(reason);
-								this.activeRequests = this.activeRequests.filter(r => r !== abortController);
-							},
-							start: (controller: ReadableStreamDefaultController<any>): void => {
-								const push: () => void = () => {
-									reader.read().then(({ done, value }) => {
-										if (done) {
-											controller.close();
-											observer.complete();
-											this.activeRequests = this.activeRequests.filter(r => r !== abortController);
-											return;
-										}
-										try {
-											if (
-												request.constructor[responseTypeSymbol] === ArrayBuffer ||
-												(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
-											) {
-												observer.next(value.constructor['naniumBufferInternalValueSymbol'] ? value : new NaniumBuffer(value));
-											} else {
-												deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
-												if (deserialized.data?.length) {
-													for (const data of deserialized.data) {
-														observer.next(NaniumObject.create(
-															data,
-															request.constructor[responseTypeSymbol],
-															request.constructor[genericTypesSymbol]
-														));
-													}
-												}
-												restFromLastTime = deserialized.rest;
-											}
-										} catch (e) {
-											this.activeRequests = this.activeRequests.filter(r => r !== abortController);
-											controller.close();
-											observer.error(e);
-										}
-
-										// read next portion from stream
-										push();
-									});
-								};
-
-								// start reading from stream
-								push();
-							},
-						});
-					});
-
-				this.config.serializer.serialize({ serviceName, streamed: true, request });
-			};
-
-			core();
-		});
-
-	}
-
 	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
-		const eventName: string = typeof eventNameOrConstructor === 'string' ? eventNameOrConstructor : eventNameOrConstructor.eventName;
 		return await this.httpCore.subscribe(eventNameOrConstructor, handler);
 	}
 

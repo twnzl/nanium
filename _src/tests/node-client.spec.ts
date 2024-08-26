@@ -10,7 +10,7 @@ import { AnonymousRequest } from './services/test/anonymous.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
 import { TimeRequest } from './services/test/time.contract';
 import { TestNoIORequest } from './services/test/noIO.contract';
-import { TestDto } from './services/test/query.contract';
+import { TestDto } from './services/test/contractparts';
 import { Nanium } from '../core';
 import { TestGetBinaryRequest } from './services/test/getBinary.contract';
 import { NaniumBuffer } from '../interfaces/naniumBuffer';

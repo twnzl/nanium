@@ -97,7 +97,6 @@ This will create the config file 'nanium.json' and the directory 'services' cont
 - serviceRequestBase.ts
 - serviceRequestContext.ts
 - serviceRequestHead.dto.ts
-- streamServiceRequestBase.ts
 
 For now, leave them as they are. Later you can adapt this to meet your needs.
 
@@ -352,20 +351,6 @@ try {
 }
 ```
 
-Since streamed services would return Observables you would use the error handler of the Observable in that case.
-
-```ts
-const response = new StuffRequest().stream().subscribe({
-	next: (value: TestDto): void => {
-		dtoList.push(value);
-	},
-	complete: (): void => resolve(),
-	error: (e: Error) => {
-		document.write(e.message);
-	}
-});
-```
-
 ## Interceptors
 
 An interceptor is a piece of code that can analyse or modify a request, either on the consumer side before it is sent to
@@ -602,39 +587,50 @@ service as NaniumBuffer, the data is not serialized or deserialized, but transpo
 
 ```ts
 // the contract
+export class TestStreamedBinaryRequestBody {
+	amount?: number;
+	msGapTime?: number;
+}
+
 @RequestType({
-	responseType: NaniumBuffer,
+	responseType: [NaniumStream, NaniumBuffer],
 	scope: 'public'
 })
-export class TestGetStreamedBufferRequest extends ServiceRequestBase<void, NaniumBuffer> {
-	static serviceName: string = 'NaniumTest:test/getStreamedBuffer';
+export class TestStreamedBinaryRequest extends SimpleServiceRequestBase<TestStreamedBinaryRequestBody, NaniumStream<NaniumBuffer>> {
+	static serviceName: string = 'NaniumTest:test/streamedBinary';
 }
 
 // the executor
-export class TestGetStreamedBufferExecutor implements StreamServiceExecutor<TestGetStreamedBufferRequest, ArrayBuffer> {
-	static serviceName: string = 'NaniumTest:test/getStreamedBuffer';
+export class TestStreamedBinaryExecutor implements ServiceExecutor<TestStreamedBinaryRequest, NaniumStream<NaniumBuffer>> {
+	static serviceName: string = 'NaniumTest:test/streamedBinary';
 
-	stream(request: TestGetStreamedBufferRequest, executionContext: ServiceRequestContext): Observable<ArrayBuffer> {
-		return new Observable((observer: Observer<ArrayBuffer>): void => {
-			const enc: TextEncoder = new TextEncoder();
-			const buf: ArrayBuffer = enc.encode('This is a string converted to a Uint8Array');
-			observer.next(buf.slice(0, 4));
-			setTimeout(() => observer.next(buf.slice(4, 20)), 500);
-			setTimeout(() => observer.next(buf.slice(20, buf.byteLength)), 1000);
-			setTimeout(() => observer.complete(), 1500);
-		});
+	async execute(request: TestStreamedBinaryRequest): Promise<NaniumStream<NaniumBuffer>> {
+		const result = new NaniumStream<NaniumBuffer>();
+		let cnt: number = 1;
+		const next = () => {
+			if (cnt > request.body.amount ?? 3) {
+				result.end();
+				clearInterval(interval);
+			} else {
+				result.write(new TextEncoder().encode(cnt.toString() + '.'));
+				cnt++;
+			}
+		};
+		// next();
+		const interval = setInterval(() => next(), request.body.msGapTime ?? 1);
+		return result;
 	}
 }
 
 // the client call
-new TestGetStreamedBufferRequest(undefined, { token: '1234' }).stream().subscribe({
-	next: (part: NaniumBuffer): void => {
-		console.log(part.asString());
-		// output:
-		// This
-		//  is a string convert
-		// ed to a Uint8Array
-	}
+const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
+const result: NaniumBuffer = new NaniumBuffer();
+stream.onData(async (chunk) => {
+	result.write(chunk);
+	const text = await chunk.asString();
+	console.log(text);
+}).onEnd(async () => {
+	console.log(await result.asString());
 });
 ```
 

@@ -1,4 +1,3 @@
-import { Observable } from 'rxjs';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { ExecutionContext } from '../../interfaces/executionContext';
@@ -40,11 +39,6 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 	async execute<T>(_serviceName: string, _request: any, _executionContext?: ExecutionContext): Promise<any> {
 		throw new Error('NotYetImplemented');
-	}
-
-	stream(_serviceName: string, _request: any): Observable<any> {
-		throw new Error('NotYetImplemented');
-		// todo: is obsolet, should be removed
 	}
 
 	private initWebSocket() {

@@ -1,5 +1,4 @@
 // todo: optimize rxjs import. Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nanium as a commonJs module
-import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from './interfaces/serviceManager';
 import { ExecutionContext } from './interfaces/executionContext';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
@@ -113,31 +112,6 @@ export class CNanium {
 		}
 		const result = await manager.execute(serviceName, request, context);
 		return result;
-	}
-
-	stream<TResult = any>(request: any, serviceName?: string, context?: ExecutionContext): Observable<TResult> {
-		console.warn('generate stream service is deprecated, please use normal service with response type: Promise<NaniumStream<ObjectType>> for object streaming or Promise<NaniumStream<NaniumBuffer>> for binary streaming');
-		serviceName = serviceName || request.constructor.serviceName;
-		const managerPromise: Promise<ServiceManager> = this.getResponsibleManager(request, serviceName);
-		return new Observable((observer: Observer<any>): void => {
-			managerPromise.then(manager => {
-				if (!manager) {
-					observer.error('no responsible service provider found');
-				} else {
-					manager.stream(serviceName, request, context).subscribe({
-						next: (value) => {
-							observer.next(value);
-						},
-						complete: () => {
-							setTimeout(() => observer.complete());
-						},
-						error: (e: any): void => {
-							observer.error(e);
-						}
-					});
-				}
-			});
-		});
 	}
 
 	async enqueue<TRequest>(

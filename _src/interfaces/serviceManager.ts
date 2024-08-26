@@ -1,4 +1,3 @@
-import { Observable } from 'rxjs';
 import { ExecutionContext } from './executionContext';
 import { EventHandler } from './eventHandler';
 import { EventSubscription } from './eventSubscription';
@@ -25,14 +24,6 @@ export interface ServiceManager {
 	 * @param context
 	 */
 	execute?(serviceName: string, request: any, context?: ExecutionContext): Promise<any>;
-
-	/**
-	 * execute a request and expect multiple replies with partial results
-	 * @param serviceName
-	 * @param request
-	 * @param context
-	 */
-	stream?(serviceName: string, request: any, context?: ExecutionContext): Observable<any>;
 
 	/**
 	 * returns if the Manager is responsible for the given Service

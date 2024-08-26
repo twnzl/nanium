@@ -17,7 +17,7 @@ import { session } from '../../../session';
 import { Stuff2Event } from '../../../events/test/stuff2Event';
 import { TestBufferRequest } from '../../../services/test/buffer.contract';
 import { TimeRequest } from '../../../services/test/time.contract';
-import { TestDto } from '../../../services/test/query.contract';
+import { TestDto } from '../../../services/test/contractparts';
 import { TestGetNaniumBufferRequest } from '../../../services/test/getNaniumBuffer.contract';
 import { TestNoIORequest } from '../../../services/test/noIO.contract';
 import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';

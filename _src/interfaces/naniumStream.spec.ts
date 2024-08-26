@@ -1,6 +1,6 @@
 import { NaniumStream } from './naniumStream';
 import { DataSource, NaniumBuffer } from './naniumBuffer';
-import { TestDto } from '../tests/services/test/query.contract';
+import { TestDto } from '../tests/services/test/contractparts';
 
 describe('NaniumStream', function (): void {
 	test('isNaniumStream', async function (): Promise<void> {

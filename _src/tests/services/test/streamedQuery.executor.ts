@@ -1,4 +1,4 @@
-import { TestDto } from './query.contract';
+import { TestDto } from './contractparts';
 import { TestStreamedQueryRequest } from './streamedQuery.contract';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';

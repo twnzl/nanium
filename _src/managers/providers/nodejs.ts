@@ -1,12 +1,10 @@
 import { Stats } from 'fs';
 import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
-import { Observable, Observer } from 'rxjs';
 import { Channel } from '../../interfaces/channel';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { Nanium } from '../../core';
 import { ServiceExecutor } from '../../interfaces/serviceExecutor';
-import { StreamServiceExecutor } from '../../interfaces/streamServiceExecutor';
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
@@ -209,53 +207,6 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		} catch (e) {
 			return await this.config.handleError(e, serviceName, request, context);
 		}
-	}
-
-	stream(serviceName: string, request: any, context?: ExecutionContext): Observable<any> {// validation
-		context = context || {};
-
-		if (this.repository === undefined) {
-			return this.createErrorObservable(new Error('nanium server is not initialized'));
-		}
-		if (!Object.prototype.hasOwnProperty.call(this.repository, serviceName)) {
-			return this.createErrorObservable(new Error('unknown service ' + serviceName));
-		}
-		const requestConstructor: any = this.repository[serviceName].Request;
-		if (context && context.scope === 'public') { // private is the default, all adaptors have to set the scope explicitly
-			if (!requestConstructor.scope || requestConstructor.scope !== 'public') {
-				return this.createErrorObservable(new Error('unauthorized'));
-			}
-		}
-
-		const realRequest: any = NaniumObject.create(
-			request,
-			requestConstructor,
-			requestConstructor[genericTypesSymbol]);
-
-
-		return new Observable<any>((observer: Observer<any>): void => {
-			this.executeRequestInterceptors(realRequest, context, this.repository[serviceName].Request).then(() => {
-				const executor: StreamServiceExecutor<any, any> = new this.repository[serviceName].Executor();
-				executor.stream(realRequest, context).subscribe({
-					next: (value: any): void => {
-						observer.next(value);
-					},
-					error: (e: any): void => {
-						this.config.handleError(e, serviceName, realRequest, context).then();
-						observer.error(e);
-					},
-					complete: (): void => {
-						observer.complete();
-					}
-				});
-			});
-		});
-	}
-
-	private createErrorObservable(e: any): Observable<any> {
-		return new Observable((observer: Observer<any>): void => {
-			observer.error(e);
-		});
 	}
 
 	/**

@@ -1,4 +1,3 @@
-import { Observable, Observer } from 'rxjs';
 import { ServiceManager } from '../../interfaces/serviceManager';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { NaniumJsonSerializer } from '../../serializers/json';
@@ -142,7 +141,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]) ||
 			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]?.[0])
 		) {
-			response = await this.stream_new(serviceName, request);
+			response = await this.stream(serviceName, request);
 		} else {
 			response = await this.httpCore.sendRequest(serviceName, request);
 		}
@@ -162,7 +161,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		return response;
 	}
 
-	async stream_new<T = any>(serviceName: string, request: any): Promise<NaniumStream<T>> {
+	async stream<T = any>(serviceName: string, request: any): Promise<NaniumStream<T>> {
 		const streamItemConstructor = request.constructor[responseTypeSymbol]?.[1];
 		const resultStream: NaniumStream<T> = new NaniumStream(streamItemConstructor);
 
@@ -230,81 +229,6 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			}
 
 			resolve(resultStream);
-		});
-	}
-
-	stream(serviceName: string, request: any): Observable<any> {
-		return new Observable<any>((observer: Observer<any>): void => {
-			let restFromLastTime: any;
-			let deserialized: {
-				data: any;
-				rest: any;
-			};
-
-			const core: Function = async (): Promise<void> => {
-				// interceptors
-				for (const interceptor of this.config.requestInterceptors) {
-					await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, {});
-				}
-
-				// transmission
-				const uri: URL = new URL(this.config.apiUrl);
-				let req: ClientRequest;
-				try {
-					const options: HttpRequestOptions | HttpsRequestOptions = {
-						...{
-							host: uri.hostname,
-							path: uri.pathname + '#' + serviceName,
-							port: uri.port,
-							method: 'POST',
-							protocol: uri.protocol
-						},
-						...this.config.options
-					};
-					const requestFn: (options: HttpRequestOptions | HttpsRequestOptions, callback?: (res: http.IncomingMessage) => void) => ClientRequest
-						= uri.protocol.startsWith('https') ? https.request : http.request;
-					req = requestFn(options, (response) => {
-						response.on('data', async (chunk: Buffer) => {
-							if (chunk.length > 0) {
-								if (
-									request.constructor[responseTypeSymbol] === ArrayBuffer ||
-									(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
-								) {
-									observer.next(chunk.constructor['naniumBufferInternalValueSymbol'] ? chunk : new NaniumBuffer(chunk));
-								} else {
-									deserialized = this.config.serializer.deserializePartial(chunk.toString(), restFromLastTime);
-									if (deserialized.data?.length) {
-										for (const data of deserialized.data) {
-											observer.next(NaniumObject.create(
-												data,
-												request.constructor[responseTypeSymbol],
-												request.constructor[genericTypesSymbol]
-											));
-										}
-									}
-									restFromLastTime = deserialized.rest;
-								}
-							}
-						});
-						response.on('end', async () => {
-							this.activeRequests = this.activeRequests.filter(r => r !== req);
-							observer.complete();
-						});
-						response.on('error', async (e) => {
-							this.activeRequests = this.activeRequests.filter(r => r !== req);
-							observer.error(e);
-						});
-					});
-					this.activeRequests.push(req);
-					req.write(this.config.serializer.serialize({ serviceName, streamed: true, request }));
-					req.end();
-				} catch (e) {
-					this.activeRequests = this.activeRequests.filter(r => r !== req);
-					observer.error(e);
-				}
-			};
-
-			core();
 		});
 	}
 

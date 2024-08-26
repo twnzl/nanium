@@ -4,7 +4,6 @@ import { Nanium } from '../../core';
 import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry';
 import { TestExecutionContext } from './testExecutionContext';
 import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
-import { Observable } from 'rxjs';
 import { ConstructorType, NaniumObject, Type } from '../../objects';
 
 export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = any> {
@@ -21,10 +20,6 @@ export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = 
 
 	async execute(context?: TestExecutionContext): Promise<ServiceResponseBase<TResponseBody>> {
 		return await Nanium.execute(this, undefined, context);
-	}
-
-	stream<TResult>(): Observable<TPartialResponse> {
-		return Nanium.stream(this);
 	}
 
 	async enqueue(mandatorId: string, options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {

@@ -2,7 +2,7 @@ import { Nanium } from '../core';
 import { NaniumProviderNodejs } from '../managers/providers/nodejs';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
 import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
-import { TestDto, TestQueryRequest } from './services/test/query.contract';
+import { TestDto } from './services/test/contractparts';
 import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
 import { TestExecutionContext } from './services/testExecutionContext';
@@ -105,44 +105,6 @@ describe('execute TestRequest on server \n', function (): void {
 		it('-->  \n', async function (): Promise<void> {
 			expect(response, 'response should not be set').toBeUndefined();
 			expect(exception.message, 'promise should have been rejected with an object of type Error and the right message').toBe('no no!');
-		});
-	});
-
-	/* stream function is deprecated: NaniumStream is used now */
-	xdescribe('streamed successful response \n', function (): void {
-		const dtoList: TestDto[] = [];
-
-		beforeEach(async function (): Promise<void> {
-			await new Promise((resolve: Function): void => {
-				new TestQueryRequest({ input: 1 }, { token: '1234' }).stream().subscribe({
-					next: (value: TestDto): void => {
-						dtoList.push(value);
-					},
-					complete: (): void => resolve(),
-					error: (err: Error) => {
-						Nanium.logger.error(err.message, err.stack);
-					}
-				});
-			});
-		});
-
-		xit('-->  \n', async function (): Promise<void> {
-			expect(dtoList.length, 'length of result list should be correct').toBe(999);
-		});
-	});
-
-	/* stream function is deprecated: NaniumStream is used now */
-	xdescribe('streamed service as Promise \n', function (): void {
-		let dtoList: TestDto[];
-
-		beforeEach(async function (): Promise<void> {
-			dtoList = await new TestQueryRequest({ input: 1 }, { token: '1234' }).execute();
-		});
-
-		it('-->  \n', async function (): Promise<void> {
-			expect(dtoList.length, 'length of result list should be correct').toBe(999);
-			expect(dtoList[0].a, 'property a of first result should be correct').toBe('1');
-			expect(dtoList[0].b, 'property b of first result should be correct').toBe(1);
 		});
 	});
 
