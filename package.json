@@ -37,7 +37,7 @@
     "prepare": "",
     "publishlist": "npm publish --dry-run",
     "bundle": "npm run build && npm test && npm publish",
-    "cleanup": "rm -rf interfaces && rm -rf managers && rm -rf serializers && rm -rf tests && rm -rf tools && rm -rf _src/tests/test-server/dst"
+    "cleanup": "rm -rf interfaces && rm -rf managers && rm -rf serializers && rm -rf tests && rm -rf tools && rm -rf communicators && rm -f *.d.ts && rm -f *.js && rm -f *.js.map && rm -rf _src/tests/test-server/dst"
   },
   "files": [
     "README.md",

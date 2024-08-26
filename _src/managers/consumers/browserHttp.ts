@@ -52,7 +52,10 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	async terminate(): Promise<void> {
 		for (const ar of this.activeRequests) {
-			ar.abort();
+			try {
+				ar.abort();
+			} catch {
+			}
 		}
 		this.activeRequests = [];
 		this.httpCore.id = undefined;
