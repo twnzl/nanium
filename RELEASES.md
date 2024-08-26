@@ -1,3 +1,14 @@
+# 2.0.0
+
+- Websocket browser consumer (for events only)
+- Websocket channel (for events only)
+- Channel instances must have an id now
+- ClusterCommunicator takes functions for serializing and deserializing ExecutionContext
+- Communicators only care for 'event_emit'. all other events must be handled by the managers and channels because only
+  they know what is needed. (e.g. http channel inform all workers about subscriptions,
+  but websocket channel does not need this )
+- optimized types in EventBase - typescript knows the type of the event in the handler function of subscribe()
+
 # 1.25.0
 
 - It is now also possible to use the event name instead of the constructor for event subscriptions via Nanium.subscribe.

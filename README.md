@@ -120,7 +120,7 @@ httpServer.listen(3000);
 async function run(): Promise<void> {
 	await Nanium.addManager(new NaniumProviderNodejs({
 		channels: [
-			new NaniumHttpChannel({
+			new NaniumHttpChannel('1', {
 				apiPath: '/api',
 				server: httpServer // https-server or an express-like app are also possible
 			})
@@ -479,7 +479,7 @@ to transfer data via UBJSON, XML, or any own binary format. For this you just ne
 await Nanium.addManager(
 	new NaniumProviderNodejs({
 		channels: [
-			new NaniumHttpChannel({
+			new NaniumHttpChannel('1', {
 				apiPath: '/api',
 				eventPath: '/events',
 				server: httpServer,
@@ -739,7 +739,7 @@ event interceptors.
 await Nanium.addManager(new NaniumNodejsProvider({
 	servicePath: 'services',
 	channels: [
-		new NaniumHttpChannel({ apiPath: '/api', eventPath: '/events', server: server })
+		new NaniumHttpChannel('1', { apiPath: '/api', eventPath: '/events', server: server })
 	],
 	eventSubscriptionReceiveInterceptors: [DemoEventSubscriptionReceiveInterceptor],
 	eventEmissionSendInterceptors: [DemoEventEmissionSendInterceptor]
@@ -920,8 +920,8 @@ npm i nanium-channel-rest
 await Nanium.addManager(new NaniumProviderNodejs({
 	servicePath: 'services',
 	channels: [
-		new NaniumHttpChannel({ apiPath: '/api', eventPath: '/events', server: server }),
-		new NaniumRestChannel({ apiBasePath: '/api2', server: server })
+		new NaniumHttpChannel('1', { apiPath: '/api', eventPath: '/events', server: server }),
+		new NaniumRestChannel('2', { apiBasePath: '/api2', server: server })
 	],
 	eventSubscriptionReceiveInterceptors: [DemoEventSubscriptionReceiveInterceptor],
 	eventEmissionSendInterceptors: [DemoEventEmissionSendInterceptor]
