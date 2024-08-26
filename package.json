@@ -65,7 +65,6 @@
   ],
   "dependencies": {
     "recursive-readdir": "^2.2.2",
-    "rxjs": "^6.6.7",
     "shelljs": "^0.8.5",
     "ws": "^8.18.0"
   },

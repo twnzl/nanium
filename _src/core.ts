@@ -1,4 +1,4 @@
-// todo: optimize rxjs import. Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nanium as a commonJs module
+// todo: Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nanium as a commonJs module
 import { ServiceManager } from './interfaces/serviceManager';
 import { ExecutionContext } from './interfaces/executionContext';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
