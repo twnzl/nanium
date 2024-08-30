@@ -1,4 +1,4 @@
-import { AnySimple, JSONSchema, NaniumObject, Type } from './objects';
+import { AnySimple, JSONSchema, NaniumObject, NaniumPropertyInfoCore, Type } from './objects';
 import { Nanium } from './core';
 import { TestLogger } from './tests/testLogger';
 import { LogLevel } from './interfaces/logger';
@@ -10,6 +10,7 @@ class MyTestClass2 extends NaniumObject<MyTestClass2> {
 	@Type(Date) aDate?: Date;
 	@Type(Object) anObject?: any;
 	@Type(Object, MyTestClass2) aDictionary?: { [key: string]: MyTestClass2 };
+	@Type(MyTestClass2) next: MyTestClass2;
 	something?: string;
 }
 
@@ -445,6 +446,9 @@ describe('nanium objects', function (): void {
 									'$ref': 'https://syscore.io/MyTestClass2.schema.json'
 								}
 							}
+						},
+						'next': {
+							'$ref': 'https://syscore.io/MyTestClass2.schema.json'
 						}
 					}
 				}
@@ -494,6 +498,31 @@ describe('nanium objects', function (): void {
 			];
 			const result = NaniumObject.createJsonSchemas(MyTestClass4, 'https://syscore.io/', []);
 			expect(result).toEqual(expected4);
+		});
+	});
+
+	describe('traverseType', function (): void {
+		it('basics', async function (): Promise<void> {
+			const result: string[] = [];
+			NaniumObject.traverseType(MyTestClass2, (name: string[], info: NaniumPropertyInfoCore) => {
+				result.push(name.join('.') + ' -> ' + info.ctor?.name);
+			});
+			expect(result).toEqual([
+				'aNumber -> Number',
+				'aString -> String',
+				'aBoolean -> Boolean',
+				'aDate -> Date',
+				'anObject -> Object',
+				'aDictionary -> Object',
+				'next -> MyTestClass2',
+				'next.aNumber -> Number',
+				'next.aString -> String',
+				'next.aBoolean -> Boolean',
+				'next.aDate -> Date',
+				'next.anObject -> Object',
+				'next.aDictionary -> Object',
+				'next.next -> MyTestClass2',
+			]);
 		});
 	});
 });

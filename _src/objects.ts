@@ -239,6 +239,27 @@ export class NaniumObject<T> {
 		core(obj, fn, []);
 	}
 
+	static traverseType(c: ConstructorType, fn: (name: string[], typeInfo?: NaniumPropertyInfoCore) => void, depth: number = 2) {
+		const knownTypes: ConstructorType[] = [];
+
+		const core = (name: string[], c: ConstructorType) => {
+			if (!c[propertyInfoSymbol]) {
+				return;
+			}
+			if (knownTypes.filter(t => t === c)?.length >= depth) {
+				return;
+			}
+			knownTypes.push(c);
+			const info: NaniumPropertyInfo = c[propertyInfoSymbol];
+			for (const prop of Object.keys(info)) {
+				fn([...name, prop], info[prop]);
+				core([...name, prop], info[prop].ctor as ConstructorType);
+			}
+		};
+
+		core([], c);
+	}
+
 	/**
 	 * generate a list of JSON schemas using the Type() annotations of NaniumObject
 	 * @param type constructor function for which the schemas schall be generated
