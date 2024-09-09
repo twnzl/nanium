@@ -420,32 +420,43 @@ async function sdk([kind]: ['a' | 'p' | 'u']): Promise<void> {
 			config.sdkTsConfig.include = [
 				'**/*.contract.ts',
 				'**/*.contractpart.ts',
+				'**/*.contractparts.ts',
 				'**/*.dto.ts'
 			];
 		} else {
 			config.sdkTsConfig.include.push('**/*.contract.ts');
+			config.sdkTsConfig.include.push('**/*.contractpart.ts');
+			config.sdkTsConfig.include.push('**/*.contractparts.ts');
 			config.sdkTsConfig.include.push('**/*.dto.ts');
 		}
 		fs.writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify(config.sdkTsConfig, null, 2));
 
+		const isContractPart = f => f.endsWith('contractpart.ts') || f.endsWith('contractparts.ts') || f.endsWith('dto.ts');
+
 		// nanium basics
 		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src'));
-		shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), path.join(tmpDir, 'src'));
+		if (fs.existsSync(path.join(serviceSrcDir, 'serviceRequestHead.ts'))) {
+			shell.cp(path.join(serviceSrcDir, 'serviceRequestHead.ts'), path.join(tmpDir, 'src'));
+		}
+		if (fs.existsSync(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'))) {
+			shell.cp(path.join(serviceSrcDir, 'streamServiceRequestBase.ts'), path.join(tmpDir, 'src'));
+		}
 
 		// copy contract ts files to src dir
 		const files: string[] = await findFiles(serviceSrcDir, [(f: string, stats: Stats): boolean =>
 			!stats.isDirectory() &&
-			!f.endsWith('.contract.ts') &&
-			!f.endsWith('\\contractpart.ts') && !f.endsWith('/contractpart.ts') && !f.endsWith('.contractpart.ts') &&
-			!f.endsWith('\\dto.ts') && !f.endsWith('/dto.ts') && !f.endsWith('.dto.ts')
+			!f.endsWith('.contract.ts') && !isContractPart(f)
 		]);
 		let dstFile: string;
 		let srcFileContent: string;
 		for (const file of files) {
-			srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
+			if (!isContractPart(file)) {
+				srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
+			}
 			// check if a request is public
 			// todo: maybe using the typescript-compiler-api is a bit safer
 			if (
+				isContractPart(file) ||
 				srcFileContent.match(/static\s+scope\s*(.*?)=\s*['"`]public['"`]/g) ||
 				srcFileContent.match(/@RequestType\s*\(\s*{[\s\S]*?scope\s*:\s*['"`](public)['"`][\s\S]*?}\s*\)/g)
 			) {
