@@ -8,12 +8,13 @@
   they know what is needed. (e.g. http channel inform all workers about subscriptions,
   but websocket channel does not need this )
 - optimized types in EventBase - typescript knows the type of the event in the handler function of subscribe()
-- removed old streaming meachanism
+- removed old streaming mechanism
+- new property "ServiceRequestQueueEntry.recurring" supports cron like configuration of recurring executions
 
 # 1.25.1
 
 - include *contractparts.ts into sdk
- 
+
 # 1.25.0
 
 - It is now also possible to use the event name instead of the constructor for event subscriptions via Nanium.subscribe.

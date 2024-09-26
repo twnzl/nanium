@@ -2,7 +2,7 @@
 import { ServiceManager } from './interfaces/serviceManager';
 import { ExecutionContext } from './interfaces/executionContext';
 import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
-import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
+import { CronConfig, ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { DateHelper } from './helper';
 import { EventSubscription } from './interfaces/eventSubscription';
 import { Logger, LogLevel } from './interfaces/logger';
@@ -292,8 +292,8 @@ export class CNanium {
 			Nanium.logger.error(e);
 		} finally {
 			entry = await requestQueue.refreshEntry(entry);
-			let nextRun: Date = DateHelper.addSeconds(entry.interval, lastRun);
-			if (entry.interval) {
+			let nextRun: Date = this.calculateNextRun(entry, lastRun);
+			if (nextRun) {
 				if (nextRun < new Date()) {
 					nextRun = new Date();
 				}
@@ -309,6 +309,69 @@ export class CNanium {
 			}
 		}
 		return true;
+	}
+
+	calculateNextRun(entry: ServiceRequestQueueEntry, lastRun: Date): Date {
+		if (entry.interval !== undefined) {
+			return DateHelper.addSeconds(entry.interval, lastRun);
+		} else if (entry.recurring) {
+			return this.calculateNextRunByCronConfig(entry.recurring);
+		}
+	}
+
+	calculateNextRunByCronConfig(config: CronConfig): Date {
+		function parseField(field: string = '*', min: number, max: number): number[] {
+			if (field === '*') {
+				return Array.from({ length: max - min + 1 }, (_, i) => i + min);
+			}
+
+			return field.split(',').flatMap(part => {
+				if (part.includes('-')) {
+					const [start, end] = part.split('-').map(Number);
+					return Array.from({ length: end - start + 1 }, (_, i) => i + start);
+				}
+				if (part.includes('/')) {
+					const [start, step] = part.split('/');
+					const startNum = start === '*' ? min : Number(start);
+					return Array.from({ length: Math.floor((max - startNum) / Number(step)) + 1 }, (_, i) => startNum + i * Number(step));
+				}
+				return [Number(part)];
+			}).filter(num => num >= min && num <= max);
+		}
+
+		const now = new Date();
+		const currentYear = now.getFullYear();
+
+		const seconds = parseField(config.second, 0, 59);
+		const minutes = parseField(config.minute, 0, 59);
+		const hours = parseField(config.hour, 0, 23);
+		const daysOfMonth = parseField(config.dayOfMonth, 1, 31);
+		const months = parseField(config.month, 1, 12);
+		const daysOfWeek = parseField(config.dayOfWeek, 0, 6);
+		const years = config.year === '*' ? [currentYear, currentYear + 1] : parseField(config.year, currentYear, currentYear + 100);
+
+		for (const year of years) {
+			for (const month of months) {
+				const daysInMonth = new Date(year, month, 0).getDate();
+				for (const day of daysOfMonth.filter(d => d <= daysInMonth)) {
+					const date = new Date(year, month - 1, day);
+					if (daysOfWeek.includes(date.getDay())) {
+						for (const hour of hours) {
+							for (const minute of minutes) {
+								for (const second of seconds) {
+									const candidateDate = new Date(year, month - 1, day, hour, minute, second);
+									if (candidateDate > now) {
+										return candidateDate;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return undefined;
 	}
 
 	async shutdown(): Promise<void> {
