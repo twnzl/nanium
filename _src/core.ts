@@ -314,12 +314,21 @@ export class CNanium {
 	calculateNextRun(entry: ServiceRequestQueueEntry, lastRun: Date): Date {
 		if (entry.interval !== undefined) {
 			return DateHelper.addSeconds(entry.interval, lastRun);
-		} else if (entry.recurring) {
-			return this.calculateNextRunByCronConfig(entry.recurring);
+		} else if (entry.recurring && Object.keys(entry.recurring).some(k => (entry.recurring[k] || '') != '')) {
+			const now = new Date(Date.now());
+			now.setMilliseconds(0);
+			lastRun = new Date(lastRun);
+			lastRun.setMilliseconds(0);
+			if (now.getTime() === lastRun.getTime()) {
+				now.setSeconds(now.getSeconds() + 1);
+			}
+			return this.calculateNextRunByCronConfig(entry.recurring, now);
 		}
+		return undefined;
 	}
 
-	calculateNextRunByCronConfig(config: CronConfig): Date {
+	private calculateNextRunByCronConfig(config: CronConfig, now: Date): Date {
+
 		function parseField(field: string = '*', min: number, max: number): number[] {
 			if (field === '*') {
 				return Array.from({ length: max - min + 1 }, (_, i) => i + min);
@@ -339,7 +348,6 @@ export class CNanium {
 			}).filter(num => num >= min && num <= max);
 		}
 
-		const now = new Date();
 		const currentYear = now.getFullYear();
 
 		const seconds = parseField(config.second, 0, 59);

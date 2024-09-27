@@ -1,4 +1,5 @@
 import { ServiceRequestQueueEntryState } from './serviceRequestQueueEntryState';
+import { NaniumObject, Type } from '../objects';
 
 /**
  * this is how a service request queue entry must look like
@@ -80,14 +81,14 @@ export interface ServiceRequestQueueEntry {
  *
  * 	skipping any property is the same as setting it to '*'
  */
-export interface CronConfig {
-	second?: string;
-	minute?: string;
-	hour?: string;
-	dayOfMonth?: string;
-	month?: string;
-	dayOfWeek?: string;
-	year?: string;
+export class CronConfig extends NaniumObject<CronConfig> {
+	@Type(String) second?: string;
+	@Type(String) minute?: string;
+	@Type(String) hour?: string;
+	@Type(String) dayOfMonth?: string;
+	@Type(String) month?: string;
+	@Type(String) dayOfWeek?: string;
+	@Type(String) year?: string;
 }
 
 export interface ServiceRequestQueueEntryQueryConditions {
