@@ -38,10 +38,12 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 		} else if (cluster.isWorker) {
 			process.on('message', async (msg: Message) => {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': receive message ', msg.type);
+				if (msg.data?.context) {
+					msg.data.context = this.fromTransferableContext(msg.data.context);
+				}
 				if (msg.type === 'event_emit') {
 					const eventMessage = msg as Message<EmitEventMessage>;
-					Nanium.emit(eventMessage.data.event, eventMessage.data.eventName,
-						this.fromTransferableContext(eventMessage.data.context), false);
+					Nanium.emit(eventMessage.data.event, eventMessage.data.eventName, msg.data.context, false);
 				}
 				// events must always be emitted in all processes.
 				// For all other messages the managers and channels have to decide what to do,
