@@ -11,6 +11,7 @@
 - removed old streaming mechanism
 - new property "ServiceRequestQueueEntry.recurring" supports cron like configuration of recurring executions
 - new function NaniumObject.getRequestInfo
+- NaniumObject.createJsonSchema: supports TypeInformation of RequestType decorator
 
 # 1.25.1
 

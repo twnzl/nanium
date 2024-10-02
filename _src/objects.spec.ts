@@ -501,6 +501,52 @@ describe('nanium objects', function (): void {
 			const result = NaniumObject.createJsonSchemas(MyTestClass4, 'https://syscore.io/', []);
 			expect(result).toEqual(expected4);
 		});
+
+		it('TestGetRequest: body is of global generic type', async function (): Promise<void> {
+			const expected = [
+				{
+					'uri': 'https://syscore.io/TestGetRequest.schema.json',
+					'schema': {
+						'type': 'object',
+						'properties': {
+							'head': {
+								'$ref': 'https://syscore.io/ServiceRequestHead.schema.json'
+							},
+							'body': {
+								'$ref': 'https://syscore.io/TestGetRequestBody.schema.json'
+							}
+						}
+					}
+				},
+				{
+					'uri': 'https://syscore.io/ServiceRequestHead.schema.json',
+					'schema': {
+						'type': 'object',
+						'properties': {
+							'token': {
+								'type': 'string'
+							},
+							'language': {
+								'type': 'string'
+							}
+						}
+					}
+				},
+				{
+					'uri': 'https://syscore.io/TestGetRequestBody.schema.json',
+					'schema': {
+						'type': 'object',
+						'properties': {
+							'cnt': {
+								'type': 'number'
+							}
+						}
+					}
+				}
+			];
+			const result = NaniumObject.createJsonSchemas(TestGetRequest, 'https://syscore.io/', []);
+			expect(result).toEqual(expected);
+		});
 	});
 
 	describe('traverseType', function (): void {

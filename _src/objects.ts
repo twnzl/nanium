@@ -327,7 +327,7 @@ export class NaniumObject<T> {
 			return true;
 		}
 
-		function createJsonSchema(c: ConstructorType): void {
+		function createJsonSchema(c: ConstructorType, globalGenericTypes?: { [id: string]: ConstructorType }): void {
 
 			// scheme for this type is already in results array
 			const uri: string = baseURI + c.name + '.schema.json';
@@ -348,18 +348,20 @@ export class NaniumObject<T> {
 				for (const prop of Object.keys(c[propertyInfoSymbol])) {
 					if (prop in c[propertyInfoSymbol]) {
 						if (
+							globalGenericTypes?.[c[propertyInfoSymbol][prop].genericTypeId] ||
 							!trySetSimpleProperty(c[propertyInfoSymbol][prop].ctor, c[propertyInfoSymbol][prop], prop, subSchema.schema.properties)
 						) {
-							const ctor = c[propertyInfoSymbol][prop].ctor;
+							const ctor = c[propertyInfoSymbol][prop].ctor ??
+								globalGenericTypes?.[c[propertyInfoSymbol][prop].genericTypeId];
 							subSchema.schema.properties[prop] = { $ref: baseURI + ctor.name + '.schema.json' };
-							createJsonSchema(ctor);
+							createJsonSchema(ctor, globalGenericTypes);
 						}
 					}
 				}
 			}
 		}
 
-		createJsonSchema(type);
+		createJsonSchema(type, NaniumObject.getRequestInfo(type)?.genericTypes);
 
 		if (knownSchemas?.length) {
 			knownSchemas.forEach(s => results.push(s));
