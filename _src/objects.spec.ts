@@ -2,6 +2,8 @@ import { AnySimple, JSONSchema, NaniumObject, NaniumPropertyInfoCore, Type } fro
 import { Nanium } from './core';
 import { TestLogger } from './tests/testLogger';
 import { LogLevel } from './interfaces/logger';
+import { TestGetRequest, TestGetRequestBody, TestGetResponseBody } from './tests/services/test/get.contract';
+import { ServiceResponseBase } from './tests/services/serviceResponseBase';
 
 class MyTestClass2 extends NaniumObject<MyTestClass2> {
 	@Type(Number) aNumber?: number;
@@ -523,6 +525,20 @@ describe('nanium objects', function (): void {
 				'next.aDictionary -> Object',
 				'next.next -> MyTestClass2',
 			]);
+		});
+	});
+
+	describe('getRequestInfo', function (): void {
+		test('TestGetRequest', async function (): Promise<void> {
+			const result = NaniumObject.getRequestInfo(TestGetRequest);
+			expect(result).toEqual({
+				responseType: ServiceResponseBase,
+				genericTypes: {
+					TRequestBody: TestGetRequestBody,
+					TResponseBody: TestGetResponseBody
+				},
+				scope: 'public'
+			});
 		});
 	});
 });

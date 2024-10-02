@@ -260,6 +260,15 @@ export class NaniumObject<T> {
 		core([], c);
 	}
 
+	static getRequestInfo(request: ConstructorType): NaniumRequestInfo {
+		const result = new NaniumRequestInfo();
+		result.responseType = request[responseTypeSymbol];
+		result.genericTypes = request[genericTypesSymbol];
+		result.scope = request[scopeProperty];
+		result.skipInterceptors = request[skipInterceptorsProperty];
+		return result;
+	}
+
 	/**
 	 * generate a list of JSON schemas using the Type() annotations of NaniumObject
 	 * @param type constructor function for which the schemas schall be generated
