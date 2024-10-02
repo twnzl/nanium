@@ -345,7 +345,7 @@ export class NaniumObject<T> {
 					}
 				};
 				results.push(subSchema);
-				for (const prop of Object.keys(c[propertyInfoSymbol])) {
+				for (const prop of Object.keys((c[propertyInfoSymbol]) ?? {})) {
 					if (prop in c[propertyInfoSymbol]) {
 						if (
 							globalGenericTypes?.[c[propertyInfoSymbol][prop].genericTypeId] ||
