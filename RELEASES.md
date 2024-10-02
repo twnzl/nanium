@@ -10,6 +10,7 @@
 - optimized types in EventBase - typescript knows the type of the event in the handler function of subscribe()
 - removed old streaming mechanism
 - new property "ServiceRequestQueueEntry.recurring" supports cron like configuration of recurring executions
+- new function NaniumObject.getRequestInfo
 
 # 1.25.1
 
