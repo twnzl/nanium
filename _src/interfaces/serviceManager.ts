@@ -62,6 +62,12 @@ export interface ServiceManager {
 	unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void>;
 
 	/**
+	 * remove client (including all event subscriptions of the client)
+	 * @param clientId
+	 */
+	removeClient(clientId: string): Promise<void>;
+
+	/**
 	 * receive a subscription: decide to accept or to reject the subscription
 	 * if accepted just return
 	 * if not accepted throw an error

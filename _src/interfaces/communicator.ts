@@ -9,9 +9,11 @@ export interface NaniumCommunicator {
 	broadcastSubscription(subscription: EventSubscription): Promise<void>;
 
 	broadcastUnsubscription(subscription: EventSubscription): Promise<void>;
+
+	broadcastRemoveClient(clientId: string): Promise<void>;
 }
 
-type MessageType = 'event_emit' | 'event_subscribe' | 'event_unsubscribe' | 'generic';
+type MessageType = 'event_emit' | 'event_subscribe' | 'event_unsubscribe' | 'generic' | 'remove_client';
 
 export class Message<T = any> {
 	constructor(

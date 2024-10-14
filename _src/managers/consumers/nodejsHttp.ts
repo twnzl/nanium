@@ -249,4 +249,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 	}
+
+	async removeClient(_clientId: string): Promise<void> {
+	}
 }

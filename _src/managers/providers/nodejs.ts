@@ -307,9 +307,10 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		});
 	}
 
-	removeClient(clientId: string): void {
+	async removeClient(clientId: string): Promise<void> {
 		for (const eventName of Object.keys(this.eventSubscriptions)) {
-			this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName].filter(s => s.clientId !== clientId);
+			this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName]
+				.filter(s => s.clientId !== clientId);
 		}
 	}
 }

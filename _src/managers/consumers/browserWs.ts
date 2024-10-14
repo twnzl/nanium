@@ -106,7 +106,10 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		}
 	}
 
-	emit(eventName: string, event: any, context: ExecutionContext): any {
+	async removeClient(_clientId: string): Promise<void> {
+	}
+
+	emit(_eventName: string, _event: any, _context: ExecutionContext): any {
 		throw new Error('NotImplemented');
 	}
 

@@ -180,6 +180,15 @@ export class CNanium {
 		}
 	}
 
+	async removeClient(clientId: string, broadcast: boolean = true): Promise<void> {
+		for (const manager of this.managers) {
+			await manager.removeClient(clientId);
+		}
+		if (broadcast) {
+			this.communicators.forEach(c => c.broadcastRemoveClient(clientId));
+		}
+	}
+
 	async receiveSubscription(subscription: EventSubscription, broadcast: boolean = true): Promise<void> {
 		for await (const manager of this.managers) {
 			if (await manager.isResponsibleForEvent(subscription.eventName, subscription)) {

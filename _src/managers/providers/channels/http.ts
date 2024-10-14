@@ -380,6 +380,9 @@ export class NaniumHttpChannel implements Channel {
 		} else if (msg.type === 'event_unsubscribe') {
 			const eventMessage = msg as Message<EventSubscription>;
 			Nanium.unsubscribe(eventMessage.data, undefined, false).then();
+		} else if (msg.type === 'remove_client') {
+			const eventMessage = msg as Message<string>;
+			Nanium.removeClient(eventMessage.data, false).then();
 		} else if (msg.type === 'generic') {
 			const message = msg.data as CommunicatorMessage;
 			if (message.type === 'long_polling_response_received') {
@@ -395,6 +398,7 @@ export class NaniumHttpChannel implements Channel {
 		for (const handler of this.onClientRemoved) {
 			handler(clientId);
 		}
+		Nanium.removeClient(clientId).then();
 	}
 
 	//#endregion event handling

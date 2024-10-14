@@ -155,6 +155,9 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 		}
 	}
 
+	async removeClient(_clientId: string): Promise<void> {
+	}
+	
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 	}
 }

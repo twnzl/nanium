@@ -114,6 +114,19 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 		});
 	}
 
+	async broadcastRemoveClient(clientId: string): Promise<void> {
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			if (cluster.worker) {
+				Nanium.logger.info('worker ', cluster.worker?.id, ': send remove_client message to primary ');
+				process.send(
+					new Message<Partial<string>>('remove_client', clientId, cluster.worker.id),
+					undefined, undefined,
+					e => (e ? reject(e) : resolve())
+				);
+			}
+		});
+	}
+
 	async broadcast(message: any): Promise<void> {
 		await new Promise<void>((resolve: Function, reject: Function) => {
 			if (cluster.worker) {
