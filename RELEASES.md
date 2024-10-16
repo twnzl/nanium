@@ -12,6 +12,7 @@
 - new property "ServiceRequestQueueEntry.recurring" supports cron like configuration of recurring executions
 - new function NaniumObject.getRequestInfo
 - NaniumObject.createJsonSchema: supports TypeInformation of RequestType decorator
+- event subscriptions (via http): fix memory leak
 
 # 1.25.1
 
