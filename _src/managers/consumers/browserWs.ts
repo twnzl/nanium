@@ -54,7 +54,6 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		this.websocket.on('message', async event => {
 			const message: WsMessage = this.config.serializer.deserialize(event.data);
 			if (message.type === 'emit_event') {
-				console.log(message);
 				await super.receiveEventLocal(message.content.eventName, message.content.event);
 			}
 		});
@@ -110,14 +109,13 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	}
 
 	emit(_eventName: string, _event: any, _context: ExecutionContext): any {
-		throw new Error('NotImplemented');
 	}
 
 	async isResponsibleForEvent(eventName: string, context?: any): Promise<number> {
 		return await this.config.isResponsibleForEvent(eventName, context);
 	}
 
-	receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
+	receiveSubscription(_subscriptionData: EventSubscription): Promise<void> {
 		throw new Error('NotImplemented');
 	}
 }
