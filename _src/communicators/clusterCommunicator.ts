@@ -84,6 +84,18 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 					undefined, undefined,
 					e => (e ? reject(e) : resolve())
 				);
+			} else {
+				for (const id of Object.keys(cluster.workers)) {
+					cluster.workers[id].send(
+						new Message<EmitEventMessage>('event_emit', {
+							event,
+							eventName,
+							context: this.toTransferableContext(context as TExecutionContext)
+						}),
+						undefined,
+						e => (e ? reject(e) : resolve())
+					);
+				}
 			}
 		});
 	}

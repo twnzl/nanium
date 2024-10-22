@@ -86,8 +86,6 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		}
 	};
 
-	// private eventSubscriptions: { [clientId: string]: ProviderEventSubscriptionInfo } = {};
-
 	constructor(config: NaniumNodejsProviderConfig) {
 		this.config = {
 			...this.config,
@@ -295,6 +293,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				await interceptor.execute(subscription);
 			}
 		}
+
 		this.eventSubscriptions[subscription.eventName] = this.eventSubscriptions[subscription.eventName] ?? [];
 		this.eventSubscriptions[subscription.eventName].push(subscription);
 	}
