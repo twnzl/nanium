@@ -6,7 +6,7 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { WebSocketClient } from './ws.core';
 import { ConsumerBase } from './base';
-import { WsMessage } from '../providers/channels/ws.types';
+import { EmitEventMessageContent, SubscribeEventmessageContent, WsMessage } from '../providers/channels/ws.types';
 
 export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerConfig {
 	// apiUrl?: string;
@@ -16,6 +16,8 @@ export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerCon
 
 export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerBrowserWebsocketConfig> implements ServiceManager {
 	private websocket?: WebSocketClient;
+	private pendingEventSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
+	private pendingEventUnSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
 
 	constructor(config?: NaniumConsumerBrowserWebsocketConfig) {
 		super(config);
@@ -46,15 +48,35 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		this.websocket.on('open', async (): Promise<void> => {
 			// if reconnected, resubscribe to events
 			if (this.eventSubscriptions) {
-				for (const subscription of Object.values(this.eventSubscriptions)) {
-					this.sendEventSubscription(subscription.eventName, subscription.additionalData);
-				}
+				await Promise.all(
+					Object.values(this.eventSubscriptions)
+						.map(s => this.sendEventSubscription(s.eventName, s.additionalData))
+				);
 			}
 		});
 		this.websocket.on('message', async event => {
-			const message: WsMessage = this.config.serializer.deserialize(event.data);
-			if (message.type === 'emit_event') {
+			const rawMessage: WsMessage = this.config.serializer.deserialize(event.data);
+			if (rawMessage.type === 'emit_event') {
+				const message = new WsMessage<EmitEventMessageContent>(rawMessage, { 'TContent': EmitEventMessageContent });
 				await super.receiveEventLocal(message.content.eventName, message.content.event);
+			} else if (rawMessage.type === 'subscription_result') {
+				const message = new WsMessage<SubscribeEventmessageContent>(rawMessage, { 'TContent': SubscribeEventmessageContent });
+				const promiseFunctions = this.pendingEventSubscriptions.get(message.content.eventName);
+				this.pendingEventSubscriptions.delete(message.content.eventName);
+				if (message.content.error) {
+					promiseFunctions.reject(message.content.error);
+				} else {
+					promiseFunctions.resolve();
+				}
+			} else if (rawMessage.type === 'unsubscription_result') {
+				const message = new WsMessage<SubscribeEventmessageContent>(rawMessage, { 'TContent': SubscribeEventmessageContent });
+				const promiseFunctions = this.pendingEventUnSubscriptions.get(message.content.eventName);
+				this.pendingEventUnSubscriptions.delete(message.content.eventName);
+				if (message.content.error) {
+					promiseFunctions.reject(message.content.error);
+				} else {
+					promiseFunctions.resolve();
+				}
 			}
 		});
 		this.websocket.connect();
@@ -68,41 +90,51 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		const subscription: EventSubscription = await super.subscribeLocal(eventNameOrConstructor, handler);
 		// if subscription for this event name has not already been sent to server - send it
 		if (this.eventSubscriptions[subscription.eventName].eventHandlers.size === 1) {
-			this.sendEventSubscription(subscription.eventName, subscription.additionalData);
+			await this.sendEventSubscription(subscription.eventName, subscription.additionalData);
 		}
 		return subscription;
 	}
 
-	private sendEventSubscription(eventName: string, additionalData: any) {
-		const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
-			type: 'subscribe_event',
-			content: {
-				clientId: this.id,
-				eventName: eventName,
-				additionalData: additionalData
-			}
+	private async sendEventSubscription(eventName: string, additionalData: any): Promise<void> {
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			this.pendingEventSubscriptions.set(eventName, { resolve, reject });
+			const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
+				type: 'subscribe_event',
+				content: {
+					clientId: this.id,
+					eventName: eventName,
+					additionalData: additionalData,
+				}
+			});
+			this.websocket.send(content);
 		});
-		this.websocket.send(content);
 	}
 
 	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
-		await super.unsubscribeLocal(subscription, eventName);
+		eventName = subscription?.eventName ?? eventName;
+		subscription = await super.unsubscribeLocal(subscription, eventName);
 		if (this.websocket?.connected) {
 			await this.websocket.connected;
 			// no mor handlers for this event registered - so unsubscribe on server
-			if (!this.eventSubscriptions[subscription.eventName]?.eventHandlers?.size) {
-				const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
-					type: 'unsubscribe_event',
-					content: {
-						clientId: this.id,
-						eventName: eventName,
-						additionalData: subscription.additionalData,
-						id: subscription.id
-					}
-				});
-				this.websocket.send(content);
+			if (!this.eventSubscriptions[eventName]?.eventHandlers?.size) {
+				await this.sendEventUnSubscription(eventName, subscription?.additionalData);
 			}
 		}
+	}
+
+	private async sendEventUnSubscription(eventName: string, additionalData: any): Promise<void> {
+		await new Promise<void>((resolve: Function, reject: Function) => {
+			this.pendingEventUnSubscriptions.set(eventName, { resolve, reject });
+			const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
+				type: 'unsubscribe_event',
+				content: {
+					clientId: this.id,
+					eventName: eventName,
+					additionalData: additionalData,
+				}
+			});
+			this.websocket.send(content);
+		});
 	}
 
 	async removeClient(_clientId: string): Promise<void> {

@@ -238,9 +238,8 @@ export class NaniumHttpChannel implements Channel {
 							try {
 								await Nanium.receiveSubscription(subscriptionData);
 							} catch (e) {
-								Nanium.logger.warn(e);
 								res.statusCode = 400;
-								const responseBody: string | ArrayBuffer = this.config.serializer.serialize(e.message);
+								const responseBody: string | ArrayBuffer = this.config.serializer.serialize(e);
 								res.write(responseBody);
 								res.end();
 								resolve();
@@ -294,7 +293,6 @@ export class NaniumHttpChannel implements Channel {
 					// 	EventSubscription,
 					// 	{'TData': this.config.subscriptionDataConstructor}
 					// );
-
 					await Nanium.unsubscribe(subscriptionData);
 					resolve();
 				} catch (e) {

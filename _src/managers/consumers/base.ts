@@ -66,7 +66,7 @@ export class ConsumerBase<TConfig extends ServiceConsumerConfig> {
 	async unsubscribeLocal(
 		subscription: EventSubscription,
 		eventName: string
-	): Promise<void> {
+	): Promise<EventSubscription> {
 		this.eventSubscriptions ??= {};
 		eventName = subscription?.eventName ?? eventName;
 		if (subscription) {
@@ -81,6 +81,7 @@ export class ConsumerBase<TConfig extends ServiceConsumerConfig> {
 			}
 			delete this.eventSubscriptions[eventName];
 		}
+		return subscription;
 	}
 
 	async receiveEventLocal(eventName: string, event: any): Promise<void> {

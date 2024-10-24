@@ -122,7 +122,7 @@ export class HttpCore {
 				// try later if the client does not yet have an id (the startLongPolling function will retry to get the id meanwhile)
 				if (!this.id) {
 					if (retries > 10) {
-						reject(new Error('subscription not possible: client has no ID'));
+						reject(new Error('subscription not possible:client has no ID'));
 						return;
 					} else {
 						retries++;
@@ -165,7 +165,7 @@ export class HttpCore {
 		}
 		const requestBody: string | ArrayBuffer = this.config.serializer.serialize(subscription);
 		try {
-			await this.httpRequest('POST', this.config.apiEventUrl + '?' + subscription.eventName, requestBody);
+			await this.httpRequest('POST', this.config.apiEventUrl + '?' + subscription?.eventName, requestBody);
 		} catch (e) {
 			const error = this.config.serializer.deserialize(e);
 			throw error;
@@ -236,7 +236,7 @@ export class HttpCore {
 						await this.sendEventSubscription(this.eventSubscriptions[eventName].eventConstructor ?? eventName, subscription);
 					}
 				}
-				await this.config.onServerConnectionRestored();
+				this.config.onServerConnectionRestored();
 			}
 			const rawEventResponse: string | ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl,
 				this.config.serializer.serialize({ clientId: this.id }));

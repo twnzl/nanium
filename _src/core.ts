@@ -169,11 +169,8 @@ export class CNanium {
 		if (manager) {
 			await manager.unsubscribe(subscription, eventName);
 		} else {
-			for (const manager of this.managers) {
-				if (await manager.isResponsibleForEvent(eventName, subscription)) {
-					await manager.unsubscribe(subscription, eventName);
-				}
-			}
+			const responsibleManager: ServiceManager = await this.getResponsibleManagerForEvent(subscription?.eventName, subscription);
+			await responsibleManager?.unsubscribe(subscription, eventName);
 		}
 		if (broadcast) {
 			this.communicators.forEach(c => c.broadcastUnsubscription(subscription));
@@ -190,11 +187,8 @@ export class CNanium {
 	}
 
 	async receiveSubscription(subscription: EventSubscription, broadcast: boolean = true): Promise<void> {
-		for await (const manager of this.managers) {
-			if (await manager.isResponsibleForEvent(subscription.eventName, subscription)) {
-				await manager.receiveSubscription(subscription);
-			}
-		}
+		const responsibleManager: ServiceManager = await this.getResponsibleManagerForEvent(subscription.eventName, subscription);
+		await responsibleManager?.receiveSubscription(subscription);
 		if (broadcast) {
 			this.communicators.forEach(c => c.broadcastSubscription(subscription));
 		}

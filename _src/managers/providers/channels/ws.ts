@@ -8,7 +8,7 @@ import { ServiceProviderManager } from '../../../interfaces/serviceProviderManag
 import * as WebSocket from 'ws';
 import { Server as HttpServer } from 'http';
 import { Server as HttpsServer } from 'https';
-import { WsMessage } from './ws.types';
+import { SubscribeEventmessageContent, WsMessage } from './ws.types';
 
 const clientIdSymbol: symbol = Symbol.for('__client_id__');
 
@@ -83,7 +83,7 @@ export class NaniumWebsocketChannel implements Channel {
 			case 'subscribe_event':
 				return this.handleIncomingEventSubscription(message, ws);
 			case 'unsubscribe_event':
-				return this.handleIncomingEventUnsubscription(message);
+				return this.handleIncomingEventUnsubscription(message, ws);
 		}
 	}
 
@@ -98,10 +98,11 @@ export class NaniumWebsocketChannel implements Channel {
 	private async handleIncomingEventSubscription(message: WsMessage<EventSubscription>, ws: WebSocket): Promise<void> {
 		Nanium.logger.info('channel ws: incoming event subscription: ', message.content.eventName);
 		// ask the manager to execute interceptors and to decide if the subscription is accepted or not
+		const subscription: EventSubscription = message?.content;
+		let error: any;
 		try {
-			const subscription: EventSubscription = message.content;
 			subscription.channelId = this.id;
-			await Nanium.receiveSubscription(subscription);
+			await Nanium.receiveSubscription(subscription, false);
 			ws[clientIdSymbol] ??= message.content.clientId;
 			if (!this.clientSubscriptionInfo.has(subscription.clientId)) {
 				this.clientSubscriptionInfo.set(subscription.clientId, new ClientSubscriptionInfo(ws));
@@ -113,14 +114,23 @@ export class NaniumWebsocketChannel implements Channel {
 				subscriptionsOfClient.eventNames.add(subscription.eventName);
 			}
 		} catch (e) {
-			Nanium.logger.error(e);
-			// todo: should the client be informed about the error ?
-			throw e;
+			error = e;
+		} finally {
+			const message = new WsMessage<SubscribeEventmessageContent>({
+				type: 'subscription_result',
+				content: {
+					eventName: subscription.eventName,
+					error: error
+				}
+			});
+			ws.send(this.config.serializer.serialize(message));
 		}
 	}
 
-	private async handleIncomingEventUnsubscription(message: WsMessage<EventSubscription>): Promise<void> {
+	private async handleIncomingEventUnsubscription(message: WsMessage<EventSubscription>, ws: WebSocket): Promise<void> {
 		Nanium.logger.info('channel ws: incoming event unsubscription: ', message.content.eventName);
+		let error: any;
+		let clientSubscription: ClientSubscriptionInfo;
 		try {
 			//todo: create real instances of EventSubscription and additionalData  e.g:
 			// const subscriptionData: EventSubscription = NaniumObject.create(
@@ -130,21 +140,28 @@ export class NaniumWebsocketChannel implements Channel {
 			// );
 
 			// remove subscription
-			const clientSubscription = this.clientSubscriptionInfo.get(message.content.clientId);
+			clientSubscription = this.clientSubscriptionInfo.get(message.content.clientId);
 			if (clientSubscription) {
 				clientSubscription.eventNames.delete(message.content.eventName);
-				// close websocket if no other subscriptions exist.
-				if (!clientSubscription.eventNames?.size) {
-					clientSubscription.websocket?.close();
-					this.clientSubscriptionInfo.delete(message.content.clientId);
-				}
 			}
 			// unsubscribe core
 			await Nanium.unsubscribe(message.content);
 		} catch (e) {
-			Nanium.logger.error(e);
-			// todo: should the client be informed about the error ?
-			throw e;
+			error = e;
+		} finally {
+			const response = new WsMessage<SubscribeEventmessageContent>({
+				type: 'unsubscription_result',
+				content: {
+					eventName: message.content.eventName,
+					error: error
+				}
+			});
+			ws.send(this.config.serializer.serialize(response));
+			// close websocket if no other subscriptions exist.
+			if (!clientSubscription?.eventNames?.size) {
+				clientSubscription.websocket?.close();
+				this.clientSubscriptionInfo.delete(message.content.clientId);
+			}
 		}
 	}
 
@@ -157,16 +174,14 @@ export class NaniumWebsocketChannel implements Channel {
 			}
 		};
 		let serialized: string | ArrayBuffer = this.config.serializer.serialize(message);
-		// loop through subscriptions and send event message
-		this.clientSubscriptionInfo.forEach((clientSubscription) => {
-			try {
-				if (clientSubscription.eventNames?.has(message.content.eventName)) {
-					clientSubscription.websocket?.send(serialized);
-				}
-			} catch (e) {
-				Nanium.logger.error('websocket channel: emitEvent: ', e.message, e.stack);
+		const clientSubscription = this.clientSubscriptionInfo.get(subscription.clientId);
+		try {
+			if (clientSubscription?.eventNames?.has(message.content.eventName)) {
+				clientSubscription.websocket?.send(serialized);
 			}
-		});
+		} catch (e) {
+			Nanium.logger.error('websocket channel: emitEvent: ', e.message, e.stack);
+		}
 	}
 
 	//#endregion event handling

@@ -1,6 +1,4 @@
-// Karma configuration file, see link for more information
-// https://karma-runner.github.io/1.0/config/configuration-file.html
-
+// karma.conf.js
 module.exports = function (config) {
 	config.set({
 		basePath: '',
@@ -10,35 +8,58 @@ module.exports = function (config) {
 			require('karma-chrome-launcher'),
 			require('karma-jasmine-html-reporter'),
 			require('karma-coverage'),
-			require('@angular-devkit/build-angular/plugins/karma')
+			require('@angular-devkit/build-angular/plugins/karma'),
+			require('karma-spec-reporter')
 		],
-		client: {
-			jasmine: {
-				// you can add configuration options for Jasmine here
-				// the possible options are listed at https://jasmine.github.io/api/edge/Configuration.html
-				// for example, you can disable the random execution with `random: false`
-				// or set a specific seed with `seed: 4321`
+		reporters: ['spec', 'kjhtml'],
+		specReporter: {
+			maxLogLines: 5,
+			suppressErrorSummary: false,
+			suppressFailed: false,
+			suppressPassed: false,
+			suppressSkipped: false,
+			showSpecTiming: true,
+			failFast: false,
+			prefixes: {
+				success: '✓ ',
+				failure: '✗ ',
+				skipped: '- '
 			},
-			clearContext: false // leave Jasmine Spec Runner output visible in browser
+			// real-time reporting
+			spec: {
+				displayStacktrace: true,
+				displaySuccessful: true,
+				displayFailed: true,
+				displayPending: true, // Show tests before they run
+				displayDuration: true
+			},
+			// Ensure failures are reported immediately
+			summary: {
+				displayErrorMessages: true,
+				displaySuccessful: true,
+				displayFailed: true,
+				displayPending: true
+			}
 		},
-		jasmineHtmlReporter: {
-			suppressAll: true // removes the duplicated traces
+
+		client: {
+			clearContext: false,
+			jasmine: {
+				random: false,
+				failFast: false,
+				verboseDeprecations: true
+			}
 		},
-		coverageReporter: {
-			dir: require('path').join(__dirname, './coverage/browser-client'),
-			subdir: '.',
-			reporters: [
-				{type: 'html'},
-				{type: 'text-summary'}
-			]
-		},
-		reporters: ['progress', 'kjhtml'],
+
+		// Increase logging detail
+		logLevel: config.LOG_INFO,
+
+		// Other standard config...
 		port: 9876,
 		colors: true,
-		logLevel: config.LOG_INFO,
-		singleRun: true,
 		autoWatch: false,
 		browsers: ['ChromeHeadless'],
-		restartOnFileChange: false
+		singleRun: true,
+		restartOnFileChange: true
 	});
 };

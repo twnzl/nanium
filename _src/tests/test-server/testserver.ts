@@ -8,11 +8,14 @@ import * as path from 'path';
 import { TestServerRequestInterceptor } from '../interceptors/server/test.request.interceptor';
 import * as cluster from 'cluster';
 import { ClusterCommunicator } from '../../communicators/clusterCommunicator';
+import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { TestEventEmissionSendInterceptor } from '../interceptors/server/test.send-event-emission.interceptor';
 import {
 	TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
-import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws';
+import { TestLogger } from '../testLogger';
+import { LogLevel } from '../../interfaces/logger';
 
 async function runPrimary(workerCount: number) {
 	console.log(`Primary ${process.pid} is running`);
@@ -86,14 +89,40 @@ async function runWorker() {
 				serializer: serializer,
 			}),
 		],
+		isResponsible: () => Promise.resolve(2),
 		requestInterceptors: [TestServerRequestInterceptor],
+		isResponsibleForEvent: () => Promise.resolve(2),
 		eventEmissionSendInterceptors: [TestEventEmissionSendInterceptor],
 		eventSubscriptionReceiveInterceptors: [TestEventSubscriptionReceiveInterceptor],
 		handleError: handleError,
 	}));
+
+	// await Nanium.addManager(new NaniumProviderNodejs({
+	// 	servicePath: '',
+	// 	channels: [
+	// 		new NaniumWebsocketChannel('2', {
+	// 			eventPath: '/events',
+	// 			server: httpServer,
+	// 			serializer: serializer,
+	// 		}),
+	// 	],
+	// 	isResponsible: () => Promise.resolve(0),
+	// 	isResponsibleForEvent: () => Promise.resolve(2),
+	// 	eventEmissionSendInterceptors: [TestEventEmissionSendInterceptor],
+	// 	eventSubscriptionReceiveInterceptors: [TestEventSubscriptionReceiveInterceptor],
+	// 	handleError: handleError
+	// }));
+
+	process.on('unhandledRejection', async function (e: any): Promise<void> {
+		await handleException(e);
+	});
+	process.on('uncaughtException', async function (e: any): Promise<void> {
+		await handleException(e);
+	});
 }
 
 async function run(workerCount: number = 2) {
+	Nanium.logger = new TestLogger(LogLevel.warn);
 	if (cluster.isMaster) {
 		await runPrimary(workerCount);
 	} else {
@@ -101,8 +130,13 @@ async function run(workerCount: number = 2) {
 	}
 }
 
-async function handleError(error: any): Promise<void> {
+async function handleError(err: any, _serviceName: string, _request: any, _executionContext: ExecutionContext): Promise<any> {
+	throw { message: err.message ?? err };
+}
+
+async function handleException(error: any): Promise<void> {
 	throw error;
 }
+
 
 run().then();
