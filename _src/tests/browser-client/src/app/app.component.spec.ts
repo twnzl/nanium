@@ -407,7 +407,7 @@ describe('', function (): void {
 				session.token = 'wrong!!';
 				// should call the client interceptor that adds credentials, but they are wrong
 				subscription = await StuffEvent.subscribe(() => {
-				}, manager);
+				}, undefined, manager);
 				expect(true).withContext('an exception should have been thrown').toBeFalse();
 			} catch (e) {
 				expect(e.message).toBe('unauthorized');
@@ -437,21 +437,21 @@ describe('', function (): void {
 					if (event2 && event3) {
 						resolve();
 					}
-				}, manager1);
+				}, undefined, manager1);
 				subscription2 = await StuffEvent.subscribe((event) => {
 					event2 = event;
 					eventCount++;
 					if (event1 && event3) {
 						resolve();
 					}
-				}, manager2);
+				}, undefined, manager2);
 				subscription3 = await StuffEvent.subscribe((event) => {
 					event3 = event;
 					eventCount++;
 					if (event1 && event2) {
 						resolve();
 					}
-				}, manager3);
+				}, undefined, manager3);
 				await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
 			});
 			await AsyncHelper.pause(1000);
@@ -476,8 +476,8 @@ describe('', function (): void {
 			session.token = '1234'; // reset right credentials
 			let event1: StuffEvent;
 			let event2: Stuff2Event;
-			await StuffEvent.subscribe((event) => event1 = event, manager1);
-			await Stuff2Event.subscribe((event) => event2 = event, manager1);
+			await StuffEvent.subscribe((event) => event1 = event, undefined, manager1);
+			await Stuff2Event.subscribe((event) => event2 = event, undefined, manager1);
 			await Stuff2Event.unsubscribe();
 			await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
 			await AsyncHelper.pause(1000);
@@ -502,12 +502,12 @@ describe('', function (): void {
 			session.tenant = 'Company1';
 			subscription1 = await StuffEvent.subscribe((event) => {
 				event1 = event;
-			}, manager1);
+			}, undefined, manager1);
 			session.token = '5678'; // other tenant
 			session.tenant = 'Company2';
 			subscription2 = await StuffEvent.subscribe((event) => {
 				event2 = event;
-			}, manager2);
+			}, undefined, manager2);
 			session.token = '1234'; // reset right credentials
 			session.tenant = 'Company1';
 			await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
@@ -529,7 +529,7 @@ describe('', function (): void {
 			let event1;
 			const subscription1 = await Nanium.subscribe(StuffEvent.eventName, async (event) => {
 				event1 = event;
-			}, manager1);
+			}, undefined, manager1);
 			await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffEvent
 			await AsyncHelper.pause(1000);
 			await subscription1.unsubscribe();

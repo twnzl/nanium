@@ -186,7 +186,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 	}
 
 	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
-		return await this.httpCore.subscribe(eventNameOrConstructor, handler);
+		return await this.httpCore.subscribe(eventNameOrConstructor, handler, context);
 	}
 
 	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {

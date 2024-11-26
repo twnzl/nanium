@@ -138,6 +138,7 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 	async subscribe(eventConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = typeof eventConstructor === 'string' ? eventConstructor : eventConstructor.eventName;
 		const subscription = new EventSubscription('', eventName, handler);
+		subscription.context = context;
 		this.internalEventSubscriptions[eventName] = this.internalEventSubscriptions[eventName] ?? [];
 		this.internalEventSubscriptions[eventName].push(subscription);
 		return subscription;
@@ -157,7 +158,7 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 
 	async removeClient(_clientId: string): Promise<void> {
 	}
-	
+
 	async receiveSubscription(subscriptionData: EventSubscription): Promise<void> {
 	}
 }

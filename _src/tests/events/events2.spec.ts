@@ -24,7 +24,7 @@ describe('events \n', function (): void {
 			try {
 				await StuffEvent.subscribe((e: StuffEvent) => {
 					receivedEvent = e;
-				}, TestHelper.consumer);
+				}, undefined, TestHelper.consumer);
 			} catch (e) {
 				expect(e?.message).toBe('unauthorized');
 			}

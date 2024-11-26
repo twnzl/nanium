@@ -11,8 +11,8 @@ export class EventBase<T = any> extends NaniumObject<T> {
 		Nanium.emit(this, undefined, context);
 	}
 
-	static async subscribe<T extends EventBase<T>>(this: ConstructorType<T>, handler: EventHandler<T>, context?: ServiceManager | any): Promise<EventSubscription> {
-		return await Nanium.subscribe(this as any, handler, context);
+	static async subscribe<T extends EventBase<T>>(this: ConstructorType<T>, handler: EventHandler<T>, context?: ExecutionContext, manager?: ServiceManager): Promise<EventSubscription> {
+		return await Nanium.subscribe(this as any, handler, context, manager);
 	}
 
 	static async unsubscribe(subscription?: EventSubscription): Promise<void> {

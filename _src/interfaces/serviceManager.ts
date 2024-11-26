@@ -36,8 +36,9 @@ export interface ServiceManager {
 	 * manager with the highest values above 0 wins
 	 * @param eventName
 	 * @param data
+	 * @param context
 	 */
-	isResponsibleForEvent(eventName: string, data?: any): Promise<number>;
+	isResponsibleForEvent(eventName: string, data?: any, context?: ExecutionContext): Promise<number>;
 
 	/**
 	 * emit an event
@@ -51,8 +52,9 @@ export interface ServiceManager {
 	 * subscribe to a specific eventType
 	 * @param eventNameOrConstructor
 	 * @param handler
+	 * @param context
 	 */
-	subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler): Promise<EventSubscription>;
+	subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription>;
 
 	/**
 	 * unsubscribe from a specific eventType

@@ -109,7 +109,7 @@ export class HttpCore {
 	}
 
 
-	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler): Promise<EventSubscription> {
+	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = typeof eventNameOrConstructor === 'string' ? eventNameOrConstructor : eventNameOrConstructor.eventName;
 		return await new Promise<EventSubscription>(async (resolve: Function, reject: Function) => {
 			// if not yet done, open long-polling request to receive events, do not use await because it is a long-polling request ;-)
@@ -131,6 +131,7 @@ export class HttpCore {
 					}
 				}
 				const subscription: EventSubscription = new EventSubscription(this.id, eventName);
+				subscription.context = context;
 
 				// add basics to eventSubscriptions for this eventName and inform the server
 				if (!this.eventSubscriptions.hasOwnProperty(eventName)) {

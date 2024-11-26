@@ -144,21 +144,17 @@ export class CNanium {
 	async subscribe(
 		eventNameOrConstructor: EventNameOrConstructor,
 		handler: (data: any) => Promise<void>,
-		managerOrData?: ServiceManager | Omit<any, 'subscribe'>
+		context?: ExecutionContext,
+		manager?: ServiceManager,
 	): Promise<EventSubscription> {
-		let manager: ServiceManager;
-		let data: any;
 		const eventName: string = typeof eventNameOrConstructor === 'string' ? eventNameOrConstructor : eventNameOrConstructor.eventName;
-		if (managerOrData && (managerOrData as ServiceManager).subscribe) {
-			manager = managerOrData as ServiceManager;
-		} else {
-			data = managerOrData;
-			manager = await this.getResponsibleManagerForEvent(eventName, data);
+		if (!manager) {
+			manager = await this.getResponsibleManagerForEvent(eventName, context);
 		}
 		if (!manager) {
 			throw new Error('no responsible manager for event "' + eventName + '" found');
 		}
-		const subscription: EventSubscription = await manager.subscribe(eventNameOrConstructor, handler);
+		const subscription: EventSubscription = await manager.subscribe(eventNameOrConstructor, handler, context);
 		subscription[managerSymbol] = manager;
 		return subscription;
 	}
@@ -208,12 +204,12 @@ export class CNanium {
 		return undefined;
 	}
 
-	async getResponsibleManagerForEvent(eventName: string, data: any): Promise<ServiceManager> {
+	async getResponsibleManagerForEvent(eventName: string, data: any, context?: any): Promise<ServiceManager> {
 		if (this.managers.length === 0) {
 			throw new Error('nanium: no managers registered - call Nanium.addManager().');
 		}
 		const priorities: number[] = await Promise.all(
-			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, data)));
+			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, data, context)));
 		const maxPriority = Math.max(...priorities);
 		let idx: number = priorities.findIndex(p => p === maxPriority);
 		if (idx >= 0 && priorities[idx] > 0) {

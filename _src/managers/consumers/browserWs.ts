@@ -82,12 +82,13 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		this.websocket.connect();
 	}
 
-	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, _context?: ExecutionContext): Promise<EventSubscription> {
+	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		if (!this.websocket) {
 			this.initWebSocket();
 		}
 		await this.websocket.connected;
 		const subscription: EventSubscription = await super.subscribeLocal(eventNameOrConstructor, handler);
+		subscription.context = context;
 		// if subscription for this event name has not already been sent to server - send it
 		if (this.eventSubscriptions[subscription.eventName].eventHandlers.size === 1) {
 			await this.sendEventSubscription(subscription.eventName, subscription.additionalData);

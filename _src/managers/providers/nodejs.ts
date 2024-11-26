@@ -111,7 +111,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		this.config.channels.push(channel);
 	}
 
-	async init(): Promise<void> {
+	async init() {
 
 		// init repository
 		if (this.config.servicePath) {
@@ -258,6 +258,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 	async subscribe(eventConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = typeof eventConstructor === 'string' ? eventConstructor : eventConstructor.eventName;
 		const subscription = new EventSubscription('', eventName, handler);
+		subscription.context = context;
 		this.eventSubscriptions[eventName] = this.eventSubscriptions[eventName] ?? [];
 		this.eventSubscriptions[eventName].push(subscription);
 		return subscription;
