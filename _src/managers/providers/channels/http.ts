@@ -168,7 +168,11 @@ export class NaniumHttpChannel implements Channel {
 					stream
 						.onData(chunk => {
 							if (NaniumBuffer.isNaniumBuffer(serviceRepository[serviceName].Request[responseTypeSymbol]?.[1])) {
-								res.write(chunk);
+								if (chunk instanceof NaniumBuffer) {
+									(chunk as NaniumBuffer).asUint8Array().then(buffer => res.write(buffer));
+								} else {
+									res.write(chunk);
+								}
 							} else {
 								res.write(config.serializer.serializePartial(chunk));
 							}
