@@ -66,8 +66,8 @@ export class AppComponent implements OnInit {
 		const manager = Nanium.managers.find(m => (m as NaniumConsumerBrowserHttp).config.apiUrl.includes('8080'));
 		let event1: StuffEvent;
 		let event2: Stuff2Event;
-		await StuffEvent.subscribe((event) => event1 = event, manager);
-		await Stuff2Event.subscribe((event) => event2 = event, manager);
+		await StuffEvent.subscribe((event) => event1 = event, undefined, manager);
+		await Stuff2Event.subscribe((event) => event2 = event, undefined, manager);
 		await Stuff2Event.unsubscribe();
 		await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
 		await AsyncHelper.pause(1000);
