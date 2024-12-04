@@ -49,7 +49,7 @@ export class EventsTestComponent implements OnInit {
 			this.subscriptions[kind].push(
 				await StuffEvent.subscribe((event: StuffEvent) => {
 					this.log.push('event received: ' + event.aNumber);
-				}, kind === 'ws' ? this.testService.naniumConsumerWs : this.testService.naniumConsumerHttp)
+				}, undefined, kind === 'ws' ? this.testService.naniumConsumerWs : this.testService.naniumConsumerHttp)
 			);
 		} catch (e) {
 			this.log.push('error: ' + (e?.message ?? e));
