@@ -1,7 +1,8 @@
-import { MultipartParser, NaniumHttpChannelConfig } from './http';
+import { NaniumHttpChannelConfig } from './http';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { TestBufferExecutor } from '../../../tests/services/test/buffer.executor';
 import { TestBufferRequest } from '../../../tests/services/test/buffer.contract';
+import { MultipartParser } from './http-multipart-parser';
 
 const requestBody = Buffer.from(
 	'------WebKitFormBoundaryLkLCIZyhA3PyKWAf\r\n' +
