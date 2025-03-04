@@ -165,7 +165,7 @@ export class CNanium {
 		if (manager) {
 			await manager.unsubscribe(subscription, eventName);
 		} else {
-			const responsibleManager: ServiceManager = await this.getResponsibleManagerForEvent(subscription?.eventName, subscription);
+			const responsibleManager: ServiceManager = await this.getResponsibleManagerForEvent(eventName, subscription);
 			await responsibleManager?.unsubscribe(subscription, eventName);
 		}
 		if (broadcast) {
