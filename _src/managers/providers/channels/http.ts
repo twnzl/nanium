@@ -8,12 +8,12 @@ import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { NaniumJsonSerializer } from '../../../serializers/json';
 import { randomUUID } from 'crypto';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { NaniumObject, responseTypeSymbol } from '../../../objects';
+import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { Message } from '../../../interfaces/communicator';
-import { MultipartParser } from './http-multipart-parser';
+import * as multipart from 'parse-multipart-data';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -109,18 +109,18 @@ export class NaniumHttpChannel implements Channel {
 		await new Promise<void>((resolve: Function, reject: Function) => {
 			let deserialized: NaniumHttpChannelBody;
 			let request: any;
-			let parser: MultipartParser;
 
 			const isMultipart = req.headers['content-type']?.startsWith('multipart/form-data');
-			if (isMultipart) {
-				parser = new MultipartParser(req.headers['content-type'], this.config, this.serviceRepository);
-			}
 			req.on('data', (chunk: Buffer) => {
-				isMultipart ? parser.parsePart(chunk) : data.push(chunk);
+				data.push(chunk);
 			}).on('end', async () => {
 				try {
 					if (isMultipart) {
-						[request, deserialized] = await parser.getResult();
+						const body = Buffer.concat(data);
+						const boundary = req.headers['content-type'].replace('multipart/form-data; boundary=', '');
+						const parts = multipart.parse(body, boundary);
+						[request, deserialized] = await this.getMultipartResult(parts);
+
 					} else {
 						const body: string = Buffer.concat(data).toString();
 						deserialized = this.config.serializer.deserialize(body);
@@ -138,8 +138,23 @@ export class NaniumHttpChannel implements Channel {
 					reject(e);
 				}
 			});
-			// }
 		});
+	}
+
+	async getMultipartResult(parts: any[]) {
+		const txt = parts.find(p => p.name === 'request').data.toString();
+		const deserialized = this.config.serializer.deserialize(txt);
+		const request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
+		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
+			if (
+				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
+				(parent[name[name.length - 1]]?.constructor && parent[name[name.length - 1]]?.constructor['naniumBufferInternalValueSymbol'])
+			) {
+				const binaryId = parent[name[name.length - 1]].id;
+				parent[name[name.length - 1]].write(parts.find(p => p.name === binaryId).data);
+			}
+		});
+		return [request, deserialized];
 	}
 
 	async process(request: any, res: ServerResponse): Promise<any> {
