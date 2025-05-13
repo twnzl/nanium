@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { TestGetRequest, TestGetResponseBody } from '../../../services/test/get.contract';
-import { ServiceResponseBase } from '../../../services/serviceResponseBase';
+import { TestGetRequest } from '../../../services/test/get.contract';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { TestBufferRequest } from '../../../services/test/buffer.contract';
 import { TestService } from './test.service';
@@ -21,7 +20,6 @@ import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary
 	styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-	testGetResponse?: ServiceResponseBase<TestGetResponseBody>;
 	error?: any;
 
 	constructor(
@@ -32,16 +30,19 @@ export class AppComponent implements OnInit {
 	async ngOnInit() {
 	}
 
-	async test1(): Promise<void> {
+	async simple(): Promise<void> {
 		try {
-			await this.testService.init();
-			this.testGetResponse = await new TestGetRequest({ input1: 'hello world' }).execute();
+			if (!Nanium.managers?.length) {
+				await this.testService.init();
+			}
+			const response = await new TestGetRequest({ input1: 'hello world' }).execute();
+			console.log(response.body.output1);
 		} catch (e) {
 			this.error = e;
 		}
 	}
 
-	async test2(): Promise<void> {
+	async buffers(): Promise<void> {
 		try {
 			await this.testService.init();
 			const request = new TestBufferRequest({
@@ -53,8 +54,6 @@ export class AppComponent implements OnInit {
 			console.log(response.id === '1');
 			console.log(response.text1 === '123*');
 			console.log(response.text2 === '456*');
-			// console.log(response.buffer1.asString() === '123*');
-			// console.log(response.buffer2.asString() === '456*');
 		} catch (e) {
 			this.error = e;
 		}
@@ -107,4 +106,13 @@ export class AppComponent implements OnInit {
 			console.log(await result.asString());
 		});
 	}
+
+
+	//#region ws
+	async wsSimple1(): Promise<void> {
+		this.testService.initWs(8080, 1);
+		await this.simple();
+	}
+
+	//#endregion ws
 }

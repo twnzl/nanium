@@ -3,3 +3,17 @@ button, input, label {
 	margin: 0.2rem;
 	padding: 0.2rem;
 }
+
+section {
+	padding: 1rem;
+	margin: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 0.5rem;
+	background-color: #eee;
+	font-family: "Open Sans", 'Segoe UI', Helvetica, Arial, sans-serif !important;
+}
+
+section header {
+	font-weight: bold;
+	font-size: 1.2rem;
+}

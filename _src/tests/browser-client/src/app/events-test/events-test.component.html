@@ -1,4 +1,5 @@
 <form>
+	<h3>connection</h3>
 	<button (click)="connect(8080)">connect 80</button>
 	<button (click)="connect(8081)">connect 81</button>
 	<span *ngIf="port">connected to: {{ port }}</span>

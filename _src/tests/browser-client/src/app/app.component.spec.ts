@@ -81,7 +81,7 @@ describe('', function (): void {
 		Nanium.logger = new TestLogger(LogLevel.error);
 	});
 
-	describe('basic browser client tests', () => {
+	describe('basic browser client tests (HTTP)', () => {
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
 
 		beforeEach(async () => {
@@ -99,51 +99,23 @@ describe('', function (): void {
 		describe('execute request via the consumer \n', function (): void {
 
 			it('normal successful execution', async () => {
-				let response: ServiceResponseBase<TestGetResponseBody>;
-				response = await new TestGetRequest({ input1: 'hello world' }).execute();
-				expect(response?.body?.output1).withContext('output1 should be correct').toBe('hello world :-)');
-				expect(response?.body?.output2).withContext('output2 should be correct').toBe(2);
+				await normalSuccessfulExecution();
 			});
 
 			it('execute and skip interceptor', async function (): Promise<void> {
-				const anonymousRequest: AnonymousRequest = new AnonymousRequest(undefined, {});
-				const anonymousResponse: ServiceResponseBase<string> = await anonymousRequest.execute();
-				expect(anonymousResponse.body).withContext('output should be correct').toBe(':-)');
+				await skipInterceptor();
 			});
 
 			it('test response interceptor\n', async function (): Promise<void> {
-				let response: ServiceResponseBase<TestGetResponseBody>;
-				TestClientResponseInterceptor.responseCnt = 0;
-				response = await new TestGetRequest({ input1: '111' }).execute();
-				expect(response?.body?.output1).withContext('output1 should be the original result from the service executor').toBe('111 :-)');
-				expect(TestClientResponseInterceptor.responseCnt).toBe(1);
-				response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnDifferentResponse' }).execute();
-				expect(response?.body?.output1).withContext('output1 should be the result that the interceptor returned').toBe('ResultFromInterceptor');
-				expect(TestClientResponseInterceptor.responseCnt).toBe(2);
-				response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnNull' }).execute();
-				expect(response).withContext('response should be null because interceptor returned null').toBeNull();
-				expect(TestClientResponseInterceptor.responseCnt).toBe(3);
-				response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnUndefined' }).execute();
-				expect(response.body.output1).withContext('output1 should be the original result from the service executor, because interceptor returned undefined').toBe('TestResponseInterceptor:ReturnUndefined :-)');
-				expect(TestClientResponseInterceptor.responseCnt).toBe(4);
-				response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnSameResponseInstance' }).execute();
-				expect(response.body.output1).withContext('output1 should be the original result from the service executor, because interceptor returned original response instance').toBe('TestResponseInterceptor:ReturnSameResponseInstance :-)');
-				expect(TestClientResponseInterceptor.responseCnt).toBe(5);
+				await responseInterceptor();
 			});
 
 			it('execute with error result (handling by errorHandle)', async () => {
-				try {
-					await new TestGetRequest({ input1: 'hello world' }, { token: 'wrong' }).execute();
-					expect(false).withContext('an exception should be thrown').toBeTruthy();
-				} catch (e) {
-					expect(e.handleError).withContext('the errorHandler function should have handled the error').toBeDefined();
-					expect(e.handleError.message).toBe('unauthorized');
-				}
+				await withErrorResult();
 			});
 
 			it('execute service with void body and void response', async () => {
-				await new TestNoIORequest().execute();
-				expect(true).toBeTruthy();
+				await voidBodyAndVoidResponse();
 			});
 
 			it('execute service with Binary (ArrayBuffer) response', async () => {
@@ -248,6 +220,12 @@ describe('', function (): void {
 			});
 		});
 
+		describe('execute request via the ws consumer \n', function (): void {
+			it('normal successful execution', async () => {
+				normalSuccessfulExecution();
+			});
+		});
+
 		describe('NaniumBuffer \n', function (): void {
 			const arrayBuffer: ArrayBuffer = new TextEncoder().encode('abc').buffer;
 			const blob = new Blob(['def']);
@@ -327,6 +305,45 @@ describe('', function (): void {
 					expect(await buf.slice(2, 7).asString()).toBe('cdefj');
 
 				});
+			});
+		});
+	});
+
+	describe('basic browser client tests (Websocket)', () => {
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+
+		beforeEach(async () => {
+			session.token = '1234';
+			session.tenant = 'Company1';
+			await addWebsocketConsumer();
+		});
+
+		afterEach(async () => {
+			await Nanium.shutdown();
+			session.token = '1234';
+			session.tenant = 'Company1';
+		});
+
+		describe('execute request via the consumer \n', function (): void {
+
+			it('normal successful execution', async () => {
+				await normalSuccessfulExecution();
+			});
+
+			it('execute and skip interceptor', async function (): Promise<void> {
+				await skipInterceptor();
+			});
+
+			it('test response interceptor\n', async function (): Promise<void> {
+				await responseInterceptor();
+			});
+
+			it('execute with error result (handling by errorHandle)', async () => {
+				await withErrorResult();
+			});
+
+			it('execute service with void body and void response', async () => {
+				await voidBodyAndVoidResponse();
 			});
 		});
 	});
@@ -611,3 +628,55 @@ describe('', function (): void {
 		});
 	});
 });
+
+//#region core tests
+async function normalSuccessfulExecution() {
+	let response: ServiceResponseBase<TestGetResponseBody>;
+	response = await new TestGetRequest({ input1: 'hello world' }).execute();
+	expect(response?.body?.output1).withContext('output1 should be correct').toBe('hello world :-)');
+	expect(response?.body?.output2).withContext('output2 should be correct').toBe(2);
+}
+
+async function skipInterceptor() {
+	const anonymousRequest: AnonymousRequest = new AnonymousRequest(undefined, {});
+	const anonymousResponse: ServiceResponseBase<string> = await anonymousRequest.execute();
+	expect(anonymousResponse.body).withContext('output should be correct').toBe(':-)');
+}
+
+async function responseInterceptor() {
+	let response: ServiceResponseBase<TestGetResponseBody>;
+	TestClientResponseInterceptor.responseCnt = 0;
+	response = await new TestGetRequest({ input1: '111' }).execute();
+	expect(response?.body?.output1).withContext('output1 should be the original result from the service executor').toBe('111 :-)');
+	expect(TestClientResponseInterceptor.responseCnt).toBe(1);
+	response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnDifferentResponse' }).execute();
+	expect(response?.body?.output1).withContext('output1 should be the result that the interceptor returned').toBe('ResultFromInterceptor');
+	expect(TestClientResponseInterceptor.responseCnt).toBe(2);
+	response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnNull' }).execute();
+	expect(response).withContext('response should be null because interceptor returned null').toBeNull();
+	expect(TestClientResponseInterceptor.responseCnt).toBe(3);
+	response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnUndefined' }).execute();
+	expect(response.body.output1).withContext('output1 should be the original result from the service executor, because interceptor returned undefined').toBe('TestResponseInterceptor:ReturnUndefined :-)');
+	expect(TestClientResponseInterceptor.responseCnt).toBe(4);
+	response = await new TestGetRequest({ input1: 'TestResponseInterceptor:ReturnSameResponseInstance' }).execute();
+	expect(response.body.output1).withContext('output1 should be the original result from the service executor, because interceptor returned original response instance').toBe('TestResponseInterceptor:ReturnSameResponseInstance :-)');
+	expect(TestClientResponseInterceptor.responseCnt).toBe(5);
+}
+
+async function withErrorResult() {
+	try {
+		await new TestGetRequest({ input1: 'hello world' }, { token: 'wrong' }).execute();
+		expect(false).withContext('an exception should be thrown').toBeTruthy();
+	} catch (e) {
+		expect(e.handleError).withContext('the errorHandler function should have handled the error').toBeDefined();
+		expect(e.handleError.message).toBe('unauthorized');
+	}
+}
+
+async function voidBodyAndVoidResponse() {
+	await new TestNoIORequest().execute();
+	expect(true).toBeTruthy();
+}
+
+
+//#endregion core tests

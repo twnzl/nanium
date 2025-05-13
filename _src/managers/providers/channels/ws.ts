@@ -8,7 +8,8 @@ import { ServiceProviderManager } from '../../../interfaces/serviceProviderManag
 import * as WebSocket from 'ws';
 import { Server as HttpServer } from 'http';
 import { Server as HttpsServer } from 'https';
-import { SubscribeEventmessageContent, WsMessage } from './ws.types';
+import { SubscribeEventmessageContent, WsMessage, WsServiceRequestMessage, WsServiceResponseMessage } from './ws.types';
+import { NaniumObject } from '../../../objects';
 
 const clientIdSymbol: symbol = Symbol.for('__client_id__');
 
@@ -25,6 +26,7 @@ export class NaniumWebsocketChannel implements Channel {
 	private readonly config: NaniumWebsocketChannelConfig;
 	private wss: WebSocket.Server;
 	private clientSubscriptionInfo: Map<string, ClientSubscriptionInfo> = new Map(); // first client ID
+	private serviceRepository: NaniumRepository;
 
 	constructor(public id: string, config: NaniumWebsocketChannelConfig) {
 		this.config = {
@@ -39,7 +41,8 @@ export class NaniumWebsocketChannel implements Channel {
 		};
 	}
 
-	async init(_serviceRepository: NaniumRepository, _manager: ServiceProviderManager): Promise<void> {
+	async init(serviceRepository: NaniumRepository, _manager: ServiceProviderManager): Promise<void> {
+		this.serviceRepository = serviceRepository;
 		this.wss = new WebSocket.Server({ server: this.config.server });
 		this.wss.on('connection', (ws: WebSocket) => {
 			// Handle messages from the client
@@ -84,12 +87,44 @@ export class NaniumWebsocketChannel implements Channel {
 				return this.handleIncomingEventSubscription(message, ws);
 			case 'unsubscribe_event':
 				return this.handleIncomingEventUnsubscription(message, ws);
+			case 'service_request':
+				return this.handleIncomingServiceRequest(message, ws);
 		}
 	}
 
 	//#region service request handling
-	async process(): Promise<any> {
-		throw new Error('NotYetImplemented');
+	async handleIncomingServiceRequest(message: WsMessage<WsServiceRequestMessage>, ws: WebSocket): Promise<any> {
+		const serviceName: string = message.content.serviceName;
+		if (!this.serviceRepository[serviceName]) {
+			throw new Error(`nanium: unknown service ${serviceName}`);
+		}
+		try {
+			const request = NaniumObject.create(message.content.request, this.serviceRepository[serviceName].Request);
+			const result: any = await Nanium.execute(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
+
+			// todo: add handling of Buffers and Streams
+
+			const responseMessage: WsMessage<WsServiceResponseMessage> = {
+				type: 'service_response',
+				content: {
+					id: message.content.id,
+					response: result
+				}
+			};
+			ws.send(this.config.serializer.serialize(responseMessage));
+		} catch (e) {
+			if (e instanceof Error) {
+				e = e.message;
+			}
+			const responseMessage: WsMessage<WsServiceResponseMessage> = {
+				type: 'service_response',
+				content: {
+					id: message.content.id,
+					error: e
+				}
+			};
+			ws.send(this.config.serializer.serialize(responseMessage));
+		}
 	}
 
 	//#endregion service request handling

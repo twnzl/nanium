@@ -6,7 +6,15 @@ import { EventSubscription } from '../../interfaces/eventSubscription';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { WebSocketClient } from './ws.core';
 import { ConsumerBase } from './base';
-import { EmitEventMessageContent, SubscribeEventmessageContent, WsMessage } from '../providers/channels/ws.types';
+import {
+	EmitEventMessageContent,
+	SubscribeEventmessageContent,
+	WsMessage,
+	WsServiceRequestMessage,
+	WsServiceResponseMessage
+} from '../providers/channels/ws.types';
+import { Nanium } from '../../core';
+import { NaniumObject, responseTypeSymbol } from '../../objects';
 
 export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerConfig {
 	// apiUrl?: string;
@@ -18,6 +26,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	private websocket?: WebSocketClient;
 	private pendingEventSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
 	private pendingEventUnSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
+	private pendingRequests: Map<string, { request: any, resolve: Function, reject: Function }> = new Map();
 
 	constructor(config?: NaniumConsumerBrowserWebsocketConfig) {
 		super(config);
@@ -39,11 +48,41 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	async execute<T>(_serviceName: string, _request: any, _executionContext?: ExecutionContext): Promise<any> {
-		throw new Error('NotYetImplemented');
+	async execute<T>(serviceName: string, request: any, executionContext?: ExecutionContext): Promise<any> {
+		return new Promise<void>(async (resolve: Function, reject: Function) => {
+			await this.initWebSocket();
+
+			// execute request interceptors
+			if (this.config.requestInterceptors?.length) {
+				let result: any;
+				for (const interceptor of this.config.requestInterceptors) {
+					result = await (typeof interceptor === 'function' ? new interceptor() : interceptor).execute(request, executionContext ?? {});
+					// if an interceptor returns an object other than the request it is a result and the execution shall be
+					// finished with this result
+					if (result !== undefined && result !== request) {
+						resolve(result);
+						return;
+					}
+				}
+			}
+
+			const msg: WsMessage<WsServiceRequestMessage> = {
+				type: 'service_request',
+				content: {
+					id: self.crypto.randomUUID(),
+					serviceName,
+					request,
+				}
+			};
+			this.pendingRequests.set(msg.content.id, { request, resolve, reject });
+			this.websocket.send(this.config.serializer.serialize(msg));
+		});
 	}
 
-	private initWebSocket() {
+	private async initWebSocket() {
+		if (this.websocket) {
+			return;
+		}
 		this.websocket = new WebSocketClient(this.config.apiEventUrl);
 		this.websocket.on('open', async (): Promise<void> => {
 			// if reconnected, resubscribe to events
@@ -77,16 +116,17 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				} else {
 					promiseFunctions.resolve();
 				}
+			} else if (rawMessage.type === 'service_response') {
+				const message = new WsMessage<WsServiceResponseMessage>(rawMessage, { 'TContent': WsServiceResponseMessage });
+				await this.handleServiceResponse(message);
 			}
 		});
 		this.websocket.connect();
+		await this.websocket.connected;
 	}
 
 	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
-		if (!this.websocket) {
-			this.initWebSocket();
-		}
-		await this.websocket.connected;
+		await this.initWebSocket();
 		const subscription: EventSubscription = await super.subscribeLocal(eventNameOrConstructor, handler);
 		subscription.context = context;
 		// if subscription for this event name has not already been sent to server - send it
@@ -150,5 +190,45 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 	receiveSubscription(_subscriptionData: EventSubscription): Promise<void> {
 		throw new Error('NotImplemented');
+	}
+
+	private async handleServiceResponse(message: WsMessage<WsServiceResponseMessage>) {
+		const pendingRequest = this.pendingRequests.get(message.content.id);
+		if (!pendingRequest) {
+			Nanium.logger.error('browserWS: no pending request found for response with id: ' + message.content.id);
+			return;
+		}
+		this.pendingRequests.delete(message.content.id);
+
+		// error
+		if (message.content.error) {
+			if (this.config.handleError) {
+				try {
+					await this.config.handleError(message.content.error);
+				} catch (e) {
+					pendingRequest.reject(e);
+				}
+			} else {
+				pendingRequest.reject(message.content.error);
+			}
+		}
+
+		// parse response
+		const response = NaniumObject.create(message.content.response, pendingRequest.request.constructor[responseTypeSymbol]);
+
+		// execute response interceptors
+		if (this.config.responseInterceptors?.length) {
+			let responseFromInterceptor: any;
+			for (const interceptor of this.config.responseInterceptors) {
+				responseFromInterceptor = await (typeof interceptor === 'function' ? new interceptor() : interceptor)
+					.execute(pendingRequest.request, response);
+				// if an interceptor returns an object other than the original response instance, the returned value will replace the original response;
+				if (responseFromInterceptor !== undefined && responseFromInterceptor !== response) {
+					pendingRequest.resolve(responseFromInterceptor);
+				}
+			}
+		}
+
+		pendingRequest.resolve(response);
 	}
 }
