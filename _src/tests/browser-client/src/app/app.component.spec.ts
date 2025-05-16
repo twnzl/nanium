@@ -119,13 +119,11 @@ describe('', function (): void {
 			});
 
 			it('execute service with Binary (ArrayBuffer) response', async () => {
-				const result = await new TestGetBinaryRequest().execute();
-				expect(await result.asString()).toBe('this is a text that will be send as binary data');
+				await arrayBufferResponse();
 			});
 
 			it('execute service with Binary (NaniumBuffer) response', async () => {
-				const result: NaniumBuffer = await new TestGetNaniumBufferRequest().execute();
-				expect(await result.asString()).toBe('this is a text that will be send as NaniumBuffer');
+				await naniumBufferResponse();
 			});
 
 			it('response as json stream', async () => {
@@ -217,12 +215,6 @@ describe('', function (): void {
 				expect(response.id).toBe('1');
 				expect(response.text1).toBe('123*');
 				expect(response.text2).toBeUndefined('');
-			});
-		});
-
-		describe('execute request via the ws consumer \n', function (): void {
-			it('normal successful execution', async () => {
-				normalSuccessfulExecution();
 			});
 		});
 
@@ -344,6 +336,14 @@ describe('', function (): void {
 
 			it('execute service with void body and void response', async () => {
 				await voidBodyAndVoidResponse();
+			});
+
+			it('execute service with Binary (ArrayBuffer) response', async () => {
+				await arrayBufferResponse();
+			});
+
+			it('execute service with Binary (NaniumBuffer) response', async () => {
+				await naniumBufferResponse();
 			});
 		});
 	});
@@ -678,5 +678,14 @@ async function voidBodyAndVoidResponse() {
 	expect(true).toBeTruthy();
 }
 
+async function arrayBufferResponse() {
+	const result = await new TestGetBinaryRequest().execute();
+	expect(await result.asString()).toBe('this is a text that will be send as binary data');
+}
+
+async function naniumBufferResponse() {
+	const result: NaniumBuffer = await new TestGetNaniumBufferRequest().execute();
+	expect(await result.asString()).toBe('this is a text that will be send as NaniumBuffer');
+}
 
 //#endregion core tests

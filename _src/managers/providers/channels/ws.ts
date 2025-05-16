@@ -10,13 +10,15 @@ import { Server as HttpServer } from 'http';
 import { Server as HttpsServer } from 'https';
 import { SubscribeEventmessageContent, WsMessage, WsServiceRequestMessage, WsServiceResponseMessage } from './ws.types';
 import { NaniumObject } from '../../../objects';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import { NaniumStream } from '../../../interfaces/naniumStream';
+import { getPrimaryResponseType } from '../../core';
 
 const clientIdSymbol: symbol = Symbol.for('__client_id__');
 
 export interface NaniumWebsocketChannelConfig extends ChannelConfig {
-	// apiPath?: string;
 	server: HttpServer | HttpsServer | { use: Function };
-	eventPath?: string;
+	binaryChunkSize?: number;
 }
 
 export class NaniumWebsocketChannel implements Channel {
@@ -30,12 +32,11 @@ export class NaniumWebsocketChannel implements Channel {
 
 	constructor(public id: string, config: NaniumWebsocketChannelConfig) {
 		this.config = {
-			...{
+			...<NaniumWebsocketChannelConfig>{
 				server: undefined,
-				eventPath: config.eventPath?.toLowerCase() ?? '',
 				serializer: new NaniumJsonSerializer(),
 				executionContextConstructor: Object,
-				longPollingRequestTimeoutInSeconds: 30
+				binaryChunkSize: 1024 * 1024, // 1MB
 			},
 			...(config || {})
 		};
@@ -95,23 +96,33 @@ export class NaniumWebsocketChannel implements Channel {
 	//#region service request handling
 	async handleIncomingServiceRequest(message: WsMessage<WsServiceRequestMessage>, ws: WebSocket): Promise<any> {
 		const serviceName: string = message.content.serviceName;
-		if (!this.serviceRepository[serviceName]) {
-			throw new Error(`nanium: unknown service ${serviceName}`);
-		}
+		let ResponseType = getPrimaryResponseType(this.serviceRepository, serviceName);
 		try {
 			const request = NaniumObject.create(message.content.request, this.serviceRepository[serviceName].Request);
 			const result: any = await Nanium.execute(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 
-			// todo: add handling of Buffers and Streams
+			// buffer response
+			if (ResponseType === ArrayBuffer || NaniumBuffer.isNaniumBuffer(ResponseType)) {
+				await this.sendBufferInChunks(ws, result, message.content.id);
+			}
 
-			const responseMessage: WsMessage<WsServiceResponseMessage> = {
-				type: 'service_response',
-				content: {
-					id: message.content.id,
-					response: result
-				}
-			};
-			ws.send(this.config.serializer.serialize(responseMessage));
+			// stream response
+			else if (NaniumStream.isNaniumStream(ResponseType)) {
+				// todo: add handling of Streams
+				throw new Error('not yet implemented');
+			}
+
+			// normal response
+			else {
+				const responseMessage: WsMessage<WsServiceResponseMessage> = {
+					type: 'service_response',
+					content: {
+						requestId: message.content.id,
+						response: result
+					}
+				};
+				ws.send(this.config.serializer.serialize(responseMessage));
+			}
 		} catch (e) {
 			if (e instanceof Error) {
 				e = e.message;
@@ -119,7 +130,7 @@ export class NaniumWebsocketChannel implements Channel {
 			const responseMessage: WsMessage<WsServiceResponseMessage> = {
 				type: 'service_response',
 				content: {
-					id: message.content.id,
+					requestId: message.content.id,
 					error: e
 				}
 			};
@@ -220,6 +231,61 @@ export class NaniumWebsocketChannel implements Channel {
 	}
 
 	//#endregion event handling
+	private async sendBufferInChunks(ws: WebSocket, buffer: NaniumBuffer | ArrayBuffer, requestId: string) {
+		const data: NaniumBuffer = NaniumBuffer.isNaniumBuffer(buffer) ? buffer as NaniumBuffer : new NaniumBuffer(buffer);
+		const totalBytes = data.length;
+		const totalChunks = Math.ceil(totalBytes / this.config.binaryChunkSize ?? 1024 * 1024);
+
+		try {
+			for (let i = 0; i < totalChunks; i++) {
+				const start = i * this.config.binaryChunkSize;
+				const end = Math.min(start + this.config.binaryChunkSize, totalBytes);
+				const chunk = data.slice(start, end);
+
+				// create message/header as binary buffer
+				const msg = new WsMessage<WsServiceResponseMessage>({ type: 'service_response' });
+				msg.content = new WsServiceResponseMessage({
+					requestId: requestId,
+					bufferId: data.id,
+					totalBytes: totalBytes,
+					isLastChunk: i === totalChunks - 1,
+				});
+				const serialized = this.config.serializer.serialize(msg);
+				const msgBuffer = new NaniumBuffer();
+				if (typeof serialized === 'string') {
+					msgBuffer.write(new TextEncoder().encode(serialized as string));
+				} else {
+					msgBuffer.write(serialized);
+				}
+
+				const headerLengthArray = new Uint8Array(4);
+				new DataView(headerLengthArray.buffer)
+					.setUint32(0, msgBuffer.length, true); // true for Little-Endian
+
+				// total message: length of the message/header (4 byte number) + message + chunk
+				const message = new Uint8Array(
+					4 + msgBuffer.length + chunk.length
+				);
+				message.set(headerLengthArray, 0);
+				message.set(await msgBuffer.asUint8Array(), 4);
+				message.set(await chunk.asUint8Array(), 4 + msgBuffer.length);
+
+				await new Promise<void>((resolve, _reject) => {
+					ws.send(message);
+					resolve();
+				});
+
+				// todo: progress info - maybe as Nanium event
+				// if (onProgress) {
+				// 	const progress = ((i + 1) / totalChunks) * 100;
+				// 	onProgress(progress);
+				// }
+			}
+		} catch (error) {
+			Nanium.logger.error('channel ws: sendBufferInChunks: ', error.message, error.stack);
+			throw error;
+		}
+	}
 }
 
 class ClientSubscriptionInfo {

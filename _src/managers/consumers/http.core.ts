@@ -1,5 +1,5 @@
 import { EventHandler } from '../../interfaces/eventHandler';
-import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../objects';
+import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../objects';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { Nanium } from '../../core';
@@ -7,6 +7,7 @@ import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
+import { getPrimaryResponseType } from '../core';
 
 interface NaniumEventResponse {
 	eventName: string;
@@ -66,23 +67,21 @@ export class HttpCore {
 			}
 
 			// send the request
+			const ResponseType = getPrimaryResponseType(request);
 			const data: ArrayBuffer = await this.httpRequest('POST', uri, body);
 			if (data === undefined || data === null) {
 				return data;
 			} else if (data.byteLength === 0) {
-				return request.constructor[responseTypeSymbol] !== String ? undefined : data;
+				return ResponseType !== String ? undefined : data;
 			}
-			if (request.constructor[responseTypeSymbol] === ArrayBuffer) {
+			if (ResponseType === ArrayBuffer) {
 				return data;
-			} else if (
-				request.constructor[responseTypeSymbol] === ArrayBuffer ||
-				(request.constructor[responseTypeSymbol] && request.constructor[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
-			) {
-				return data.constructor['naniumBufferInternalValueSymbol'] ? data : new NaniumBuffer(data);
+			} else if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
+				return new NaniumBuffer(data);
 			} else {
 				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),
-					request.constructor[responseTypeSymbol],
+					ResponseType,
 					request.constructor[genericTypesSymbol]
 				);
 				return r;

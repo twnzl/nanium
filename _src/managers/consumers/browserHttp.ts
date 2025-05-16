@@ -9,6 +9,7 @@ import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../obje
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { getPrimaryResponseType } from '../core';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -84,11 +85,9 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		}
 
 		// execute the request
+		let ResponseType = getPrimaryResponseType(request);
 		let response: any;
-		if (
-			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]) ||
-			NaniumStream.isNaniumStream(request.constructor[responseTypeSymbol]?.[0])
-		) {
+		if (NaniumStream.isNaniumStream(ResponseType)) {
 			response = await this.stream(serviceName, request);
 		} else {
 			response = await this.httpCore.sendRequest(serviceName, request);

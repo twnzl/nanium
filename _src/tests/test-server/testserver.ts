@@ -84,7 +84,6 @@ async function runWorker() {
 				serializer: serializer,
 			}),
 			new NaniumWebsocketChannel('2', {
-				eventPath: '/events',
 				server: httpServer,
 				serializer: serializer,
 			}),

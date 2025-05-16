@@ -14,6 +14,7 @@ import { ServiceProviderManager } from '../../../interfaces/serviceProviderManag
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { Message } from '../../../interfaces/communicator';
 import * as multipart from 'parse-multipart-data';
+import { getPrimaryResponseType, getSecondaryResponseType } from '../../core';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -163,26 +164,20 @@ export class NaniumHttpChannel implements Channel {
 
 	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, res: ServerResponse): Promise<any> {
 		const serviceName: string = request.constructor.serviceName;
-		if (!serviceRepository[serviceName]) {
-			throw new Error(`nanium: unknown service ${serviceName}`);
-		}
+		let ResponseType = getPrimaryResponseType(serviceRepository, serviceName);
 		try {
 			res.setHeader('Content-Type', config.serializer.mimeType);
 			const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 			if (result !== undefined && result !== null) {
 				if (
-					serviceRepository[serviceName].Request[responseTypeSymbol] === ArrayBuffer ||
-					(serviceRepository[serviceName].Request[responseTypeSymbol] && serviceRepository[serviceName].Request[responseTypeSymbol]['naniumBufferInternalValueSymbol'])
+					ResponseType === ArrayBuffer || NaniumBuffer.isNaniumBuffer(ResponseType)
 				) {
 					res.write(await NaniumBuffer.as(Uint8Array, result));
-				} else if (
-					NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]) ||
-					NaniumStream.isNaniumStream(serviceRepository[serviceName].Request[responseTypeSymbol]?.[0])
-				) {
+				} else if (NaniumStream.isNaniumStream(ResponseType)) {
 					const stream: NaniumStream = (result as NaniumStream);
 					stream
 						.onData(chunk => {
-							if (NaniumBuffer.isNaniumBuffer(serviceRepository[serviceName].Request[responseTypeSymbol]?.[1])) {
+							if (NaniumBuffer.isNaniumBuffer(getSecondaryResponseType(serviceRepository, serviceName))) {
 								if (chunk instanceof NaniumBuffer) {
 									(chunk as NaniumBuffer).asUint8Array().then(buffer => res.write(buffer));
 								} else {

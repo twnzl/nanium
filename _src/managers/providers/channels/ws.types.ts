@@ -25,7 +25,11 @@ export class WsServiceRequestMessage extends NaniumObject<WsServiceRequestMessag
 }
 
 export class WsServiceResponseMessage extends NaniumObject<WsServiceResponseMessage> {
-	@Type(String) id: string;
+	@Type(String) requestId: string;
 	@Type(String) error?: string;
 	@Type(Object) response?: any;
+	@Type(String) bufferId?: string;
+	@Type(String) streamId?: string;
+	@Type(Boolean) isLastChunk?: boolean;
+	@Type(Number) totalBytes?: number;
 }

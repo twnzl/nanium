@@ -10,11 +10,15 @@ import {
 	EmitEventMessageContent,
 	SubscribeEventmessageContent,
 	WsMessage,
+	WsMessageType,
 	WsServiceRequestMessage,
 	WsServiceResponseMessage
 } from '../providers/channels/ws.types';
 import { Nanium } from '../../core';
-import { NaniumObject, responseTypeSymbol } from '../../objects';
+import { NaniumObject } from '../../objects';
+import { getPrimaryResponseType } from '../core';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+import { NaniumStream } from '../../interfaces/naniumStream';
 
 export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerConfig {
 	// apiUrl?: string;
@@ -26,7 +30,12 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	private websocket?: WebSocketClient;
 	private pendingEventSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
 	private pendingEventUnSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
-	private pendingRequests: Map<string, { request: any, resolve: Function, reject: Function }> = new Map();
+	private pendingRequests: Map<string, {
+		request: any,
+		response?: any,
+		resolve: Function,
+		reject: Function
+	}> = new Map();
 
 	constructor(config?: NaniumConsumerBrowserWebsocketConfig) {
 		super(config);
@@ -94,7 +103,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			}
 		});
 		this.websocket.on('message', async event => {
-			const rawMessage: WsMessage = this.config.serializer.deserialize(event.data);
+			const rawMessage: WsRawMessage = await this.parseMessage(event.data);
 			if (rawMessage.type === 'emit_event') {
 				const message = new WsMessage<EmitEventMessageContent>(rawMessage, { 'TContent': EmitEventMessageContent });
 				await super.receiveEventLocal(message.content.eventName, message.content.event);
@@ -118,7 +127,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				}
 			} else if (rawMessage.type === 'service_response') {
 				const message = new WsMessage<WsServiceResponseMessage>(rawMessage, { 'TContent': WsServiceResponseMessage });
-				await this.handleServiceResponse(message);
+				await this.handleServiceResponse(message, rawMessage.payload);
 			}
 		});
 		this.websocket.connect();
@@ -192,13 +201,12 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		throw new Error('NotImplemented');
 	}
 
-	private async handleServiceResponse(message: WsMessage<WsServiceResponseMessage>) {
-		const pendingRequest = this.pendingRequests.get(message.content.id);
+	private async handleServiceResponse(message: WsMessage<WsServiceResponseMessage>, payload: ArrayBuffer | undefined): Promise<void> {
+		const pendingRequest = this.pendingRequests.get(message.content.requestId);
 		if (!pendingRequest) {
-			Nanium.logger.error('browserWS: no pending request found for response with id: ' + message.content.id);
+			Nanium.logger.error('browserWS: no pending request found for response with id: ' + message.content.requestId);
 			return;
 		}
-		this.pendingRequests.delete(message.content.id);
 
 		// error
 		if (message.content.error) {
@@ -214,21 +222,68 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		}
 
 		// parse response
-		const response = NaniumObject.create(message.content.response, pendingRequest.request.constructor[responseTypeSymbol]);
+		const ResponseType = getPrimaryResponseType(pendingRequest.request);
+		if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
+			pendingRequest.response ??= new NaniumBuffer();
+			pendingRequest.response.write(payload);
+			if (!message.content.isLastChunk) {
+				return;
+			}
+		} else if (NaniumStream.isNaniumStream(ResponseType)) {
+			pendingRequest.response ??= new NaniumStream();
+			(pendingRequest.response as NaniumStream).id = message.content.streamId;
+			(pendingRequest.response as NaniumStream).write(payload);
+			if (message.content.isLastChunk) {
+				(pendingRequest.response as NaniumStream).end();
+			}
+		} else {
+			pendingRequest.response = NaniumObject.create(message.content.response, ResponseType);
+			// todo: handle buffers and streams inside of object response
+		}
 
 		// execute response interceptors
 		if (this.config.responseInterceptors?.length) {
 			let responseFromInterceptor: any;
 			for (const interceptor of this.config.responseInterceptors) {
 				responseFromInterceptor = await (typeof interceptor === 'function' ? new interceptor() : interceptor)
-					.execute(pendingRequest.request, response);
+					.execute(pendingRequest.request, pendingRequest.response);
 				// if an interceptor returns an object other than the original response instance, the returned value will replace the original response;
-				if (responseFromInterceptor !== undefined && responseFromInterceptor !== response) {
+				if (responseFromInterceptor !== undefined && responseFromInterceptor !== pendingRequest.response) {
 					pendingRequest.resolve(responseFromInterceptor);
 				}
 			}
 		}
 
-		pendingRequest.resolve(response);
+		this.pendingRequests.delete(message.content.requestId);
+		pendingRequest.resolve(pendingRequest.response);
 	}
+
+	private async parseMessage(data: string | Blob | ArrayBuffer): Promise<WsRawMessage> {
+		// message only
+		if (typeof data === 'string') {
+			return this.config.serializer.deserialize(data);
+		}
+		// DataView for reading the length of the message/header
+		const binary = data instanceof ArrayBuffer ? data : await (data as Blob).arrayBuffer();
+		const dataView = new DataView(binary);
+		const headerLength = dataView.getUint32(0, true);
+
+		// extract and parse message/header
+		const headerArray = new Uint8Array(binary, 4, headerLength);
+		const headerJson = new TextDecoder().decode(headerArray);
+		const result: WsRawMessage = this.config.serializer.deserialize(headerJson);
+
+		// extract appending data
+		if (binary.byteLength > 4 + headerLength) {
+			result.payload = new Uint8Array(binary, 4 + headerLength, binary.byteLength - 4 - headerLength);
+		}
+
+		return result;
+	}
+}
+
+class WsRawMessage {
+	type: WsMessageType;
+	content: any;
+	payload: ArrayBuffer;
 }

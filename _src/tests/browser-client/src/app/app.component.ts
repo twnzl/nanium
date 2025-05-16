@@ -13,6 +13,7 @@ import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.c
 import { TestDto } from '../../../services/test/contractparts';
 import { NaniumStream } from '../../../../interfaces/naniumStream';
 import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
+import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
 
 @Component({
 	selector: 'app-root',
@@ -109,9 +110,17 @@ export class AppComponent implements OnInit {
 
 
 	//#region ws
-	async wsSimple1(): Promise<void> {
+	async wsSimple(): Promise<void> {
 		this.testService.initWs(8080, 1);
 		await this.simple();
+	}
+
+	async wsBufferResponse(): Promise<void> {
+		this.testService.initWs(8080, 1);
+		const request = new TestGetBinaryRequest();
+		const response = await request.execute();
+		const text = new TextDecoder().decode(await response.asUint8Array());
+		console.log(text, text === 'this is a text that will be send as binary data');
 	}
 
 	//#endregion ws
