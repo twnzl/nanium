@@ -8,11 +8,17 @@ import { ServiceProviderManager } from '../../../interfaces/serviceProviderManag
 import * as WebSocket from 'ws';
 import { Server as HttpServer } from 'http';
 import { Server as HttpsServer } from 'https';
-import { SubscribeEventmessageContent, WsMessage, WsServiceRequestMessage, WsServiceResponseMessage } from './ws.types';
-import { NaniumObject } from '../../../objects';
+import {
+	SubscribeEventmessageContent,
+	WsMessage,
+	WsServiceBufferChunkMessage,
+	WsServiceRequestMessage
+} from './ws.types';
+import { NaniumObject, NaniumPropertyInfoCore } from '../../../objects';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { getPrimaryResponseType } from '../../core';
+import { parseMessage, sendBufferInChunks, sendMessage } from '../../ws.core';
 
 const clientIdSymbol: symbol = Symbol.for('__client_id__');
 
@@ -29,6 +35,12 @@ export class NaniumWebsocketChannel implements Channel {
 	private wss: WebSocket.Server;
 	private clientSubscriptionInfo: Map<string, ClientSubscriptionInfo> = new Map(); // first client ID
 	private serviceRepository: NaniumRepository;
+	private arrivingRequests: Map<string, {
+		request?: any,
+		buffers?: NaniumBuffer[],
+		resolve?: Function,
+		reject?: Function,
+	}> = new Map();
 
 	constructor(public id: string, config: NaniumWebsocketChannelConfig) {
 		this.config = {
@@ -48,7 +60,16 @@ export class NaniumWebsocketChannel implements Channel {
 		this.wss.on('connection', (ws: WebSocket) => {
 			// Handle messages from the client
 			ws.on('message', (rawMessage: ArrayBuffer | string) => {
-				this.handleIncomingMessage(rawMessage, ws);
+				try {
+					this.handleIncomingMessage(rawMessage, ws);
+				} catch (e) {
+					sendMessage(<WsMessage>{
+						type: 'service_response',
+						error: e,
+						content: null
+					}, this.config.serializer, data => ws.send(data));
+
+				}
 			});
 
 			// Handle client disconnection
@@ -82,7 +103,8 @@ export class NaniumWebsocketChannel implements Channel {
 	}
 
 	private async handleIncomingMessage(rawMessage: ArrayBuffer | string, ws: WebSocket): Promise<void> {
-		const message: WsMessage = this.config.serializer.deserialize(rawMessage);
+		const message: WsMessage = await parseMessage(rawMessage, this.config.serializer);
+		// const message: WsMessage = this.config.serializer.deserialize(rawMessage);
 		switch (message.type) {
 			case 'subscribe_event':
 				return this.handleIncomingEventSubscription(message, ws);
@@ -90,6 +112,8 @@ export class NaniumWebsocketChannel implements Channel {
 				return this.handleIncomingEventUnsubscription(message, ws);
 			case 'service_request':
 				return this.handleIncomingServiceRequest(message, ws);
+			case 'service_request_buffer_chunk':
+				return this.handleIncomingServiceRequestBufferChunk(message, ws);
 		}
 	}
 
@@ -99,12 +123,33 @@ export class NaniumWebsocketChannel implements Channel {
 		let ResponseType = getPrimaryResponseType(this.serviceRepository, serviceName);
 		try {
 			const request = NaniumObject.create(message.content.request, this.serviceRepository[serviceName].Request);
+
+			// buffers in request
+			const buffers: NaniumBuffer[] = [];
+			NaniumObject.forEachProperty(request, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+				if (typeInfo && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
+					const prop = name[name.length - 1];
+					buffers.push(parent[prop] as NaniumBuffer);
+				}
+			});
+			if (buffers?.length) {
+				this.arrivingRequests.set(message.content.id, { request, buffers });
+				await new Promise(async (resolve: Function, reject: Function): Promise<void> => {
+					this.arrivingRequests.get(message.content.id).resolve = resolve;
+					this.arrivingRequests.get(message.content.id).reject = reject;
+					// handleIncomingServiceRequestBufferChunk will resolve this when all request data arrived
+				});
+			}
+
 			const result: any = await Nanium.execute(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 
 			// buffer response
 			if (ResponseType === ArrayBuffer || NaniumBuffer.isNaniumBuffer(ResponseType)) {
-				await this.sendBufferInChunks(ws, result, message.content.id);
+				await sendBufferInChunks(result, message.content.id, data => ws.send(data),
+					'service_response', this.config.serializer, this.config.binaryChunkSize);
 			}
+
+				// todo: buffers inside response object
 
 			// stream response
 			else if (NaniumStream.isNaniumStream(ResponseType)) {
@@ -114,27 +159,60 @@ export class NaniumWebsocketChannel implements Channel {
 
 			// normal response
 			else {
-				const responseMessage: WsMessage<WsServiceResponseMessage> = {
+				const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
 					type: 'service_response',
 					content: {
 						requestId: message.content.id,
 						response: result
 					}
 				};
-				ws.send(this.config.serializer.serialize(responseMessage));
+				await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
 			}
 		} catch (e) {
 			if (e instanceof Error) {
 				e = e.message;
 			}
-			const responseMessage: WsMessage<WsServiceResponseMessage> = {
+			const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
 				type: 'service_response',
+				error: e,
 				content: {
 					requestId: message.content.id,
-					error: e
 				}
 			};
-			ws.send(this.config.serializer.serialize(responseMessage));
+			await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
+		}
+	}
+
+	async handleIncomingServiceRequestBufferChunk(message: WsMessage<WsServiceBufferChunkMessage>, ws: WebSocket): Promise<any> {
+		try {
+			const arrivingRequest = this.arrivingRequests.get(message.content.requestId);
+			if (!arrivingRequest) {
+				throw new Error('pending request not found');
+			}
+			const buffer = arrivingRequest.buffers?.find(b => b.id === message.content.bufferId);
+			if (!buffer) {
+				arrivingRequest.reject(
+					new Error('buffer not found: ' + message.content.bufferId + ' in request ' + message.content.requestId)
+				);
+			}
+
+			buffer.write(message.payload);
+			if (message.content.isLastChunk) {
+				arrivingRequest.buffers.splice(arrivingRequest.buffers.indexOf(buffer), 1);
+			}
+			if (!arrivingRequest.buffers.length) {
+				arrivingRequest.resolve();
+			}
+		} catch (e) {
+			if (e instanceof Error) {
+				e = e.message;
+			}
+			const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
+				type: 'service_response',
+				error: e,
+				content: message.content
+			};
+			await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
 		}
 	}
 
@@ -164,12 +242,12 @@ export class NaniumWebsocketChannel implements Channel {
 		} finally {
 			const message = new WsMessage<SubscribeEventmessageContent>({
 				type: 'subscription_result',
+				error: error,
 				content: {
 					eventName: subscription.eventName,
-					error: error
 				}
 			});
-			ws.send(this.config.serializer.serialize(message));
+			await sendMessage(message, this.config.serializer, data => ws.send(data));
 		}
 	}
 
@@ -197,12 +275,12 @@ export class NaniumWebsocketChannel implements Channel {
 		} finally {
 			const response = new WsMessage<SubscribeEventmessageContent>({
 				type: 'unsubscription_result',
+				error: error,
 				content: {
 					eventName: message.content.eventName,
-					error: error
 				}
 			});
-			ws.send(this.config.serializer.serialize(response));
+			await sendMessage(response, this.config.serializer, data => ws.send(data));
 			// close websocket if no other subscriptions exist.
 			if (!clientSubscription?.eventNames?.size) {
 				clientSubscription.websocket?.close();
@@ -219,11 +297,10 @@ export class NaniumWebsocketChannel implements Channel {
 				event
 			}
 		};
-		let serialized: string | ArrayBuffer = this.config.serializer.serialize(message);
 		const clientSubscription = this.clientSubscriptionInfo.get(subscription.clientId);
 		try {
 			if (clientSubscription?.eventNames?.has(message.content.eventName)) {
-				clientSubscription.websocket?.send(serialized);
+				await sendMessage(message, this.config.serializer, data => clientSubscription.websocket?.send(data));
 			}
 		} catch (e) {
 			Nanium.logger.error('websocket channel: emitEvent: ', e.message, e.stack);
@@ -231,61 +308,7 @@ export class NaniumWebsocketChannel implements Channel {
 	}
 
 	//#endregion event handling
-	private async sendBufferInChunks(ws: WebSocket, buffer: NaniumBuffer | ArrayBuffer, requestId: string) {
-		const data: NaniumBuffer = NaniumBuffer.isNaniumBuffer(buffer) ? buffer as NaniumBuffer : new NaniumBuffer(buffer);
-		const totalBytes = data.length;
-		const totalChunks = Math.ceil(totalBytes / this.config.binaryChunkSize ?? 1024 * 1024);
 
-		try {
-			for (let i = 0; i < totalChunks; i++) {
-				const start = i * this.config.binaryChunkSize;
-				const end = Math.min(start + this.config.binaryChunkSize, totalBytes);
-				const chunk = data.slice(start, end);
-
-				// create message/header as binary buffer
-				const msg = new WsMessage<WsServiceResponseMessage>({ type: 'service_response' });
-				msg.content = new WsServiceResponseMessage({
-					requestId: requestId,
-					bufferId: data.id,
-					totalBytes: totalBytes,
-					isLastChunk: i === totalChunks - 1,
-				});
-				const serialized = this.config.serializer.serialize(msg);
-				const msgBuffer = new NaniumBuffer();
-				if (typeof serialized === 'string') {
-					msgBuffer.write(new TextEncoder().encode(serialized as string));
-				} else {
-					msgBuffer.write(serialized);
-				}
-
-				const headerLengthArray = new Uint8Array(4);
-				new DataView(headerLengthArray.buffer)
-					.setUint32(0, msgBuffer.length, true); // true for Little-Endian
-
-				// total message: length of the message/header (4 byte number) + message + chunk
-				const message = new Uint8Array(
-					4 + msgBuffer.length + chunk.length
-				);
-				message.set(headerLengthArray, 0);
-				message.set(await msgBuffer.asUint8Array(), 4);
-				message.set(await chunk.asUint8Array(), 4 + msgBuffer.length);
-
-				await new Promise<void>((resolve, _reject) => {
-					ws.send(message);
-					resolve();
-				});
-
-				// todo: progress info - maybe as Nanium event
-				// if (onProgress) {
-				// 	const progress = ((i + 1) / totalChunks) * 100;
-				// 	onProgress(progress);
-				// }
-			}
-		} catch (error) {
-			Nanium.logger.error('channel ws: sendBufferInChunks: ', error.message, error.stack);
-			throw error;
-		}
-	}
 }
 
 class ClientSubscriptionInfo {

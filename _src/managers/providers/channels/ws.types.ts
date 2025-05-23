@@ -1,11 +1,14 @@
 import { NaniumObject, Type } from '../../../objects';
 
 export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_event' |
-	'subscription_result' | 'unsubscription_result' | 'service_request' | 'service_response';
+	'subscription_result' | 'unsubscription_result' | 'service_request' | 'service_response'
+	| 'service_request_buffer_chunk';
 
 export class WsMessage<TContent = any> extends NaniumObject<WsMessage<TContent>> {
 	@Type(String) type: WsMessageType;
 	@Type('TContent') content: TContent;
+	@Type(Object) payload?: ArrayBuffer;
+	@Type(Object) error?: any;
 }
 
 export class EmitEventMessageContent extends NaniumObject<EmitEventMessageContent> {
@@ -15,7 +18,6 @@ export class EmitEventMessageContent extends NaniumObject<EmitEventMessageConten
 
 export class SubscribeEventmessageContent extends NaniumObject<SubscribeEventmessageContent> {
 	@Type(String) eventName: string;
-	@Type(Object) error?: any;
 }
 
 export class WsServiceRequestMessage extends NaniumObject<WsServiceRequestMessage> {
@@ -24,9 +26,8 @@ export class WsServiceRequestMessage extends NaniumObject<WsServiceRequestMessag
 	@Type(Object) request: any;
 }
 
-export class WsServiceResponseMessage extends NaniumObject<WsServiceResponseMessage> {
+export class WsServiceBufferChunkMessage extends NaniumObject<WsServiceBufferChunkMessage> {
 	@Type(String) requestId: string;
-	@Type(String) error?: string;
 	@Type(Object) response?: any;
 	@Type(String) bufferId?: string;
 	@Type(String) streamId?: string;

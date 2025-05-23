@@ -10,19 +10,20 @@ import {
 	EmitEventMessageContent,
 	SubscribeEventmessageContent,
 	WsMessage,
-	WsMessageType,
-	WsServiceRequestMessage,
-	WsServiceResponseMessage
+	WsServiceBufferChunkMessage,
+	WsServiceRequestMessage
 } from '../providers/channels/ws.types';
 import { Nanium } from '../../core';
-import { NaniumObject } from '../../objects';
+import { NaniumObject, NaniumPropertyInfoCore } from '../../objects';
 import { getPrimaryResponseType } from '../core';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
+import { parseMessage, sendBufferInChunks, sendMessage } from '../ws.core';
 
 export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerConfig {
 	// apiUrl?: string;
 	apiEventUrl?: string;
+	binaryChunkSize?: number;
 	// onServerConnectionRestored?: () => void;
 }
 
@@ -84,7 +85,28 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				}
 			};
 			this.pendingRequests.set(msg.content.id, { request, resolve, reject });
-			this.websocket.send(this.config.serializer.serialize(msg));
+
+			// buffer in requests
+			const buffers: NaniumBuffer[] = [];
+			NaniumObject.forEachProperty(request, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+				// todo: support buffers as generic types
+				if (typeInfo?.ctor && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
+					const prop = name[name.length - 1];
+					if (parent[prop]) {
+						buffers.push(parent[prop] as NaniumBuffer);
+						parent[prop] = new NaniumBuffer();
+						parent[prop].id = buffers[buffers.length - 1].id;
+					}
+				}
+			});
+
+			// send
+			await sendMessage(msg, this.config.serializer, data => this.websocket.send(data));
+			for (const buffer of buffers) {
+				await sendBufferInChunks(buffer, msg.content.id,
+					data => this.websocket.send(data), 'service_request_buffer_chunk',
+					this.config.serializer, this.config.binaryChunkSize);
+			}
 		});
 	}
 
@@ -103,7 +125,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			}
 		});
 		this.websocket.on('message', async event => {
-			const rawMessage: WsRawMessage = await this.parseMessage(event.data);
+			const rawMessage: WsMessage = await parseMessage(event.data, this.config.serializer);
 			if (rawMessage.type === 'emit_event') {
 				const message = new WsMessage<EmitEventMessageContent>(rawMessage, { 'TContent': EmitEventMessageContent });
 				await super.receiveEventLocal(message.content.eventName, message.content.event);
@@ -111,8 +133,8 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				const message = new WsMessage<SubscribeEventmessageContent>(rawMessage, { 'TContent': SubscribeEventmessageContent });
 				const promiseFunctions = this.pendingEventSubscriptions.get(message.content.eventName);
 				this.pendingEventSubscriptions.delete(message.content.eventName);
-				if (message.content.error) {
-					promiseFunctions.reject(message.content.error);
+				if (message.error) {
+					promiseFunctions.reject(message.error);
 				} else {
 					promiseFunctions.resolve();
 				}
@@ -120,13 +142,13 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				const message = new WsMessage<SubscribeEventmessageContent>(rawMessage, { 'TContent': SubscribeEventmessageContent });
 				const promiseFunctions = this.pendingEventUnSubscriptions.get(message.content.eventName);
 				this.pendingEventUnSubscriptions.delete(message.content.eventName);
-				if (message.content.error) {
-					promiseFunctions.reject(message.content.error);
+				if (message.error) {
+					promiseFunctions.reject(message.error);
 				} else {
 					promiseFunctions.resolve();
 				}
 			} else if (rawMessage.type === 'service_response') {
-				const message = new WsMessage<WsServiceResponseMessage>(rawMessage, { 'TContent': WsServiceResponseMessage });
+				const message = new WsMessage<WsServiceBufferChunkMessage>(rawMessage, { 'TContent': WsServiceBufferChunkMessage });
 				await this.handleServiceResponse(message, rawMessage.payload);
 			}
 		});
@@ -146,17 +168,16 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	}
 
 	private async sendEventSubscription(eventName: string, additionalData: any): Promise<void> {
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>(async (resolve: Function, reject: Function) => {
 			this.pendingEventSubscriptions.set(eventName, { resolve, reject });
-			const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
+			await sendMessage(<WsMessage<EventSubscription>>{
 				type: 'subscribe_event',
 				content: {
 					clientId: this.id,
 					eventName: eventName,
 					additionalData: additionalData,
 				}
-			});
-			this.websocket.send(content);
+			}, this.config.serializer, data => this.websocket.send(data));
 		});
 	}
 
@@ -175,15 +196,14 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	private async sendEventUnSubscription(eventName: string, additionalData: any): Promise<void> {
 		await new Promise<void>((resolve: Function, reject: Function) => {
 			this.pendingEventUnSubscriptions.set(eventName, { resolve, reject });
-			const content: string | ArrayBuffer = this.config.serializer.serialize(<WsMessage<EventSubscription>>{
+			sendMessage(<WsMessage<EventSubscription>>{
 				type: 'unsubscribe_event',
 				content: {
 					clientId: this.id,
 					eventName: eventName,
 					additionalData: additionalData,
 				}
-			});
-			this.websocket.send(content);
+			}, this.config.serializer, data => this.websocket.send(data));
 		});
 	}
 
@@ -201,7 +221,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		throw new Error('NotImplemented');
 	}
 
-	private async handleServiceResponse(message: WsMessage<WsServiceResponseMessage>, payload: ArrayBuffer | undefined): Promise<void> {
+	private async handleServiceResponse(message: WsMessage<WsServiceBufferChunkMessage>, payload: ArrayBuffer | undefined): Promise<void> {
 		const pendingRequest = this.pendingRequests.get(message.content.requestId);
 		if (!pendingRequest) {
 			Nanium.logger.error('browserWS: no pending request found for response with id: ' + message.content.requestId);
@@ -209,15 +229,17 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		}
 
 		// error
-		if (message.content.error) {
+		if (message.error) {
 			if (this.config.handleError) {
 				try {
-					await this.config.handleError(message.content.error);
+					await this.config.handleError(message.error);
 				} catch (e) {
 					pendingRequest.reject(e);
+					return;
 				}
 			} else {
-				pendingRequest.reject(message.content.error);
+				pendingRequest.reject(message.error);
+				return;
 			}
 		}
 
@@ -257,33 +279,4 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		this.pendingRequests.delete(message.content.requestId);
 		pendingRequest.resolve(pendingRequest.response);
 	}
-
-	private async parseMessage(data: string | Blob | ArrayBuffer): Promise<WsRawMessage> {
-		// message only
-		if (typeof data === 'string') {
-			return this.config.serializer.deserialize(data);
-		}
-		// DataView for reading the length of the message/header
-		const binary = data instanceof ArrayBuffer ? data : await (data as Blob).arrayBuffer();
-		const dataView = new DataView(binary);
-		const headerLength = dataView.getUint32(0, true);
-
-		// extract and parse message/header
-		const headerArray = new Uint8Array(binary, 4, headerLength);
-		const headerJson = new TextDecoder().decode(headerArray);
-		const result: WsRawMessage = this.config.serializer.deserialize(headerJson);
-
-		// extract appending data
-		if (binary.byteLength > 4 + headerLength) {
-			result.payload = new Uint8Array(binary, 4 + headerLength, binary.byteLength - 4 - headerLength);
-		}
-
-		return result;
-	}
-}
-
-class WsRawMessage {
-	type: WsMessageType;
-	content: any;
-	payload: ArrayBuffer;
 }

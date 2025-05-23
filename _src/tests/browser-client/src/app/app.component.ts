@@ -21,7 +21,6 @@ import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract'
 	styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-	error?: any;
 
 	constructor(
 		public testService: TestService
@@ -39,7 +38,8 @@ export class AppComponent implements OnInit {
 			const response = await new TestGetRequest({ input1: 'hello world' }).execute();
 			console.log(response.body.output1);
 		} catch (e) {
-			this.error = e;
+			console.log(e);
+			alert('An error occurred. see console for details.');
 		}
 	}
 
@@ -56,7 +56,8 @@ export class AppComponent implements OnInit {
 			console.log(response.text1 === '123*');
 			console.log(response.text2 === '456*');
 		} catch (e) {
-			this.error = e;
+			console.log(e);
+			alert('An error occurred. see console for details.');
 		}
 	}
 
@@ -121,6 +122,17 @@ export class AppComponent implements OnInit {
 		const response = await request.execute();
 		const text = new TextDecoder().decode(await response.asUint8Array());
 		console.log(text, text === 'this is a text that will be send as binary data');
+	}
+
+	async wsBufferRequest() {
+		this.testService.initWs(8080, 1);
+		const request = new TestBufferRequest({
+			id: '1',
+			buffer1: new NaniumBuffer(new TextEncoder().encode('123')),
+			buffer2: undefined,// new NaniumBuffer(new TextEncoder().encode('456'))
+		});
+		const response = await request.execute();
+		console.log(JSON.stringify(response, null, 2));
 	}
 
 	//#endregion ws

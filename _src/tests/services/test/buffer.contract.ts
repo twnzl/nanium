@@ -3,13 +3,13 @@ import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
 
 export class TestBufferRequestBody extends NaniumObject<TestBufferRequestBody> {
-	@Type(String) id: '1';
+	@Type(String) id: string;
 	@Type(NaniumBuffer) buffer1: NaniumBuffer;
 	@Type(NaniumBuffer) buffer2: NaniumBuffer;
 }
 
 export class TestBufferResponse extends NaniumObject<TestBufferResponse> {
-	@Type(String) id: '1';
+	@Type(String) id: string;
 	// in step 1 NaniumBuffers are only allowed in requests
 	// @Type(NaniumBuffer) buffer1: NaniumBuffer;
 	// @Type(NaniumBuffer) buffer2: NaniumBuffer;
