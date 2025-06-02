@@ -144,12 +144,20 @@ export class NaniumWebsocketChannel implements Channel {
 			const result: any = await Nanium.execute(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
 
 			// buffer response
-			if (ResponseType === ArrayBuffer || NaniumBuffer.isNaniumBuffer(ResponseType)) {
-				await sendBufferInChunks(result, message.content.id, data => ws.send(data),
-					'service_response', this.config.serializer, this.config.binaryChunkSize);
+			if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
+				const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
+					type: 'service_response',
+					content: {
+						requestId: message.content.id,
+						response: result ? new NaniumBuffer(undefined, (result as NaniumBuffer).id) : undefined
+					}
+				};
+				await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
+				if (result) {
+					await sendBufferInChunks(result, message.content.id, data => ws.send(data),
+						'service_response_buffer_chunk', this.config.serializer, this.config.binaryChunkSize);
+				}
 			}
-
-				// todo: buffers inside response object
 
 			// stream response
 			else if (NaniumStream.isNaniumStream(ResponseType)) {
@@ -159,6 +167,18 @@ export class NaniumWebsocketChannel implements Channel {
 
 			// normal response
 			else {
+				// buffers inside response object
+				const resBuffers: NaniumBuffer[] = [];
+				// todo: optimize: not performant for large arrays in response
+				NaniumObject.forEachProperty(result, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+					if (typeInfo && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
+						const prop = name[name.length - 1];
+						if (parent[prop]) {
+							resBuffers.push(parent[prop] as NaniumBuffer);
+							parent[prop] = new NaniumBuffer(undefined, (parent[prop] as NaniumBuffer).id); // replace with buffer that only holds the id, not the data to send only this in the answer request
+						}
+					}
+				});
 				const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
 					type: 'service_response',
 					content: {
@@ -167,6 +187,12 @@ export class NaniumWebsocketChannel implements Channel {
 					}
 				};
 				await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
+				// send buffer chunks
+				for (const buffer of resBuffers) {
+					await sendBufferInChunks(buffer, responseMessage.content.requestId,
+						data => ws.send(data), 'service_response_buffer_chunk',
+						this.config.serializer, this.config.binaryChunkSize);
+				}
 			}
 		} catch (e) {
 			if (e instanceof Error) {

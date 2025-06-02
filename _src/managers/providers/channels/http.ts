@@ -37,13 +37,13 @@ export class NaniumHttpChannel implements Channel {
 
 	constructor(public id: string, config: NaniumHttpChannelConfig) {
 		this.config = {
-			...{
+			...<NaniumHttpChannelConfig>{
 				server: undefined,
 				apiPath: config.apiPath?.toLowerCase() ?? '/api',
 				eventPath: config.eventPath?.toLowerCase() ?? '/events',
 				serializer: new NaniumJsonSerializer(),
 				executionContextConstructor: Object,
-				longPollingRequestTimeoutInSeconds: 30
+				longPollingRequestTimeoutInSeconds: 30,
 			},
 			...(config || {})
 		};
@@ -169,9 +169,7 @@ export class NaniumHttpChannel implements Channel {
 			res.setHeader('Content-Type', config.serializer.mimeType);
 			const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
 			if (result !== undefined && result !== null) {
-				if (
-					ResponseType === ArrayBuffer || NaniumBuffer.isNaniumBuffer(ResponseType)
-				) {
+				if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
 					res.write(await NaniumBuffer.as(Uint8Array, result));
 				} else if (NaniumStream.isNaniumStream(ResponseType)) {
 					const stream: NaniumStream = (result as NaniumStream);

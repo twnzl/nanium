@@ -3,7 +3,6 @@ import { TestGetRequest, TestGetResponseBody } from '../../../services/test/get.
 import { AnonymousRequest } from '../../../services/test/anonymous.contract';
 import { TestClientResponseInterceptor } from '../../../interceptors/client/test.response.interceptor';
 import { TestNoIORequest } from '../../../services/test/noIO.contract';
-import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { TestGetNaniumBufferRequest } from '../../../services/test/getNaniumBuffer.contract';
 import { TestBufferRequest } from '../../../services/test/buffer.contract';
@@ -55,11 +54,6 @@ export class TestCore {
 	static async voidBodyAndVoidResponse() {
 		await new TestNoIORequest().execute();
 		expect(true).toBeTruthy();
-	}
-
-	static async arrayBufferResponse() {
-		const result = await new TestGetBinaryRequest().execute();
-		expect(await result.asString()).toBe('this is a text that will be send as binary data');
 	}
 
 	static async naniumBufferResponse() {

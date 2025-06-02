@@ -10,9 +10,8 @@ export class TestBufferRequestBody extends NaniumObject<TestBufferRequestBody> {
 
 export class TestBufferResponse extends NaniumObject<TestBufferResponse> {
 	@Type(String) id: string;
-	// in step 1 NaniumBuffers are only allowed in requests
-	// @Type(NaniumBuffer) buffer1: NaniumBuffer;
-	// @Type(NaniumBuffer) buffer2: NaniumBuffer;
+	@Type(NaniumBuffer) buffer1: NaniumBuffer;
+	@Type(NaniumBuffer) buffer2: NaniumBuffer;
 	@Type(String) text1?: string;
 	@Type(String) text2?: string;
 }

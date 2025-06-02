@@ -114,10 +114,6 @@ describe('', function (): void {
 				await TestCore.voidBodyAndVoidResponse();
 			});
 
-			it('execute service with Binary (ArrayBuffer) response', async () => {
-				await TestCore.arrayBufferResponse();
-			});
-
 			it('execute service with Binary (NaniumBuffer) response', async () => {
 				await TestCore.naniumBufferResponse();
 			});
@@ -318,19 +314,15 @@ describe('', function (): void {
 				await TestCore.voidBodyAndVoidResponse();
 			});
 
-			it('execute service with Binary (ArrayBuffer) response', async () => {
-				await TestCore.arrayBufferResponse();
-			});
-
 			it('execute service with Binary (NaniumBuffer) response', async () => {
 				await TestCore.naniumBufferResponse();
 			});
 
-			it('NaniumBuffers in request \n', async function (): Promise<void> {
+			it('NaniumBuffers in request and response \n', async function (): Promise<void> {
 				await TestCore.naniumBuffersRequest();
 			});
 
-			it('NaniumBuffers in request but one is undefined \n', async function (): Promise<void> {
+			it('NaniumBuffers in request and response but one is undefined \n', async function (): Promise<void> {
 				await TestCore.naniumBuffersRequestWithOneUndefined();
 			});
 		});

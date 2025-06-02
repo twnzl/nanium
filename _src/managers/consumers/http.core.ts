@@ -74,9 +74,7 @@ export class HttpCore {
 			} else if (data.byteLength === 0) {
 				return ResponseType !== String ? undefined : data;
 			}
-			if (ResponseType === ArrayBuffer) {
-				return data;
-			} else if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
+			if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
 				return new NaniumBuffer(data);
 			} else {
 				const r: any = NaniumObject.create(

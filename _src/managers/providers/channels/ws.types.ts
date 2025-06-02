@@ -2,7 +2,7 @@ import { NaniumObject, Type } from '../../../objects';
 
 export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_event' |
 	'subscription_result' | 'unsubscription_result' | 'service_request' | 'service_response'
-	| 'service_request_buffer_chunk';
+	| 'service_request_buffer_chunk' | 'service_response_buffer_chunk';
 
 export class WsMessage<TContent = any> extends NaniumObject<WsMessage<TContent>> {
 	@Type(String) type: WsMessageType;
