@@ -53,11 +53,27 @@ class MyTestClass3<TConfig> extends NaniumObject<MyTestClass3<TConfig>> {
 	aGeneric?: TConfig;
 	@Type(MyTestClass, { 'T': (me, p: MyTestClass<String | Date>) => p.aString === 's' ? String : Date })
 	aSubGeneric?: MyTestClass<String | Date>;
+	test: boolean;
 }
 
 class MyTestClass4 extends NaniumObject<MyTestClass4> {
 	@Type(Array, Object) jsonSchemas?: JSONSchema[];
 	@Type(Object, MyTestClass4) dic?: { [key: string]: MyTestClass4 };
+}
+
+class NoNaniumObject1<T1> {
+	@Type(String) id: string;
+	noDecoratorProp: boolean;
+
+	constructor() {
+		this.id = '456';
+		this.noDecoratorProp = true;
+	}
+}
+
+class MyTestClass5 extends NaniumObject<MyTestClass5> {
+	@Type(Number) num: number;
+	@Type(NoNaniumObject1, Number) prop1: NoNaniumObject1<number>;
 }
 
 describe('nanium objects', function (): void {
@@ -177,6 +193,16 @@ describe('nanium objects', function (): void {
 			expect((result.anyObject as any).arr === (obj.anyObject as any).arr).toBe(false);
 			expect((result.anyObject as any).date === (obj.anyObject as any).date).toBe(false);
 			expect((result.anyObject as any).obj === (obj.anyObject as any).obj).toBe(false);
+		});
+
+		it('not extending NaniumObject, with property that has second type parameter but inside this property there is a field without @Type decorator', async function (): Promise<void> {
+			const obj: MyTestClass5 = new MyTestClass5({
+				num: 1,
+				prop1: new NoNaniumObject1()
+			});
+			expect(obj.num).toBe(1);
+			expect(obj.prop1.id).toBe('456');
+			expect(obj.prop1.noDecoratorProp).toBe(true);
 		});
 	});
 

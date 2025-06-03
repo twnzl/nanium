@@ -128,17 +128,14 @@ export class NaniumObject<T> {
 					if (typeof localGenericTypes === 'function') { // indexer Properties
 						if (!this.isConstructor(localGenericTypes)) {
 							localGenericTypes = (localGenericTypes as Function)(plain[property], plain, ...plainParents);
-						}
-						if (Object.prototype.hasOwnProperty.call(plain, property)) {
 							result[property] = this.initObjectCore(plain[property], localGenericTypes as ConstructorType, globalGenericTypes, undefined, strict, deepClone, [plain, ...plainParents]);
+						} else {
+							if (plain.constructor === Object) {
+								result[property] = this.initObjectCore(plain[property], localGenericTypes as ConstructorType, globalGenericTypes, undefined, strict, deepClone, [plain, ...plainParents]);
+							} else if (!strict) {
+								result[property] = deepClone ? this.cloneDeep(plain[property]) : plain[property];
+							}
 						}
-						// } else if (typeof plain[property] === 'object' && plain[property] !== null) {
-						// 	if (!Array.isArray(plain[property]) || (plain[property].length && typeof plain[property][0] === 'object')) {
-						// 		if (!strict) {
-						// 			result[property] = deepClone ? this.cloneDeep(plain[property]) : plain[property];
-						// 			Nanium.logger.warn(`NaniumObject: no type given for property ${property} of class ${constructor.name}`);
-						// 		}
-						// 	}
 					} else {
 						if (!strict) {
 							result[property] = deepClone ? this.cloneDeep(plain[property]) : plain[property];
