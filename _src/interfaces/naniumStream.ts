@@ -14,7 +14,12 @@ let uuidCounter: number = 0;
 
 export class NaniumStream<T = any> { //implements Promise<T> {
 	@Type(String) id: string;
-	@Type(Boolean) isBinary: boolean;
+
+	test1: boolean = true;
+
+	get isBinary(): boolean {
+		return NaniumBuffer.isNaniumBuffer(this[responseTypeSymbol]);
+	}
 
 	static naniumStreamOnDataHandlerSymbol: symbol = Symbol.for('NaniumStream_OnDataHandlerSymbol');
 	static naniumStreamOnErrorHandlerSymbol: symbol = Symbol.for('NaniumStream_OnErrorHandlerSymbol');
@@ -23,8 +28,6 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	constructor(itemConstructor?: new (...data: any) => T, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
 		this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
 		this[genericTypesSymbol] = genericTypeInfo;
-
-		this.isBinary = itemConstructor?.name === NaniumBuffer.name;
 		this.id = id ?? Date.now() + '-' + Math.random().toFixed(20).substring(2) + '-' + (++uuidCounter);
 		this[NaniumStream.naniumStreamOnDataHandlerSymbol] = [];
 		this[NaniumStream.naniumStreamOnErrorHandlerSymbol] = [];
