@@ -9,6 +9,9 @@ import * as readline from 'readline';
 import { Interface } from 'readline';
 import * as zip from 'unzipper';
 
+let root: string;
+let config: NaniumToolConfig;
+
 export class NaniumToolConfig {
 	eventsDirectory: string;
 	serviceDirectory: string;
@@ -73,13 +76,10 @@ nanium sdk {b|p|u}
 // determine and execute action
 const command: string = process.argv[2];
 (async function (): Promise<void> {
+	config = getNaniumConfig();
 	await actions[command](...process.argv.slice(3));
 	process.exit();
 })();
-
-
-// read config file
-let root: string;
 
 function writeNaniumConfig(dir: string = process.cwd()): void {
 	fs.writeFileSync(path.join(dir, 'nanium.json'), JSON.stringify(config, null, 2));
@@ -126,8 +126,6 @@ function getNaniumConfig(dir: string = process.cwd()): NaniumToolConfig {
 
 	return getNaniumConfig(path.resolve(path.join(dir, '..')));
 }
-
-let config: NaniumToolConfig = getNaniumConfig();
 
 // action functions
 function copyFiles(src: string, dst: string): void {
