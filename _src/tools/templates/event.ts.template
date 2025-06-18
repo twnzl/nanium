@@ -5,7 +5,7 @@ import { EventType, Type } from 'nanium/objects';
 	scope: '${scope}'
 })
 export class ${coreClassName}Event extends EventBase<${coreClassName}Event> {
-	static eventName: string = '${prefix}:${subPath}${lastName}';
+	static override eventName: string = '${prefix}:${subPath}${lastName}';
 
 	// todo: define the events properties here
 	@Type(String) someProperty: string;
