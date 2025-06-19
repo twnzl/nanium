@@ -222,8 +222,6 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			if (
 				requestType.skipInterceptors === true ||
 				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor.constructor.name)) ||
-				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor.constructor)) ||
-				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor)) ||
 				(context?.scope && (requestType.skipInterceptors ?? {})[context.scope] === true) ||
 				(context?.scope && (Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && !requestType.skipInterceptors[context.scope].includes(interceptor.constructor.name))
 			) {

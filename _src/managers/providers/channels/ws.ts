@@ -6,21 +6,17 @@ import { NaniumJsonSerializer } from '../../../serializers/json';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
 import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
 import * as WebSocket from 'ws';
-import { Server as HttpServer } from 'http';
+import { IncomingMessage, Server as HttpServer } from 'http';
 import { Server as HttpsServer } from 'https';
-import {
-	SubscribeEventmessageContent,
-	WsMessage,
-	WsServiceBufferChunkMessage,
-	WsServiceRequestMessage
-} from './ws.types';
+import { SubscribeEventmessageContent, WsMessage, WsServiceChunkMessage, WsServiceRequestMessage } from './ws.types';
 import { NaniumObject, NaniumPropertyInfoCore } from '../../../objects';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { getPrimaryResponseType } from '../../core';
-import { parseMessage, sendBufferInChunks, sendMessage } from '../../ws.core';
+import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../../ws.core';
 
 const clientIdSymbol: symbol = Symbol.for('__client_id__');
+const sourceSymbol: symbol = Symbol.for('__source__');
 
 export interface NaniumWebsocketChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer | { use: Function };
@@ -41,6 +37,14 @@ export class NaniumWebsocketChannel implements Channel {
 		resolve?: Function,
 		reject?: Function,
 	}> = new Map();
+	private openRequestStreams: Map<string, {
+		type: NaniumPropertyInfoCore,
+		stream?: NaniumStream,
+	}> = new Map();
+	private openResponseStreams: Map<string, {
+		type: NaniumPropertyInfoCore,
+		stream?: NaniumStream,
+	}> = new Map();
 
 	constructor(public id: string, config: NaniumWebsocketChannelConfig) {
 		this.config = {
@@ -57,7 +61,9 @@ export class NaniumWebsocketChannel implements Channel {
 	async init(serviceRepository: NaniumRepository, _manager: ServiceProviderManager): Promise<void> {
 		this.serviceRepository = serviceRepository;
 		this.wss = new WebSocket.Server({ server: this.config.server });
-		this.wss.on('connection', (ws: WebSocket) => {
+		this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+			ws[sourceSymbol] = this.getClientIp(req);
+
 			// Handle messages from the client
 			ws.on('message', (rawMessage: ArrayBuffer | string) => {
 				try {
@@ -93,6 +99,14 @@ export class NaniumWebsocketChannel implements Channel {
 		this.clientSubscriptionInfo = new Map();
 	};
 
+	getClientIp(req: IncomingMessage): string {
+		const forwardedFor = req.headers['x-forwarded-for'];
+		if (forwardedFor && typeof forwardedFor === 'string') {
+			return forwardedFor.split(',')[0].trim();
+		}
+		return req.socket.remoteAddress;
+	}
+
 	removeClient?(clientId: string) {
 		if (clientId) {
 			this.clientSubscriptionInfo.delete(clientId);
@@ -112,8 +126,16 @@ export class NaniumWebsocketChannel implements Channel {
 				return this.handleIncomingEventUnsubscription(message, ws);
 			case 'service_request':
 				return this.handleIncomingServiceRequest(message, ws);
-			case 'service_request_buffer_chunk':
+			case 'service_buffer_chunk':
 				return this.handleIncomingServiceRequestBufferChunk(message, ws);
+			case 'service_stream_chunk':
+				return this.handleIncomingServiceRequestStreamChunk(message, ws);
+			// case 'service_request_stream_objects':
+			// 	return this.handleIncomingServiceRequestStreamObjects(message, ws);
+			case 'service_stream_end':
+				return this.handleIncomingServiceRequestStreamEnd(message, ws);
+			case 'service_stream_error':
+				return this.handleIncomingServiceRequestStreamError(message, ws);
 		}
 	}
 
@@ -140,12 +162,27 @@ export class NaniumWebsocketChannel implements Channel {
 					// handleIncomingServiceRequestBufferChunk will resolve this when all request data arrived
 				});
 			}
+			// streams in request
+			NaniumObject.forEachProperty(request, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+				if (typeInfo && NaniumStream.isNaniumStream(typeInfo.ctor)) {
+					const prop = name[name.length - 1];
+					if (parent[prop]) {
+						const stream: NaniumStream = parent[prop];
+						this.openRequestStreams.set(stream.id, { stream: stream, type: typeInfo });
+						// todo: timeouts to close/cleanup streams if not used for a while
+					}
+				}
+			});
 
-			const result: any = await Nanium.execute(request, serviceName, new this.config.executionContextConstructor({ scope: 'public' }));
+			const executionContext = new this.config.executionContextConstructor({
+				scope: 'public',
+				source: ws[sourceSymbol]
+			});
+			const result: any = await Nanium.execute(request, serviceName, executionContext);
 
 			// buffer response
 			if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
-				const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
+				const responseMessage: WsMessage<WsServiceChunkMessage> = {
 					type: 'service_response',
 					content: {
 						requestId: message.content.id,
@@ -155,7 +192,7 @@ export class NaniumWebsocketChannel implements Channel {
 				await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
 				if (result) {
 					await sendBufferInChunks(result, message.content.id, data => ws.send(data),
-						'service_response_buffer_chunk', this.config.serializer, this.config.binaryChunkSize);
+						'service_buffer_chunk', this.config.serializer, this.config.binaryChunkSize);
 				}
 			}
 
@@ -168,8 +205,8 @@ export class NaniumWebsocketChannel implements Channel {
 			// normal response
 			else {
 				// buffers inside response object
+				// todo: optimize: not performant for large arrays in response: if NaniumObject.containsType(ResponseType, NaniumBuffer) ...
 				const resBuffers: NaniumBuffer[] = [];
-				// todo: optimize: not performant for large arrays in response
 				NaniumObject.forEachProperty(result, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
 					if (typeInfo && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
 						const prop = name[name.length - 1];
@@ -179,7 +216,23 @@ export class NaniumWebsocketChannel implements Channel {
 						}
 					}
 				});
-				const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
+
+				// streams inside response object
+				// todo: optimize: not performant for large arrays in response: if NaniumObject.containsType(ResponseType, NaniumStreams) ...
+				NaniumObject.forEachProperty(result, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+					if (typeInfo && NaniumStream.isNaniumStream(typeInfo.ctor)) {
+						const prop = name[name.length - 1];
+						if (parent[prop]) {
+							const stream: NaniumStream = parent[prop];
+							this.openResponseStreams.set(stream.id, { stream, type: typeInfo });
+							// todo: set timeouts to close/cleanup streams if not used for a while
+							initStream(stream, typeInfo.localGenerics, message.content.id, data => ws.send(data), this.config.serializer, this.config.binaryChunkSize);
+						}
+					}
+				});
+
+				// send basic response
+				const responseMessage: WsMessage<WsServiceChunkMessage> = {
 					type: 'service_response',
 					content: {
 						requestId: message.content.id,
@@ -187,10 +240,11 @@ export class NaniumWebsocketChannel implements Channel {
 					}
 				};
 				await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
+
 				// send buffer chunks
 				for (const buffer of resBuffers) {
 					await sendBufferInChunks(buffer, responseMessage.content.requestId,
-						data => ws.send(data), 'service_response_buffer_chunk',
+						data => ws.send(data), 'service_buffer_chunk',
 						this.config.serializer, this.config.binaryChunkSize);
 				}
 			}
@@ -198,7 +252,7 @@ export class NaniumWebsocketChannel implements Channel {
 			if (e instanceof Error) {
 				e = e.message;
 			}
-			const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
+			const responseMessage: WsMessage<WsServiceChunkMessage> = {
 				type: 'service_response',
 				error: e,
 				content: {
@@ -209,19 +263,20 @@ export class NaniumWebsocketChannel implements Channel {
 		}
 	}
 
-	async handleIncomingServiceRequestBufferChunk(message: WsMessage<WsServiceBufferChunkMessage>, ws: WebSocket): Promise<any> {
+	async handleIncomingServiceRequestBufferChunk(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
 		try {
 			const arrivingRequest = this.arrivingRequests.get(message.content.requestId);
 			if (!arrivingRequest) {
 				throw new Error('pending request not found');
 			}
-			const buffer = arrivingRequest.buffers?.find(b => b.id === message.content.bufferId);
+			const buffer = arrivingRequest.buffers?.find(b => b.id === message.content.bufferOrStreamId);
 			if (!buffer) {
 				arrivingRequest.reject(
-					new Error('buffer not found: ' + message.content.bufferId + ' in request ' + message.content.requestId)
+					new Error('buffer not found: ' + message.content.bufferOrStreamId + ' in request ' + message.content.requestId)
 				);
 			}
 
+			// todo: implement check of maxSize to prevent from DOS attacs by filling Memory with uge data
 			buffer.write(message.payload);
 			if (message.content.isLastChunk) {
 				arrivingRequest.buffers.splice(arrivingRequest.buffers.indexOf(buffer), 1);
@@ -233,13 +288,39 @@ export class NaniumWebsocketChannel implements Channel {
 			if (e instanceof Error) {
 				e = e.message;
 			}
-			const responseMessage: WsMessage<WsServiceBufferChunkMessage> = {
+			const responseMessage: WsMessage<WsServiceChunkMessage> = {
 				type: 'service_response',
 				error: e,
 				content: message.content
 			};
 			await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
 		}
+	}
+
+	async handleIncomingServiceRequestStreamChunk(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
+
+		const streamInfo = this.openRequestStreams.get(message.content.bufferOrStreamId);
+		// todo: object streams
+		// if (streamInfo.type === 'objects') {
+		// 	const deserialized = this.config.serializer.deserialize(message.payload);
+		// 	const objects = NaniumObject.create(Sobject => {
+		// 	});
+		// } else {
+		streamInfo.stream.write(message.payload instanceof NaniumBuffer ? message.payload : new NaniumBuffer(message.payload));
+		// }
+	}
+
+	async handleIncomingServiceRequestStreamEnd(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
+		const streamInfo = this.openRequestStreams.get(message.content.bufferOrStreamId);
+		streamInfo.stream.end();
+		this.openRequestStreams.delete(message.content.bufferOrStreamId);
+	}
+
+	async handleIncomingServiceRequestStreamError(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
+		const streamInfo = this.openRequestStreams.get(message.content.bufferOrStreamId);
+		const deserialized = this.config.serializer.deserialize(message.payload);
+		streamInfo.stream.error(deserialized);
+		this.openRequestStreams.delete(message.content.bufferOrStreamId);
 	}
 
 	//#endregion service request handling
@@ -252,6 +333,7 @@ export class NaniumWebsocketChannel implements Channel {
 		let error: any;
 		try {
 			subscription.channelId = this.id;
+			subscription.source = ws[sourceSymbol];
 			await Nanium.receiveSubscription(subscription, false);
 			ws[clientIdSymbol] ??= message.content.clientId;
 			if (!this.clientSubscriptionInfo.has(subscription.clientId)) {
@@ -295,6 +377,7 @@ export class NaniumWebsocketChannel implements Channel {
 				clientSubscription.eventNames.delete(message.content.eventName);
 			}
 			// unsubscribe core
+			message.content.source = ws[sourceSymbol];
 			await Nanium.unsubscribe(message.content);
 		} catch (e) {
 			error = e;
@@ -343,3 +426,4 @@ class ClientSubscriptionInfo {
 	constructor(public websocket: WebSocket) {
 	}
 }
+

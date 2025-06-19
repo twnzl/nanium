@@ -11,6 +11,7 @@ export class EventSubscription<TData = any, TContext = any> {
 	@Type(String) eventName?: string;
 	@Type('TData') additionalData?: TData;
 	@Type(String) channelId?: string;
+	@Type(String) source?: string;
 
 	handler?: EventHandler;
 

@@ -1,18 +1,23 @@
 # 2.0.0
 
-- Websocket browser consumer (for events only)
-- Websocket channel (for events only)
+- Websocket browser consumer (including support for multiple Buffers and Streams in requests and responses)
+- Websocket channel (including support for multiple Buffers and Streams in requests and responses)
 - Channel instances must have an id now
 - ClusterCommunicator takes functions for serializing and deserializing ExecutionContext
 - Communicators only care for 'event_emit'. all other events must be handled by the managers and channels because only
   they know what is needed. (e.g. http channel inform all workers about subscriptions,
   but websocket channel does not need this )
 - optimized types in EventBase - typescript knows the type of the event in the handler function of subscribe()
-- removed old streaming mechanism
+- removed the old streaming mechanism
 - new property "ServiceRequestQueueEntry.recurring" supports cron like configuration of recurring executions
 - new function NaniumObject.getRequestInfo
 - NaniumObject.createJsonSchema: supports TypeInformation of RequestType decorator
 - event subscriptions (via http): fix memory leak
+- optimized multi-buffer handling in http chanel
+- When the response is NaniumBuffer the executors are no longer allowed to return ArrayBuffers (only NaniumBuffers)
+- skipInterceptors: array of Interceptor instances or classes allowed
+- added a field "source" in ExecutionContext and EventSubscription to identify the same caller. E.g., to implement
+  source-based rate limit interceptors
 
 # 1.25.1
 

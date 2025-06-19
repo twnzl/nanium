@@ -1,8 +1,9 @@
 import { NaniumObject, Type } from '../../../objects';
 
-export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_event' |
-	'subscription_result' | 'unsubscription_result' | 'service_request' | 'service_response'
-	| 'service_request_buffer_chunk' | 'service_response_buffer_chunk';
+export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_event'
+	| 'subscription_result' | 'unsubscription_result' | 'service_request' | 'service_response'
+	| 'service_buffer_chunk'
+	| 'service_stream_chunk' | 'service_stream_error' | 'service_stream_end';
 
 export class WsMessage<TContent = any> extends NaniumObject<WsMessage<TContent>> {
 	@Type(String) type: WsMessageType;
@@ -26,11 +27,10 @@ export class WsServiceRequestMessage extends NaniumObject<WsServiceRequestMessag
 	@Type(Object) request: any;
 }
 
-export class WsServiceBufferChunkMessage extends NaniumObject<WsServiceBufferChunkMessage> {
+export class WsServiceChunkMessage extends NaniumObject<WsServiceChunkMessage> {
 	@Type(String) requestId: string;
 	@Type(Object) response?: any;
-	@Type(String) bufferId?: string;
-	@Type(String) streamId?: string;
+	@Type(String) bufferOrStreamId?: string;
 	@Type(Boolean) isLastChunk?: boolean;
 	@Type(Number) totalBytes?: number;
 }

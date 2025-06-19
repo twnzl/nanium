@@ -127,7 +127,7 @@ export class NaniumHttpChannel implements Channel {
 						deserialized = this.config.serializer.deserialize(body);
 						request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
 					}
-					await this.process(request, res);
+					await this.process(request, req, res);
 					if (
 						!NaniumStream.isNaniumStream(this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]) &&
 						!NaniumStream.isNaniumStream(this.serviceRepository[deserialized.serviceName].Request[responseTypeSymbol]?.[0])
@@ -158,16 +158,20 @@ export class NaniumHttpChannel implements Channel {
 		return [request, deserialized];
 	}
 
-	async process(request: any, res: ServerResponse): Promise<any> {
-		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, request, res);
+	async process(request: any, req: IncomingMessage, res: ServerResponse): Promise<any> {
+		return await NaniumHttpChannel.processCore(this.config, this.serviceRepository, request, req, res);
 	}
 
-	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, res: ServerResponse): Promise<any> {
+	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, req: IncomingMessage, res: ServerResponse): Promise<any> {
 		const serviceName: string = request.constructor.serviceName;
 		let ResponseType = getPrimaryResponseType(serviceRepository, serviceName);
 		try {
 			res.setHeader('Content-Type', config.serializer.mimeType);
-			const result: any = await Nanium.execute(request, serviceName, new config.executionContextConstructor({ scope: 'public' }));
+			const executionContext = new config.executionContextConstructor({
+				scope: 'public',
+				source: this.getClientIp(req)
+			});
+			const result: any = await Nanium.execute(request, serviceName, executionContext);
 			if (result !== undefined && result !== null) {
 				if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
 					res.write(await NaniumBuffer.as(Uint8Array, result));
@@ -213,6 +217,15 @@ export class NaniumHttpChannel implements Channel {
 		}
 	}
 
+	static getClientIp(req: IncomingMessage): string {
+		const forwardedFor = req.headers['x-forwarded-for'];
+		if (forwardedFor && typeof forwardedFor === 'string') {
+			return forwardedFor.split(',')[0].trim();
+		}
+		return req.socket.remoteAddress;
+	}
+
+
 	//#endregion service request handling
 
 	//#region event handling
@@ -237,6 +250,7 @@ export class NaniumHttpChannel implements Channel {
 						// deserialize subscription info
 						const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
 						subscriptionData.channelId = this.id;
+						subscriptionData.source = NaniumHttpChannel.getClientIp(req);
 						//todo: create real instances of EventSubscription and additionalData  e.g:
 						// const subscriptionData: EventSubscription = NaniumObject.create(
 						// 	this.config.serializer.deserialize(Buffer.concat(data).toString()),
@@ -300,6 +314,7 @@ export class NaniumHttpChannel implements Channel {
 				try {
 					// deserialize subscription info
 					const subscriptionData: EventSubscription = this.config.serializer.deserialize(Buffer.concat(data).toString());
+					subscriptionData.source = NaniumHttpChannel.getClientIp(req);
 					//todo: create real instances of EventSubscription and additionalData  e.g:
 					// const subscriptionData: EventSubscription = NaniumObject.create(
 					// 	this.config.serializer.deserialize(Buffer.concat(data).toString()),

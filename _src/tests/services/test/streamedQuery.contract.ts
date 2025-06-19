@@ -10,6 +10,10 @@ export class TestStreamedQueryRequestBody {
 
 @RequestType({
 	responseType: [NaniumStream, TestDto],
+	// genericTypes: {
+	// 	TRequestBody: TestStreamedQueryRequestBody,
+	// 	TResponseBody: [NaniumStream, TestDto]
+	// },
 	scope: 'public'
 })
 export class TestStreamedQueryRequest extends SimpleServiceRequestBase<TestStreamedQueryRequestBody, NaniumStream<TestDto>> {
