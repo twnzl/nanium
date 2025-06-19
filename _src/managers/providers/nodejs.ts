@@ -191,10 +191,14 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 
 			// if the request comes from a communication channel it is normally a deserialized object,
 			// but we need real object that is constructed via the request constructor
-			realRequest = NaniumObject.create(
-				request,
-				requestConstructor,
-				requestConstructor[genericTypesSymbol]);
+			if (request.constructor !== requestConstructor) {
+				realRequest = NaniumObject.create(
+					request,
+					requestConstructor,
+					requestConstructor[genericTypesSymbol]);
+			} else {
+				realRequest = request;
+			}
 
 			// execution
 			if (context?.scope === 'public') {
@@ -218,8 +222,10 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			if (
 				requestType.skipInterceptors === true ||
 				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor.constructor.name)) ||
-				((requestType.skipInterceptors ?? {})[context.scope] === true) ||
-				((Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && !requestType.skipInterceptors[context.scope].includes(interceptor.constructor.name))
+				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor.constructor)) ||
+				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor)) ||
+				(context?.scope && (requestType.skipInterceptors ?? {})[context.scope] === true) ||
+				(context?.scope && (Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && !requestType.skipInterceptors[context.scope].includes(interceptor.constructor.name))
 			) {
 				continue;
 			}
