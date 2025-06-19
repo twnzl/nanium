@@ -219,7 +219,7 @@ export class NaniumBuffer {
 		}
 		let i: number = 0;
 		let l: number;
-		while (true) {
+		while (data.length > i) {
 			l = this.getLength(data[i]);
 			if (start < l) {
 				break;
