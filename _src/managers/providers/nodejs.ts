@@ -15,7 +15,7 @@ import {
 	EventSubscriptionReceiveInterceptor
 } from '../../interfaces/eventSubscriptionInterceptor';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, NaniumObject } from '../../objects';
+import { ConstructorType, genericTypesSymbol, NaniumObject } from '../../objects';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { Message } from '../../interfaces/communicator';
 
@@ -219,11 +219,12 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			return;
 		}
 		for (const interceptor of this.config.requestInterceptors) {
+			const name = (interceptor as ServiceRequestInterceptor<any>).execute ? interceptor.constructor.name : (interceptor as ConstructorType).name;
 			if (
 				requestType.skipInterceptors === true ||
-				(Array.isArray(requestType.skipInterceptors) && !requestType.skipInterceptors.includes(interceptor.constructor.name)) ||
+				(Array.isArray(requestType.skipInterceptors) && requestType.skipInterceptors.includes(name)) ||
 				(context?.scope && (requestType.skipInterceptors ?? {})[context.scope] === true) ||
-				(context?.scope && (Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && !requestType.skipInterceptors[context.scope].includes(interceptor.constructor.name))
+				(context?.scope && (Array.isArray(requestType.skipInterceptors ?? {})[context.scope]) && requestType.skipInterceptors[context.scope].includes(name))
 			) {
 				continue;
 			}
