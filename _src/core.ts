@@ -118,7 +118,7 @@ export class CNanium {
 		entry: ServiceRequestQueueEntry,
 		executionContext?: ExecutionContext
 	): Promise<ServiceRequestQueueEntry> {
-		const queue: ServiceRequestQueue = await this.getResponsibleQueue(entry);
+		const queue: ServiceRequestQueue = await this.getResponsibleQueue(entry, executionContext);
 		if (!queue) {
 			throw new Error('nanium: no queue has been initialized');
 		}
@@ -219,9 +219,9 @@ export class CNanium {
 	}
 
 	//#region queue
-	async getResponsibleQueue(entry: ServiceRequestQueueEntry): Promise<ServiceRequestQueue> {
+	async getResponsibleQueue(entry: ServiceRequestQueueEntry, executionContext?: ExecutionContext): Promise<ServiceRequestQueue> {
 		const priorities: number[] = await Promise.all(
-			this.queues.map((queue: ServiceRequestQueue) => queue.isResponsible(entry)));
+			this.queues.map((queue: ServiceRequestQueue) => queue.isResponsible(entry, executionContext)));
 		const maxPriority = Math.max(...priorities);
 		let idx: number = priorities.findIndex(p => p === maxPriority);
 		if (idx >= 0 && priorities[idx] > 0) {

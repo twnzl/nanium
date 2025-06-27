@@ -19,6 +19,10 @@
 - added a field "source" in ExecutionContext and EventSubscription to identify the same caller. E.g., to implement
   source-based rate limit interceptors
 
+# 1.25.2
+
+- queues: add executionContext for responsibility check
+
 # 1.25.1
 
 - include *contractparts.ts into sdk

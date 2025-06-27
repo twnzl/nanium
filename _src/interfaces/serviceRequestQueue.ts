@@ -19,8 +19,9 @@ export interface ServiceRequestQueue {
 	 * must return 0 if this queue is not responsible for requests with the given name or a value above 0 as the rank if
 	 * multiple queues are defined (the highest wins)
 	 * @param entry
+	 * @param executionContext
 	 */
-	isResponsible(entry: ServiceRequestQueueEntry): Promise<number>;
+	isResponsible(entry: ServiceRequestQueueEntry, executionContext?: ExecutionContext): Promise<number>;
 
 	/**
 	 * enqueue a new entry into the queue
@@ -47,6 +48,7 @@ export interface ServiceRequestQueue {
 	/**
 	 * create an execution context for a specific entry. It will be used for the execution of the request
 	 * @param entry
+	 * @param requestQueue
 	 */
 	getExecutionContext(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<ExecutionContext>;
 
