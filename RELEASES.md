@@ -1,3 +1,7 @@
+# 1.25.2
+
+- queues: add executionContext for responsibility check
+
 # 1.25.1
 
 - include *contractparts.ts into sdk
