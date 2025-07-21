@@ -19,7 +19,7 @@ export abstract class ServiceRequestBase<TRequestBody, TResponse> {
 		return await Nanium.execute(this, undefined, context);
 	}
 
-	async enqueue(options?: Partial<ServiceRequestQueueEntry>): Promise<ServiceRequestQueueEntry> {
+	async enqueue(options?: Partial<ServiceRequestQueueEntry>, executionContext?: ExecutionContext): Promise<ServiceRequestQueueEntry> {
 		const serviceName: string = (this.constructor as any).serviceName;
 		return await Nanium.enqueue({ serviceName, request: this, ...options });
 	}
