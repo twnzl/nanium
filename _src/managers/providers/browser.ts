@@ -6,7 +6,7 @@ import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { Channel } from '../../interfaces/channel';
-import { NaniumObject } from '../../objects';
+import { ConstructorType, NaniumObject } from '../../objects';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 
 export class NaniumBrowserProviderConfig {
@@ -70,6 +70,10 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 	addChannel<T>(channel: Channel): void {
 		throw ('channels not supported by this provider');
 	}
+
+	getRequestClass(serviceName: string): ConstructorType {
+		return this.repository[serviceName]?.Request;
+	};
 
 	async init(): Promise<void> {
 	}

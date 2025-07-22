@@ -8,6 +8,8 @@ import { EventSubscription } from './interfaces/eventSubscription';
 import { Logger, LogLevel } from './interfaces/logger';
 import { NaniumCommunicator } from './interfaces/communicator';
 import { EventNameOrConstructor } from './interfaces/eventConstructor';
+import { genericTypesSymbol, NaniumObject } from './objects';
+import { ServiceProviderManager } from './interfaces/serviceProviderManager';
 
 declare var global: any;
 
@@ -250,10 +252,24 @@ export class CNanium {
 	private async start(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void> {
 		try {
 			entry = await requestQueue.onBeforeStart(entry);
+			// create request of real type
+			const manager = Nanium.getResponsibleManager(entry.request, entry.serviceName);
+			const requestConstructor = (manager as any as ServiceProviderManager).getRequestClass(entry.serviceName);
+			let request: any;
+			if (entry.request.constructor !== requestConstructor) {
+				request = NaniumObject.create(
+					entry.request,
+					requestConstructor,
+					requestConstructor[genericTypesSymbol]);
+			} else {
+				request = entry.request;
+			}
+			// update entry
 			entry.startDate = entry.startDate || new Date();
 			await requestQueue.updateEntry(entry);
+			// execute
 			entry.response = await this.execute(
-				entry.request,
+				request,
 				entry.serviceName,
 				await requestQueue.getExecutionContext(entry, requestQueue));
 			entry.state = 'done';

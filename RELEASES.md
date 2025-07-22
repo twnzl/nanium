@@ -18,6 +18,8 @@
 - skipInterceptors: array of Interceptor instances or classes allowed
 - added a field "source" in ExecutionContext and EventSubscription to identify the same caller. E.g., to implement
   source-based rate limit interceptors
+- request.enqueue: supports execution context
+- request queues: transform request to instance with correct types before execution
 
 # 1.25.2
 

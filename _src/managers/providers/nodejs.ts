@@ -111,6 +111,10 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 		this.config.channels.push(channel);
 	}
 
+	getRequestClass(serviceName: string): ConstructorType {
+		return this.repository[serviceName]?.Request;
+	};
+
 	async init() {
 
 		// init repository
