@@ -73,7 +73,7 @@ export class NaniumProviderBrowser implements ServiceProviderManager {
 
 	getRequestClass(serviceName: string): ConstructorType {
 		return this.repository[serviceName]?.Request;
-	};
+	}
 
 	async init(): Promise<void> {
 	}

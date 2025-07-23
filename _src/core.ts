@@ -253,7 +253,7 @@ export class CNanium {
 		try {
 			entry = await requestQueue.onBeforeStart(entry);
 			// create request of real type
-			const manager = Nanium.getResponsibleManager(entry.request, entry.serviceName);
+			const manager = await Nanium.getResponsibleManager(entry.request, entry.serviceName);
 			const requestConstructor = (manager as any as ServiceProviderManager).getRequestClass(entry.serviceName);
 			let request: any;
 			if (entry.request.constructor !== requestConstructor) {
