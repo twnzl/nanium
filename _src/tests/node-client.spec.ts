@@ -1,23 +1,23 @@
-import { TestExecutionContext } from './services/testExecutionContext';
 import * as http from 'http';
 import { IncomingMessage } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
-import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
-import { TestHelper } from './testHelper';
-import { AnonymousRequest } from './services/test/anonymous.contract';
-import { ServiceResponseBase } from './services/serviceResponseBase';
-import { TimeRequest } from './services/test/time.contract';
-import { TestNoIORequest } from './services/test/noIO.contract';
-import { TestDto } from './services/test/contractparts';
 import { Nanium } from '../core';
-import { TestGetBinaryRequest } from './services/test/getBinary.contract';
 import { NaniumBuffer } from '../interfaces/naniumBuffer';
-import { TestGetNaniumBufferRequest } from './services/test/getNaniumBuffer.contract';
 import { NaniumStream } from '../interfaces/naniumStream';
-import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
+import { ServiceResponseBase } from './services/serviceResponseBase';
+import { AnonymousRequest } from './services/test/anonymous.contract';
+import { TestDto } from './services/test/contractparts';
+import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
+import { TestGetBinaryRequest } from './services/test/getBinary.contract';
+import { TestGetNaniumBufferRequest } from './services/test/getNaniumBuffer.contract';
+import { TestNoIORequest } from './services/test/noIO.contract';
 import { TestStreamedBinaryRequest } from './services/test/streamedBinary.contract';
+import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
+import { TimeRequest } from './services/test/time.contract';
+import { TestExecutionContext } from './services/testExecutionContext';
+import { TestHelper } from './testHelper';
 
 let request: TestGetRequest;
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
@@ -175,14 +175,20 @@ describe('host services via https \n', function (): void {
 					protocol: uri.protocol,
 					rejectUnauthorized: false
 				};
-				https.get(options, (res: IncomingMessage) => {
+				const req = https.get(options, (res: IncomingMessage) => {
 					let str: string = '';
 					res.on('data', (chunk: string) => {
 						str += chunk;
 					});
-					res.on('end', async () => {
+					res.on('end', () => {
+						req.destroy();
+						res.destroy();
 						resolve(str);
 					});
+				});
+				req.on('error', (err) => {
+					req.destroy();
+					resolve(err.message);
 				});
 			});
 			expect(result).toBe('*** https fallback ***');
