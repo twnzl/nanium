@@ -20,6 +20,7 @@
   source-based rate limit interceptors
 - request.enqueue: supports execution context
 - request queues: transform request to instance with correct types before execution
+- NaniumBuffer: added methods for sequential writing, added Big-Endian-read methods, fix of asUInt8Array
 
 # 1.25.2
 

@@ -42,6 +42,16 @@ describe('NaniumBuffer', function (): void {
 			buf.write(uint8Array);
 			expect(await buf.asString()).toBe('abcdefjkl');
 		});
+
+		it('asString with bigger internal buffer than data\n', async () => {
+			const largeBuffer = new ArrayBuffer(100); // 100 bytes buffer
+			const smallView = new Uint8Array(largeBuffer, 10, 3); // only 3 bytes starting at offset 10
+			smallView[0] = 65; // 'A'
+			smallView[1] = 66; // 'B' 
+			smallView[2] = 67; // 'C'
+			const buf = new NaniumBuffer([arrayBuffer, smallView]);
+			expect(await buf.asString()).toBe('abcABC');
+		});
 	});
 
 	describe('asUInt8Array', function (): void {
@@ -79,6 +89,16 @@ describe('NaniumBuffer', function (): void {
 			buf.write(buf);
 			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklmnopqrstabcdefjklmnopqrst');
 		});
+
+		it('asUInt8Array with bigger internal buffer than data\n', async () => {
+			const largeBuffer = new ArrayBuffer(100); // 100 bytes buffer
+			const smallView = new Uint8Array(largeBuffer, 10, 3); // only 3 bytes starting at offset 10
+			smallView[0] = 65; // 'A'
+			smallView[1] = 66; // 'B' 
+			smallView[2] = 67; // 'C'
+			const buf = new NaniumBuffer([arrayBuffer, smallView]);
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcABC');
+		});
 	});
 
 	describe('as())', function (): void {
@@ -96,6 +116,16 @@ describe('NaniumBuffer', function (): void {
 			const ab = await NaniumBuffer.as(ArrayBuffer, b);
 			expect(ab instanceof ArrayBuffer).toBeTruthy();
 			expect(new TextDecoder().decode(new Uint8Array(ab))).toBe('fgh');
+		});
+
+		it('as(ArrayBuffer) with bigger internal buffer than data\n', async () => {
+			const largeBuffer = new ArrayBuffer(100); // 100 bytes buffer
+			const smallView = new Uint8Array(largeBuffer, 10, 3); // only 3 bytes starting at offset 10
+			smallView[0] = 65; // 'A'
+			smallView[1] = 66; // 'B' 
+			smallView[2] = 67; // 'C'
+			const buf = await new NaniumBuffer([arrayBuffer, smallView]).as(ArrayBuffer);
+			expect(new TextDecoder().decode(new Uint8Array(buf))).toBe('abcABC');
 		});
 	});
 
@@ -166,5 +196,48 @@ describe('NaniumBuffer', function (): void {
 		expect((await buf.readFloat32LE(3)).toFixed(6)).toBe('12.345000');
 		buf = new NaniumBuffer([uint8Array, new Float64Array([12.3456789012345]), buffer32]);
 		expect((await buf.readFloat64LE(3)).toFixed(13)).toBe('12.3456789012345');
+	});
+
+	it('--> readUInt32BE \n', async function (): Promise<void> {
+		const buf = new NaniumBuffer();
+		// Arrange: Mehrere UInt32-Werte hintereinander
+		buf.write(new Uint8Array([0x12, 0x34, 0x56, 0x78])) // (Big-Endian)
+		buf.write(new Uint8Array([0xAB, 0xCD, 0xEF, 0x00])) // (Big-Endian)
+		buf.write(new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF])) // (Big-Endian)
+
+		// Act & Assert
+		expect(await buf.readUInt32BE(0)).toBe(0x12345678);
+		expect(await buf.readUInt32BE(4)).toBe(0xABCDEF00);
+		expect(await buf.readUInt32BE(8)).toBe(0xDEADBEEF);
+	});
+
+	it('--> write \n', async function (): Promise<void> {
+		let buf = new NaniumBuffer();
+		buf.writeInt32LE(3);
+		buf.writeFloat32LE(8.5);
+		let bytes = Array.from(await buf.asUint8Array());
+		expect(bytes[0]).toBe(parseInt('00000011', 2));
+		expect(bytes[1]).toBe(parseInt('00000000', 2));
+		expect(bytes[2]).toBe(parseInt('00000000', 2));
+		expect(bytes[3]).toBe(parseInt('00000000', 2));
+
+		expect(bytes[4]).toBe(parseInt('00000000', 2));
+		expect(bytes[5]).toBe(parseInt('00000000', 2));
+		expect(bytes[6]).toBe(parseInt('00001000', 2));
+		expect(bytes[7]).toBe(parseInt('01000001', 2));
+
+		buf = new NaniumBuffer();
+		buf.writeInt32BE(3);
+		buf.writeFloat32BE(8.5);
+		bytes = Array.from(await buf.asUint8Array());
+		expect(bytes[0]).toBe(parseInt('00000000', 2));
+		expect(bytes[1]).toBe(parseInt('00000000', 2));
+		expect(bytes[2]).toBe(parseInt('00000000', 2));
+		expect(bytes[3]).toBe(parseInt('00000011', 2));
+
+		expect(bytes[4]).toBe(parseInt('01000001', 2));
+		expect(bytes[5]).toBe(parseInt('00001000', 2));
+		expect(bytes[6]).toBe(parseInt('00000000', 2));
+		expect(bytes[7]).toBe(parseInt('00000000', 2));
 	});
 });

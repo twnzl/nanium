@@ -84,7 +84,7 @@ export class NaniumBuffer {
 		} else if (this.isBufferLike(targetType)) {
 			return targetType['from'](data);
 		} else { // any typed Array
-			return new targetType(data.buffer, data.byteOffset, data.byteLength / targetType['BYTES_PER_ELEMENT'] ?? 1);
+			return new targetType(data.buffer, data.byteOffset, data.byteLength / targetType['BYTES_PER_ELEMENT']);
 		}
 	}
 
@@ -127,56 +127,122 @@ export class NaniumBuffer {
 		return typeof obj['forEach'] === 'function' && !this.isBufferLike(objectOrConstructor);
 	}
 
-	async asUint8Array(): Promise<Uint8Array> {
+
+	async asUint8Array_(): Promise<Uint8Array> {
 		const internalValues = this[NaniumBuffer.naniumBufferInternalValueSymbol];
+
 		// if there is only one buffer, we do not need to copy the data.
 		// For performance, we just wrap the original data with UInt8Array. But keep in mind that changing the original
 		// buffer changes the result of this function
 		if (internalValues.length === 1) {
 			const data = internalValues[0];
+
 			if (this.isArrayBufferLike(data)) {
 				return new Uint8Array(data);
 			} else if (this.isBlobLike(data)) {
-				return new Uint8Array(await data.arrayBuffer(), 0, data.size);
-			} else { // Buffer or any typed Array
+				const arrayBuffer = await data.arrayBuffer();
+				return new Uint8Array(arrayBuffer);
+			} else if (this.isTypedArrayLike(data)) {
+				// TypedArray: Nur den genutzten Bereich verwenden
 				return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+			} else if (this.isBufferLike(data)) {
+				// Node.js Buffer: Direkte Konvertierung
+				return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+			} else {
+				throw new Error(`Unsupported data type: ${typeof data}`);
 			}
 		}
 
 		// if there are multiple parts create a new buffer and copy data of all parts into it
 		const result = new Uint8Array(this.length);
-		let i: number = 0;
-		let j: number = 0;
+		let offset = 0;
+
 		for (const part of internalValues) {
-			if (this.isBlobLike(part)) { // Blob
-				const view = new Uint8Array(await part.arrayBuffer());
-				if (internalValues.length === 1) {
-					return view;
-				}
-				for (i = 0; i < (view).length; ++i) {
-					result[j + i] = view[i];
-				}
-			} else if (this.isTypedArrayLike(part)) { // UInt8Array & ...
-				const view = new Uint8Array(part.buffer);
-				for (i = 0; i < part.byteLength; ++i) {
-					result[j + i] = view[i];
-				}
-			} else if (this.isBufferLike(part)) { // Buffer
-				for (i = 0; i < part.byteLength; ++i) {
-					result[j + i] = part[i];
-				}
-			} else { // ArrayBuffer
-				const view = new Uint8Array(part);
-				if (internalValues.length === 1) {
-					return view;
-				}
-				for (i = 0; i < view.byteLength; ++i) {
-					result[j + i] = view[i];
-				}
+			let sourceBytes: Uint8Array;
+			let bytesToCopy: number;
+
+			if (this.isBlobLike(part)) {
+				const arrayBuffer = await part.arrayBuffer();
+				sourceBytes = new Uint8Array(arrayBuffer);
+				bytesToCopy = sourceBytes.length;
+			} else if (this.isTypedArrayLike(part)) {
+				// TypedArray: Korrekte Behandlung von byteOffset und byteLength
+				sourceBytes = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
+				bytesToCopy = part.byteLength;
+			} else if (this.isBufferLike(part)) {
+				// Node.js Buffer
+				sourceBytes = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
+				bytesToCopy = part.byteLength;
+			} else if (this.isArrayBufferLike(part)) {
+				sourceBytes = new Uint8Array(part);
+				bytesToCopy = part.byteLength;
+			} else {
+				throw new Error(`Unsupported data type: ${typeof part}`);
 			}
-			j += i;
+
+			// efficient copy using set()
+			result.set(sourceBytes, offset);
+			offset += bytesToCopy;
+		}
+
+		return result;
+	}
+
+	async asUint8Array(): Promise<Uint8Array> {
+		const internalValues = this[NaniumBuffer.naniumBufferInternalValueSymbol];
+		if (internalValues.length === 0) {
+			return new Uint8Array(0);
+		}
+		if (internalValues.length === 1) {
+			return this.convertSinglePartToUint8Array(internalValues[0]);
+		}
+		return this.concatenateMultiplePartsToUint8Array(internalValues);
+	}
+
+	private async convertSinglePartToUint8Array(data: any): Promise<Uint8Array> {
+		if (this.isArrayBufferLike(data)) {
+			return new Uint8Array(data);
+		}
+		if (this.isBlobLike(data)) {
+			const arrayBuffer = await data.arrayBuffer();
+			return new Uint8Array(arrayBuffer);
+		}
+		if (this.isTypedArrayLike(data) || this.isBufferLike(data)) {
+			return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+		}
+		throw new Error(`Unsupported data type: ${Object.prototype.toString.call(data)}`);
+	}
+
+	private async concatenateMultiplePartsToUint8Array(internalValues: any[]): Promise<Uint8Array> {
+		const result = new Uint8Array(this.length);
+		let offset = 0;
+		for (const part of internalValues) {
+			const { sourceBytes, bytesToCopy } = await this.preparePartForCopy(part);
+			// Sicherheitscheck
+			if (offset + bytesToCopy > result.length) {
+				throw new Error(`Buffer overflow: trying to write ${bytesToCopy} bytes at offset ${offset}, but result has only ${result.length} bytes`);
+			}
+			result.set(sourceBytes, offset);
+			offset += bytesToCopy;
 		}
 		return result;
+	}
+
+	private async preparePartForCopy(part: any): Promise<{ sourceBytes: Uint8Array, bytesToCopy: number }> {
+		if (this.isBlobLike(part)) {
+			const arrayBuffer = await part.arrayBuffer();
+			const sourceBytes = new Uint8Array(arrayBuffer);
+			return { sourceBytes, bytesToCopy: sourceBytes.length };
+		}
+		if (this.isTypedArrayLike(part) || this.isBufferLike(part)) {
+			const sourceBytes = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
+			return { sourceBytes, bytesToCopy: part.byteLength };
+		}
+		if (this.isArrayBufferLike(part)) {
+			const sourceBytes = new Uint8Array(part);
+			return { sourceBytes, bytesToCopy: part.byteLength };
+		}
+		throw new Error(`Unsupported data type: ${Object.prototype.toString.call(part)}`);
 	}
 
 	async asArrayBuffer(): Promise<ArrayBuffer> {
@@ -192,20 +258,35 @@ export class NaniumBuffer {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
 	}
 
-	async asString(): Promise<string> {
+	async asString(encoding: string = 'utf-8'): Promise<string> {
 		const result: string[] = [];
+
 		for (const part of this[NaniumBuffer.naniumBufferInternalValueSymbol]) {
 			if (!part) {
 				continue;
 			}
-			if (typeof part['text'] === 'function') { // Blob
-				result.push(await part['text']());
-			} else if (typeof part === 'string') { // String
-				result.push(part);
-			} else { // Buffer or ArrayBuffer
-				result.push(new TextDecoder().decode(part));
+
+			try {
+				if (this.isBlobLike(part)) {
+					result.push(await part.text());
+				} else if (typeof part === 'string') {
+					result.push(part);
+				} else if (this.isTypedArrayLike(part)) {
+					const uint8View = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
+					result.push(new TextDecoder(encoding).decode(uint8View));
+				} else if (this.isBufferLike(part)) {
+					const uint8View = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
+					result.push(new TextDecoder(encoding).decode(uint8View));
+				} else if (this.isArrayBufferLike(part)) {
+					result.push(new TextDecoder(encoding).decode(part));
+				} else { // Fallback: try as ArrayBufferView
+					result.push(new TextDecoder(encoding).decode(part));
+				}
+			} catch (error) {
+				throw new Error(`Failed to decode part to string: ${error.message}. Part type: ${Object.prototype.toString.call(part)}`);
 			}
 		}
+
 		return result.join('');
 	}
 
@@ -260,6 +341,7 @@ export class NaniumBuffer {
 		return result;
 	}
 
+	//#region Little-Endian Read Methods
 	async readBigInt64LE(idx: number): Promise<bigint> {
 		return (await this.slice(idx, BigInt64Array.BYTES_PER_ELEMENT).as(BigInt64Array))[0];
 	}
@@ -299,6 +381,141 @@ export class NaniumBuffer {
 	async readUInt32LE(idx: number) {
 		return (await this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).as(Uint32Array))[0];
 	}
+	//#endregion Little-Endian Read Methods
+
+	//#region Big-Endian Read Methods
+	async readBigInt64BE(idx: number): Promise<bigint> {
+		const bytes = await this.slice(idx, idx + BigInt64Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getBigInt64(0, false); // false = Big-Endian
+	}
+
+	async readBigUInt64BE(idx: number): Promise<bigint> {
+		const bytes = await this.slice(idx, idx + BigUint64Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getBigUint64(0, false); // false = Big-Endian
+	}
+
+	async readFloat32BE(idx: number): Promise<number> {
+		const bytes = await this.slice(idx, idx + Float32Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getFloat32(0, false); // false = Big-Endian
+	}
+
+	async readFloat64BE(idx: number): Promise<number> {
+		const bytes = await this.slice(idx, idx + Float64Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getFloat64(0, false); // false = Big-Endian
+	}
+
+	async readInt8BE(idx: number): Promise<number> {
+		// Int8 hat keine Endianness, aber für Konsistenz
+		return (await this.slice(idx, idx + Int8Array.BYTES_PER_ELEMENT).as(Int8Array))[0];
+	}
+
+	async readInt16BE(idx: number): Promise<number> {
+		const bytes = await this.slice(idx, idx + Int16Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getInt16(0, false); // false = Big-Endian
+	}
+
+	async readInt32BE(idx: number): Promise<number> {
+		const bytes = await this.slice(idx, idx + Int32Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getInt32(0, false); // false = Big-Endian
+	}
+
+	async readUInt8BE(idx: number): Promise<number> {
+		// UInt8 hat keine Endianness, aber für Konsistenz
+		return (await this.slice(idx, idx + Uint8Array.BYTES_PER_ELEMENT).as(Uint8Array))[0];
+	}
+
+	async readUInt16BE(idx: number): Promise<number> {
+		const bytes = await this.slice(idx, idx + Uint16Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getUint16(0, false); // false = Big-Endian
+	}
+
+	async readUInt32BE(idx: number): Promise<number> {
+		const bytes = await this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).asUint8Array();
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		return view.getUint32(0, false); // false = Big-Endian
+	}
+	//#endregion Big-Endian Read Methods
+
+	//#region write Little Endian Methods
+	writeCore(n: number, type: 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
+		const buffer = new ArrayBuffer(bits / 8);
+		new DataView(buffer)['set' + type + bits](0, n, endianness === 'LE');
+		this[NaniumBuffer.naniumBufferInternalValueSymbol].push(buffer);
+	}
+
+	writeInt8LE(n: number): void {
+		this.writeCore(n, 'Int', 8, 'LE');
+	}
+
+	writeInt16LE(n: number): void {
+		this.writeCore(n, 'Int', 16, 'LE');
+	}
+
+	writeInt32LE(n: number): void {
+		this.writeCore(n, 'Int', 32, 'LE');
+	}
+
+	writeInt64LE(n: number): void {
+		this.writeCore(n, 'Int', 64, 'LE');
+	}
+
+	writeFloat8LE(n: number): void {
+		this.writeCore(n, 'Float', 8, 'LE');
+	}
+
+	writeFloat16LE(n: number): void {
+		this.writeCore(n, 'Float', 16, 'LE');
+	}
+
+	writeFloat32LE(n: number): void {
+		this.writeCore(n, 'Float', 32, 'LE');
+	}
+
+	writeFloat64LE(n: number): void {
+		this.writeCore(n, 'Float', 64, 'LE');
+	}
+	//#endregion write Little Endian Methods
+
+	//#region write Big Endian Methods	
+	writeInt8BE(n: number): void {
+		this.writeCore(n, 'Int', 8, 'BE');
+	}
+
+	writeInt16BE(n: number): void {
+		this.writeCore(n, 'Int', 16, 'BE');
+	}
+
+	writeInt32BE(n: number): void {
+		this.writeCore(n, 'Int', 32, 'BE');
+	}
+
+	writeInt64BE(n: number): void {
+		this.writeCore(n, 'Int', 64, 'BE');
+	}
+
+	writeFloat8BE(n: number): void {
+		this.writeCore(n, 'Float', 8, 'BE');
+	}
+
+	writeFloat16BE(n: number): void {
+		this.writeCore(n, 'Float', 16, 'BE');
+	}
+
+	writeFloat32BE(n: number): void {
+		this.writeCore(n, 'Float', 32, 'BE');
+	}
+
+	writeFloat64BE(n: number): void {
+		this.writeCore(n, 'Float', 64, 'BE');
+	}
+	//#endregion write Big Endian Methods
 
 	static isNaniumBuffer(objectOrConstructor: ConstructorType | object): boolean {
 		return objectOrConstructor?.['naniumBufferInternalValueSymbol'] != undefined ||
