@@ -341,7 +341,12 @@ export class NaniumBuffer {
 		return result;
 	}
 
-	//#region Little-Endian Read Methods
+	//#region Read Methods
+	async readString(idx: number, length: number, encoding: string = 'utf-8'): Promise<string> {
+		const bytes = this.slice(idx, idx + length);
+		return new TextDecoder(encoding).decode(await bytes.asUint8Array());
+	};
+
 	async readBigInt64LE(idx: number): Promise<bigint> {
 		return (await this.slice(idx, BigInt64Array.BYTES_PER_ELEMENT).as(BigInt64Array))[0];
 	}
@@ -381,9 +386,7 @@ export class NaniumBuffer {
 	async readUInt32LE(idx: number) {
 		return (await this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).as(Uint32Array))[0];
 	}
-	//#endregion Little-Endian Read Methods
 
-	//#region Big-Endian Read Methods
 	async readBigInt64BE(idx: number): Promise<bigint> {
 		const bytes = await this.slice(idx, idx + BigInt64Array.BYTES_PER_ELEMENT).asUint8Array();
 		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -441,16 +444,20 @@ export class NaniumBuffer {
 		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 		return view.getUint32(0, false); // false = Big-Endian
 	}
-	//#endregion Big-Endian Read Methods
+	//#endregion Read Methods
 
-	//#region write Little Endian Methods
+	//#region write methods
+	writeString(text: string): void {
+		this.write(new TextEncoder().encode(text));
+	};
+
 	writeCore(n: number, type: 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
 		const buffer = new ArrayBuffer(bits / 8);
 		new DataView(buffer)['set' + type + bits](0, n, endianness === 'LE');
 		this[NaniumBuffer.naniumBufferInternalValueSymbol].push(buffer);
 	}
 
-	writeInt8LE(n: number): void {
+	writeInt8(n: number): void {
 		this.writeCore(n, 'Int', 8, 'LE');
 	}
 
@@ -458,20 +465,24 @@ export class NaniumBuffer {
 		this.writeCore(n, 'Int', 16, 'LE');
 	}
 
+	writeInt16BE(n: number): void {
+		this.writeCore(n, 'Int', 16, 'BE');
+	}
+
 	writeInt32LE(n: number): void {
 		this.writeCore(n, 'Int', 32, 'LE');
+	}
+
+	writeInt32BE(n: number): void {
+		this.writeCore(n, 'Int', 32, 'BE');
 	}
 
 	writeInt64LE(n: number): void {
 		this.writeCore(n, 'Int', 64, 'LE');
 	}
 
-	writeFloat8LE(n: number): void {
-		this.writeCore(n, 'Float', 8, 'LE');
-	}
-
-	writeFloat16LE(n: number): void {
-		this.writeCore(n, 'Float', 16, 'LE');
+	writeInt64BE(n: number): void {
+		this.writeCore(n, 'Int', 64, 'BE');
 	}
 
 	writeFloat32LE(n: number): void {
@@ -481,32 +492,7 @@ export class NaniumBuffer {
 	writeFloat64LE(n: number): void {
 		this.writeCore(n, 'Float', 64, 'LE');
 	}
-	//#endregion write Little Endian Methods
 
-	//#region write Big Endian Methods	
-	writeInt8BE(n: number): void {
-		this.writeCore(n, 'Int', 8, 'BE');
-	}
-
-	writeInt16BE(n: number): void {
-		this.writeCore(n, 'Int', 16, 'BE');
-	}
-
-	writeInt32BE(n: number): void {
-		this.writeCore(n, 'Int', 32, 'BE');
-	}
-
-	writeInt64BE(n: number): void {
-		this.writeCore(n, 'Int', 64, 'BE');
-	}
-
-	writeFloat8BE(n: number): void {
-		this.writeCore(n, 'Float', 8, 'BE');
-	}
-
-	writeFloat16BE(n: number): void {
-		this.writeCore(n, 'Float', 16, 'BE');
-	}
 
 	writeFloat32BE(n: number): void {
 		this.writeCore(n, 'Float', 32, 'BE');
@@ -515,7 +501,7 @@ export class NaniumBuffer {
 	writeFloat64BE(n: number): void {
 		this.writeCore(n, 'Float', 64, 'BE');
 	}
-	//#endregion write Big Endian Methods
+	//#endregion write Methods
 
 	static isNaniumBuffer(objectOrConstructor: ConstructorType | object): boolean {
 		return objectOrConstructor?.['naniumBufferInternalValueSymbol'] != undefined ||

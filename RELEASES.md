@@ -20,7 +20,7 @@
   source-based rate limit interceptors
 - request.enqueue: supports execution context
 - request queues: transform request to instance with correct types before execution
-- NaniumBuffer: added methods for sequential writing, added Big-Endian-read methods, fix of asUInt8Array
+- NaniumBuffer: added methods for sequential writing, added Big-Endian-read methods, added readString & writeString, fix of asUInt8Array,
 
 # 1.25.2
 
@@ -100,29 +100,29 @@
 - NaniumObject: the constructor creates per default a deep clone
 - NaniumObject: the @Type Decorator now also accepts an arrow function as first parameter, that takes the parent source
   Object and must return a Constructor for this property.
-  ```ts  
-  class MyClass<T extends A | B> extends NaniumObject<MyClass<any>> { 
+  ```ts
+  class MyClass<T extends A | B> extends NaniumObject<MyClass<any>> {
     @Type(String) type: 'a' | 'b';
     @Type((p: MyClass<any>) => a.type === 'a' ? A : B) config: T;
   };
-  const c = new MyClass({ 
+  const c = new MyClass({
     type: 'b',
     config: { bb: 3 }}
-  ); 
+  );
   // c.config will have type B
   ```
 - NaniumObject: the @Type Decorator now also accepts this type of arrow functions in the second parameter. Either direct
   or as value of a generic typeId
   ```ts
-  class Wrapper extends NaniumObject<Wrapper> { 	
+  class Wrapper extends NaniumObject<Wrapper> {
     @Type(MyClass, p => a.type === 'a' ? A : B) mc: MyClass<A | B>;
   };
-  const c = new MyClass({     
+  const c = new MyClass({
     mc: {
       type: 'b',
       config: { bb: 3}
     }
-  }); 
+  });
   // c.mc.config will have type B
   ```
 - Events: static unsubscribe of EventClass is now callable without parameter and will unsubscribe alls subscriptions of

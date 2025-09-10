@@ -47,7 +47,7 @@ describe('NaniumBuffer', function (): void {
 			const largeBuffer = new ArrayBuffer(100); // 100 bytes buffer
 			const smallView = new Uint8Array(largeBuffer, 10, 3); // only 3 bytes starting at offset 10
 			smallView[0] = 65; // 'A'
-			smallView[1] = 66; // 'B' 
+			smallView[1] = 66; // 'B'
 			smallView[2] = 67; // 'C'
 			const buf = new NaniumBuffer([arrayBuffer, smallView]);
 			expect(await buf.asString()).toBe('abcABC');
@@ -94,7 +94,7 @@ describe('NaniumBuffer', function (): void {
 			const largeBuffer = new ArrayBuffer(100); // 100 bytes buffer
 			const smallView = new Uint8Array(largeBuffer, 10, 3); // only 3 bytes starting at offset 10
 			smallView[0] = 65; // 'A'
-			smallView[1] = 66; // 'B' 
+			smallView[1] = 66; // 'B'
 			smallView[2] = 67; // 'C'
 			const buf = new NaniumBuffer([arrayBuffer, smallView]);
 			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcABC');
@@ -122,7 +122,7 @@ describe('NaniumBuffer', function (): void {
 			const largeBuffer = new ArrayBuffer(100); // 100 bytes buffer
 			const smallView = new Uint8Array(largeBuffer, 10, 3); // only 3 bytes starting at offset 10
 			smallView[0] = 65; // 'A'
-			smallView[1] = 66; // 'B' 
+			smallView[1] = 66; // 'B'
 			smallView[2] = 67; // 'C'
 			const buf = await new NaniumBuffer([arrayBuffer, smallView]).as(ArrayBuffer);
 			expect(new TextDecoder().decode(new Uint8Array(buf))).toBe('abcABC');
@@ -200,15 +200,27 @@ describe('NaniumBuffer', function (): void {
 
 	it('--> readUInt32BE \n', async function (): Promise<void> {
 		const buf = new NaniumBuffer();
-		// Arrange: Mehrere UInt32-Werte hintereinander
 		buf.write(new Uint8Array([0x12, 0x34, 0x56, 0x78])) // (Big-Endian)
 		buf.write(new Uint8Array([0xAB, 0xCD, 0xEF, 0x00])) // (Big-Endian)
 		buf.write(new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF])) // (Big-Endian)
-
-		// Act & Assert
 		expect(await buf.readUInt32BE(0)).toBe(0x12345678);
 		expect(await buf.readUInt32BE(4)).toBe(0xABCDEF00);
 		expect(await buf.readUInt32BE(8)).toBe(0xDEADBEEF);
+	});
+
+	it('--> readString \n', async function (): Promise<void> {
+		const buf = new NaniumBuffer();
+		buf.writeInt32LE(2);
+		buf.write(new TextEncoder().encode('abcdef'));
+		expect(await buf.readString(4, 5)).toBe('abcde');
+	});
+
+	it('--> writeString \n', async function (): Promise<void> {
+		const buf = new NaniumBuffer();
+		buf.writeInt32LE(2);
+		buf.writeString('abc');
+		const result = new TextDecoder('utf-8').decode(await (await buf.slice(4, 7)).asUint8Array());
+		expect(result).toBe('abc');
 	});
 
 	it('--> write \n', async function (): Promise<void> {
