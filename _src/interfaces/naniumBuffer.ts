@@ -6,6 +6,8 @@ export class NaniumBuffer {
 	@Type(String) id: string;
 	private static naniumBufferInternalValueSymbol: symbol = Symbol.for('__Nanium__BufferInternalValueSymbol__');
 
+	private readIndex: number = 0;
+
 	constructor(data?: DataSource | DataSource[], id?: string) {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
 		this.id = id ?? Date.now() + '-' + Math.random().toFixed(20).substring(2) + (++uuidCounter);
@@ -62,6 +64,13 @@ export class NaniumBuffer {
 				this[NaniumBuffer.naniumBufferInternalValueSymbol].push(part);
 			}
 		} else {
+			if (data instanceof DataView) {
+				data = new Uint8Array(
+					data.buffer,
+					data.byteOffset,
+					data.byteLength
+				);
+			}
 			this[NaniumBuffer.naniumBufferInternalValueSymbol].push(data);
 		}
 	}
@@ -342,107 +351,91 @@ export class NaniumBuffer {
 	}
 
 	//#region Read Methods
-	async readString(idx: number, length: number, encoding: string = 'utf-8'): Promise<string> {
+	startSequentialReadingAt(idx: number) {
+		this.readIndex = idx ?? 0;
+	}
+
+	async readString(idx: number = this.readIndex, length?: number, encoding: string = 'utf-8'): Promise<string> {
 		const bytes = this.slice(idx, idx + length);
 		return new TextDecoder(encoding).decode(await bytes.asUint8Array());
 	};
 
-	async readBigInt64LE(idx: number): Promise<bigint> {
+	async readBigInt64LE(idx: number = this.readIndex): Promise<bigint> {
 		return (await this.slice(idx, BigInt64Array.BYTES_PER_ELEMENT).as(BigInt64Array))[0];
 	}
 
-	async readBigUInt64LE(idx: number): Promise<bigint> {
+	async readBigUInt64LE(idx: number = this.readIndex): Promise<bigint> {
 		return (await this.slice(idx, BigUint64Array.BYTES_PER_ELEMENT).as(BigUint64Array))[0];
 	}
 
-	async readFloat32LE(idx: number): Promise<number> {
+	async readFloat32LE(idx: number = this.readIndex): Promise<number> {
 		return (await this.slice(idx, idx + Float32Array.BYTES_PER_ELEMENT).as(Float32Array))[0];
 	}
 
-	async readFloat64LE(idx: number): Promise<number> {
+	async readFloat64LE(idx: number = this.readIndex): Promise<number> {
 		return (await this.slice(idx, idx + Float64Array.BYTES_PER_ELEMENT).as(Float64Array))[0];
 	}
 
-	async readInt8LE(idx: number) {
+	async readInt8(idx: number = this.readIndex) {
 		return (await this.slice(idx, idx + Int8Array.BYTES_PER_ELEMENT).as(Int8Array))[0];
 	}
 
-	async readInt16LE(idx: number) {
+	async readInt16LE(idx: number = this.readIndex) {
 		return (await this.slice(idx, idx + Int16Array.BYTES_PER_ELEMENT).as(Int16Array))[0];
 	}
 
-	async readInt32LE(idx: number) {
+	async readInt32LE(idx: number = this.readIndex) {
 		return (await this.slice(idx, idx + Int32Array.BYTES_PER_ELEMENT).as(Int32Array))[0];
 	}
 
-	async readUInt8LE(idx: number) {
+	async readUInt8(idx: number = this.readIndex) {
 		return (await this.slice(idx, idx + Uint8Array.BYTES_PER_ELEMENT).as(Uint8Array))[0];
 	}
 
-	async readUInt16LE(idx: number) {
+	async readUInt16LE(idx: number = this.readIndex) {
 		return (await this.slice(idx, idx + Uint16Array.BYTES_PER_ELEMENT).as(Uint16Array))[0];
 	}
 
-	async readUInt32LE(idx: number) {
+	async readUInt32LE(idx: number = this.readIndex) {
 		return (await this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).as(Uint32Array))[0];
 	}
 
-	async readBigInt64BE(idx: number): Promise<bigint> {
-		const bytes = await this.slice(idx, idx + BigInt64Array.BYTES_PER_ELEMENT).asUint8Array();
+	async readBE(idx: number = this.readIndex, byteCount: number, fn: keyof DataView) {
+		const bytes = await this.slice(idx, idx + byteCount).asUint8Array();
 		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getBigInt64(0, false); // false = Big-Endian
+		return (view[fn] as Function)(0, false); // false = Big-Endian
 	}
 
-	async readBigUInt64BE(idx: number): Promise<bigint> {
-		const bytes = await this.slice(idx, idx + BigUint64Array.BYTES_PER_ELEMENT).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getBigUint64(0, false); // false = Big-Endian
+	async readBigInt64BE(idx?: number): Promise<bigint> {
+		return await this.readBE(idx, BigInt64Array.BYTES_PER_ELEMENT, 'getBigInt64');
 	}
 
-	async readFloat32BE(idx: number): Promise<number> {
-		const bytes = await this.slice(idx, idx + Float32Array.BYTES_PER_ELEMENT).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getFloat32(0, false); // false = Big-Endian
+	async readBigUInt64BE(idx?: number): Promise<bigint> {
+		return await this.readBE(idx, BigUint64Array.BYTES_PER_ELEMENT, 'getBigUint64');
 	}
 
-	async readFloat64BE(idx: number): Promise<number> {
-		const bytes = await this.slice(idx, idx + Float64Array.BYTES_PER_ELEMENT).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getFloat64(0, false); // false = Big-Endian
+	async readFloat32BE(idx?: number): Promise<number> {
+		return await this.readBE(idx, Float32Array.BYTES_PER_ELEMENT, 'getFloat32');
 	}
 
-	async readInt8BE(idx: number): Promise<number> {
-		// Int8 hat keine Endianness, aber für Konsistenz
-		return (await this.slice(idx, idx + Int8Array.BYTES_PER_ELEMENT).as(Int8Array))[0];
+	async readFloat64BE(idx?: number): Promise<number> {
+		return await this.readBE(idx, Float64Array.BYTES_PER_ELEMENT, 'getFloat64');
 	}
 
-	async readInt16BE(idx: number): Promise<number> {
-		const bytes = await this.slice(idx, idx + Int16Array.BYTES_PER_ELEMENT).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getInt16(0, false); // false = Big-Endian
+	async readInt16BE(idx: number = this.readIndex): Promise<number> {
+		return await this.readBE(idx, Int16Array.BYTES_PER_ELEMENT, 'getInt16');
 	}
 
-	async readInt32BE(idx: number): Promise<number> {
-		const bytes = await this.slice(idx, idx + Int32Array.BYTES_PER_ELEMENT).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getInt32(0, false); // false = Big-Endian
+	async readInt32BE(idx: number = this.readIndex): Promise<number> {
+		return await this.readBE(idx, Int32Array.BYTES_PER_ELEMENT, 'getInt32');
 	}
 
-	async readUInt8BE(idx: number): Promise<number> {
-		// UInt8 hat keine Endianness, aber für Konsistenz
-		return (await this.slice(idx, idx + Uint8Array.BYTES_PER_ELEMENT).as(Uint8Array))[0];
+	async readUInt16BE(idx: number = this.readIndex): Promise<number> {
+		return await this.readBE(idx, Uint16Array.BYTES_PER_ELEMENT, 'getUint16');
 	}
 
-	async readUInt16BE(idx: number): Promise<number> {
-		const bytes = await this.slice(idx, idx + Uint16Array.BYTES_PER_ELEMENT).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getUint16(0, false); // false = Big-Endian
-	}
-
-	async readUInt32BE(idx: number): Promise<number> {
-		const bytes = await this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		return view.getUint32(0, false); // false = Big-Endian
+	async readUInt32BE(idx: number = this.readIndex): Promise<number> {
+		return await this.readBE(idx, Uint32Array.BYTES_PER_ELEMENT, 'getUint32');
 	}
 	//#endregion Read Methods
 
@@ -522,4 +515,11 @@ export interface BlobLike {
 	text(): Promise<string>;
 }
 
-export type DataSource = (NaniumBuffer | ArrayBuffer | Uint8Array | BlobLike);
+export interface BufferLike {
+	byteLength: number;
+	byteOffset: number;
+	buffer: ArrayBufferLike;
+	BYTES_PER_ELEMENT: number;
+}
+
+export type DataSource = (NaniumBuffer | ArrayBuffer | ArrayBufferLike | BlobLike | BufferLike | DataView);
