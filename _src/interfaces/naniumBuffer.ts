@@ -254,7 +254,7 @@ export class NaniumBuffer {
 		throw new Error(`Unsupported data type: ${Object.prototype.toString.call(part)}`);
 	}
 
-	async asArrayBuffer(): Promise<ArrayBuffer> {
+	async asArrayBuffer(): Promise<ArrayBufferLike> {
 		const data = await this.asUint8Array();
 		if (data.byteLength === data.buffer.byteLength) {
 			return (await this.asUint8Array()).buffer;
@@ -510,16 +510,17 @@ export interface BlobLike {
 
 	slice(start?: number, end?: number, contentType?: string): BlobLike;
 
-	stream(): any;
-
 	text(): Promise<string>;
 }
 
 export interface BufferLike {
-	byteLength: number;
+	buffer: ArrayBuffer;
 	byteOffset: number;
-	buffer: ArrayBufferLike;
-	BYTES_PER_ELEMENT: number;
+	length: number;
+	poolSize: number;
 }
 
-export type DataSource = (NaniumBuffer | ArrayBuffer | ArrayBufferLike | BlobLike | BufferLike | DataView);
+export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array |
+	Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array;
+
+export type DataSource = (NaniumBuffer | ArrayBuffer | ArrayBufferLike | TypedArray | BlobLike | BufferLike | DataView);

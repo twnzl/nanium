@@ -1,3 +1,4 @@
+import { Blob } from 'node:buffer';
 import { NaniumBuffer } from './naniumBuffer';
 import { NaniumStream } from './naniumStream';
 
@@ -8,7 +9,7 @@ describe('NaniumBuffer', function (): void {
 	const float32Array: Float32Array = new Float32Array(new TextEncoder().encode('mnop').buffer);
 	const buffer32 = Buffer.from(new TextEncoder().encode('qrst'));
 	const dataView = new DataView(new TextEncoder().encode('uvw').buffer);
-	// Blob is tested in browser app.component.spec.ts
+	const blob = new Blob([new TextEncoder().encode('xyz')]);
 
 	test('isNaniumBuffer', async function (): Promise<void> {
 		expect(NaniumBuffer.isNaniumBuffer(NaniumBuffer)).toBeTruthy();
@@ -19,10 +20,10 @@ describe('NaniumBuffer', function (): void {
 	describe('asString', function (): void {
 		it('with different types in constructor', async function (): Promise<void> {
 			const buf = new NaniumBuffer([
-				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView
+				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView, blob
 			]);
 			expect(buf.id?.length > 0).toBeTruthy();
-			expect(await buf.asString()).toBe('abcdefjklmnopqrstuvw');
+			expect(await buf.asString()).toBe('abcdefjklmnopqrstuvwxyz');
 		});
 
 		it('asString with a single arrayBuffer', async function (): Promise<void> {
@@ -58,9 +59,9 @@ describe('NaniumBuffer', function (): void {
 	describe('asUInt8Array', function (): void {
 		it('asUInt8Array with different types in constructor \n', async function (): Promise<void> {
 			const buf = new NaniumBuffer([
-				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView
+				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView, blob
 			]);
-			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklmnopqrstuvw');
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklmnopqrstuvwxyz');
 		});
 
 		it('asUInt8Array with a single arrayBuffer', async function (): Promise<void> {
@@ -75,20 +76,20 @@ describe('NaniumBuffer', function (): void {
 
 		it('asUInt8Array with different types in constructor and additional NaniumBuffer written\n', async function (): Promise<void> {
 			const buf = new NaniumBuffer([
-				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView
+				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView, blob
 			]);
 			buf.write(new NaniumBuffer([
-				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView
+				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView, blob
 			]));
-			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklmnopqrstuvwabcdefjklmnopqrstuvw');
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklmnopqrstuvwxyzabcdefjklmnopqrstuvwxyz');
 		});
 
 		it('asUInt8Array with different types in constructor and same NaniumBuffer written again to itself\n', async function (): Promise<void> {
 			const buf = new NaniumBuffer([
-				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView,
+				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView, blob
 			]);
 			buf.write(buf);
-			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklmnopqrstuvwabcdefjklmnopqrstuvw');
+			expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklmnopqrstuvwxyzabcdefjklmnopqrstuvwxyz');
 		});
 
 		it('asUInt8Array with bigger internal buffer than data\n', async () => {
@@ -105,11 +106,11 @@ describe('NaniumBuffer', function (): void {
 	describe('as())', function (): void {
 		it('as(Buffer) with different types in constructor \n', async function (): Promise<void> {
 			const buf = new NaniumBuffer([
-				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView
+				arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView, blob
 			]);
 			const b = await buf.as(Buffer);
 			expect(b instanceof Buffer).toBeTruthy();
-			expect(new TextDecoder().decode(new Uint8Array(b as any, b.byteOffset, b.byteLength))).toBe('abcdefjklmnopqrstuvw');
+			expect(new TextDecoder().decode(new Uint8Array(b as any, b.byteOffset, b.byteLength))).toBe('abcdefjklmnopqrstuvwxyz');
 		});
 
 		it('as(ArrayBuffer) with Buffer with smaller byteLength than the underlying ArrayBuffer \n', async function (): Promise<void> {
@@ -143,40 +144,45 @@ describe('NaniumBuffer', function (): void {
 		buf.write(uint8Array);
 		buf.write(buffer32);
 		buf.write(dataView);
-		expect(buf.length).toBe(14);
-		expect(await buf.asString()).toBe('mnopjklqrstuvw');
+		buf.write(blob);
+		expect(buf.length).toBe(17);
+		expect(await buf.asString()).toBe('mnopjklqrstuvwxyz');
 		buf.clear();
 		expect(buf.length).toBe(0);
 	});
 
 	it('--> slice \n', async function (): Promise<void> {
 		const buf = new NaniumBuffer([
-			arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView
+			arrayBuffer, buffer, uint8Array, float32Array, buffer32, dataView, blob
 		]);
-		expect(await buf.asString()).toBe('abcdefjklmnopqrstuvw');
-		expect(await buf.slice(0).asString()).toBe('abcdefjklmnopqrstuvw');
+		expect(await buf.asString()).toBe('abcdefjklmnopqrstuvwxyz');
+		expect(await buf.slice(0).asString()).toBe('abcdefjklmnopqrstuvwxyz');
 		expect(await buf.slice(0, 3).asString()).toBe('abc');
 		expect(await buf.slice(0, 4).asString()).toBe('abcd');
-		expect(await buf.slice(0, -1).asString()).toBe('abcdefjklmnopqrstuv');
-		expect(await buf.slice(1, -1).asString()).toBe('bcdefjklmnopqrstuv');
-		expect(await buf.slice(3, -1).asString()).toBe('defjklmnopqrstuv');
-		expect(await buf.slice(4, -1).asString()).toBe('efjklmnopqrstuv');
-		expect(await buf.slice(6, -1).asString()).toBe('jklmnopqrstuv');
-		expect(await buf.slice(7, -1).asString()).toBe('klmnopqrstuv');
-		expect(await buf.slice(9, -1).asString()).toBe('mnopqrstuv');
-		expect(await buf.slice(10, -1).asString()).toBe('nopqrstuv');
-		expect(await buf.slice(13, -1).asString()).toBe('qrstuv');
-		expect(await buf.slice(14, -1).asString()).toBe('rstuv');
+		expect(await buf.slice(0, -1).asString()).toBe('abcdefjklmnopqrstuvwxy');
+		expect(await buf.slice(1, -1).asString()).toBe('bcdefjklmnopqrstuvwxy');
+		expect(await buf.slice(3, -1).asString()).toBe('defjklmnopqrstuvwxy');
+		expect(await buf.slice(4, -1).asString()).toBe('efjklmnopqrstuvwxy');
+		expect(await buf.slice(6, -1).asString()).toBe('jklmnopqrstuvwxy');
+		expect(await buf.slice(7, -1).asString()).toBe('klmnopqrstuvwxy');
+		expect(await buf.slice(9, -1).asString()).toBe('mnopqrstuvwxy');
+		expect(await buf.slice(10, -1).asString()).toBe('nopqrstuvwxy');
+		expect(await buf.slice(13, -1).asString()).toBe('qrstuvwxy');
+		expect(await buf.slice(14, -1).asString()).toBe('rstuvwxy');
+		expect(await buf.slice(17, -1).asString()).toBe('uvwxy');
+		expect(await buf.slice(18, -1).asString()).toBe('vwxy');
+		expect(await buf.slice(21, -1).asString()).toBe('y');
+		expect(await buf.slice(22, -1).asString()).toBe('');
 
-		expect(await buf.slice(1, -4).asString()).toBe('bcdefjklmnopqrs');
-		expect(await buf.slice(1, -5).asString()).toBe('bcdefjklmnopqr');
-		expect(await buf.slice(1, -8).asString()).toBe('bcdefjklmno');
-		expect(await buf.slice(1, -9).asString()).toBe('bcdefjklmn');
-		expect(await buf.slice(1, -11).asString()).toBe('bcdefjkl');
-		expect(await buf.slice(1, -12).asString()).toBe('bcdefjk');
-		expect(await buf.slice(1, -14).asString()).toBe('bcdef');
-		expect(await buf.slice(1, -15).asString()).toBe('bcde');
-		expect(await buf.slice(0, -15).asString()).toBe('abcde');
+		expect(await buf.slice(1, -4).asString()).toBe('bcdefjklmnopqrstuv');
+		expect(await buf.slice(1, -5).asString()).toBe('bcdefjklmnopqrstu');
+		expect(await buf.slice(1, -8).asString()).toBe('bcdefjklmnopqr');
+		expect(await buf.slice(1, -9).asString()).toBe('bcdefjklmnopq');
+		expect(await buf.slice(1, -11).asString()).toBe('bcdefjklmno');
+		expect(await buf.slice(1, -12).asString()).toBe('bcdefjklmn');
+		expect(await buf.slice(1, -14).asString()).toBe('bcdefjkl');
+		expect(await buf.slice(1, -15).asString()).toBe('bcdefjk');
+		expect(await buf.slice(0, -15).asString()).toBe('abcdefjk');
 	});
 
 	it('--> readFloat32LE \n', async function (): Promise<void> {
