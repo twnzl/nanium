@@ -8,27 +8,19 @@ export class NaniumBuffer {
 
 	private readIndex: number = 0;
 
-	constructor(id?: string) {
+	constructor(data?: DataSource | DataSource[], id?: string) {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
 		this.id = id ?? Date.now() + '-' + Math.random().toFixed(20).substring(2) + (++uuidCounter);
-		return this;
-	}
-
-	static async create(data?: DataSource | DataSource[], id?: string): Promise<NaniumBuffer> {
-		id ??= Date.now() + '-' + Math.random().toFixed(20).substring(2) + (++uuidCounter);
-		const result: NaniumBuffer = new NaniumBuffer(id);
-		result[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
 		if (data) {
 			if (Array.isArray(data)) {
 				for (const part of data) {
-					await result.write(part);
+					this.write(part);
 				}
 			} else {
-				await result.write(data as DataSource);
+				this.write(data as DataSource);
 			}
 		}
-
-		return result;
+		return this;
 	}
 
 	private getLength(part): number {
@@ -49,7 +41,7 @@ export class NaniumBuffer {
 		}
 	}
 
-	async write(data: DataSource): Promise<void> {
+	write(data: DataSource) {
 		if (data?.constructor && data?.constructor['naniumBufferInternalValueSymbol']) {
 			let part: any;
 			const length = data[NaniumBuffer.naniumBufferInternalValueSymbol].length;
@@ -58,16 +50,12 @@ export class NaniumBuffer {
 				this[NaniumBuffer.naniumBufferInternalValueSymbol].push(part);
 			}
 		} else {
-			if (this.isBlobLike(data)) {
-				data = await (data as BlobLike).arrayBuffer();
-			} else {
-				if (data instanceof DataView) {
-					data = new Uint8Array(
-						data.buffer,
-						data.byteOffset,
-						data.byteLength
-					);
-				}
+			if (data instanceof DataView) {
+				data = new Uint8Array(
+					data.buffer,
+					data.byteOffset,
+					data.byteLength
+				);
 			}
 			this[NaniumBuffer.naniumBufferInternalValueSymbol].push(data);
 		}
@@ -77,15 +65,15 @@ export class NaniumBuffer {
 		if (data.constructor && data.constructor['naniumBufferInternalValueSymbol']) {
 			return (data as NaniumBuffer).as(targetType);
 		} else {
-			return (await NaniumBuffer.create(data)).as(targetType);
+			return new NaniumBuffer(data).as(targetType);
 		}
 	}
 
-	as<T>(targetType: new (first?: any, second?: any, third?: any) => T): T {
+	async as<T>(targetType: new (first?: any, second?: any, third?: any) => T): Promise<T> {
 		if (this.isArrayBufferLike(targetType)) {
-			return this.asArrayBuffer() as unknown as T;
+			return await this.asArrayBuffer() as unknown as T;
 		}
-		const data = this.asUint8Array();
+		const data = await this.asUint8Array();
 		if (this.isBlobLike(targetType)) {
 			return new targetType([data]);
 		} else if (this.isBufferLike(targetType)) {
@@ -134,68 +122,7 @@ export class NaniumBuffer {
 		return typeof obj['forEach'] === 'function' && !this.isBufferLike(objectOrConstructor);
 	}
 
-
-	async asUint8Array_(): Promise<Uint8Array> {
-		const internalValues = this[NaniumBuffer.naniumBufferInternalValueSymbol];
-
-		// if there is only one buffer, we do not need to copy the data.
-		// For performance, we just wrap the original data with UInt8Array. But keep in mind that changing the original
-		// buffer changes the result of this function
-		if (internalValues.length === 1) {
-			const data = internalValues[0];
-
-			if (this.isArrayBufferLike(data)) {
-				return new Uint8Array(data);
-			} else if (this.isBlobLike(data)) {
-				const arrayBuffer = await data.arrayBuffer();
-				return new Uint8Array(arrayBuffer);
-			} else if (this.isTypedArrayLike(data)) {
-				// TypedArray: Nur den genutzten Bereich verwenden
-				return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-			} else if (this.isBufferLike(data)) {
-				// Node.js Buffer: Direkte Konvertierung
-				return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-			} else {
-				throw new Error(`Unsupported data type: ${typeof data}`);
-			}
-		}
-
-		// if there are multiple parts create a new buffer and copy data of all parts into it
-		const result = new Uint8Array(this.length);
-		let offset = 0;
-
-		for (const part of internalValues) {
-			let sourceBytes: Uint8Array;
-			let bytesToCopy: number;
-
-			if (this.isBlobLike(part)) {
-				const arrayBuffer = await part.arrayBuffer();
-				sourceBytes = new Uint8Array(arrayBuffer);
-				bytesToCopy = sourceBytes.length;
-			} else if (this.isTypedArrayLike(part)) {
-				// TypedArray: Korrekte Behandlung von byteOffset und byteLength
-				sourceBytes = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
-				bytesToCopy = part.byteLength;
-			} else if (this.isBufferLike(part)) {
-				// Node.js Buffer
-				sourceBytes = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
-				bytesToCopy = part.byteLength;
-			} else if (this.isArrayBufferLike(part)) {
-				sourceBytes = new Uint8Array(part);
-				bytesToCopy = part.byteLength;
-			} else {
-				throw new Error(`Unsupported data type: ${typeof part}`);
-			}
-
-			// efficient copy using set()
-			result.set(sourceBytes, offset);
-			offset += bytesToCopy;
-		}
-
-		return result;
-	}
-
-	asUint8Array(): Uint8Array {
+	async asUint8Array(): Promise<Uint8Array> {
 		const internalValues = this[NaniumBuffer.naniumBufferInternalValueSymbol];
 		if (internalValues.length === 0) {
 			return new Uint8Array(0);
@@ -206,9 +133,13 @@ export class NaniumBuffer {
 		return this.concatenateMultiplePartsToUint8Array(internalValues);
 	}
 
-	private convertSinglePartToUint8Array(data: any): Uint8Array {
+	private async convertSinglePartToUint8Array(data: any): Promise<Uint8Array> {
 		if (this.isArrayBufferLike(data)) {
 			return new Uint8Array(data);
+		}
+		if (this.isBlobLike(data)) {
+			const arrayBuffer = await data.arrayBuffer();
+			return new Uint8Array(arrayBuffer);
 		}
 		if (this.isTypedArrayLike(data) || this.isBufferLike(data)) {
 			return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
@@ -216,11 +147,11 @@ export class NaniumBuffer {
 		throw new Error(`Unsupported data type: ${Object.prototype.toString.call(data)}`);
 	}
 
-	private concatenateMultiplePartsToUint8Array(internalValues: any[]): Uint8Array {
+	private async concatenateMultiplePartsToUint8Array(internalValues: any[]): Promise<Uint8Array> {
 		const result = new Uint8Array(this.length);
 		let offset = 0;
 		for (const part of internalValues) {
-			const { sourceBytes, bytesToCopy } = this.preparePartForCopy(part);
+			const { sourceBytes, bytesToCopy } = await this.preparePartForCopy(part);
 			// Sicherheitscheck
 			if (offset + bytesToCopy > result.length) {
 				throw new Error(`Buffer overflow: trying to write ${bytesToCopy} bytes at offset ${offset}, but result has only ${result.length} bytes`);
@@ -231,7 +162,12 @@ export class NaniumBuffer {
 		return result;
 	}
 
-	private preparePartForCopy(part: any): { sourceBytes: Uint8Array, bytesToCopy: number } {
+	private async preparePartForCopy(part: any): Promise<{ sourceBytes: Uint8Array, bytesToCopy: number }> {
+		if (this.isBlobLike(part)) {
+			const arrayBuffer = await part.arrayBuffer();
+			const sourceBytes = new Uint8Array(arrayBuffer);
+			return { sourceBytes, bytesToCopy: sourceBytes.length };
+		}
 		if (this.isTypedArrayLike(part) || this.isBufferLike(part)) {
 			const sourceBytes = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
 			return { sourceBytes, bytesToCopy: part.byteLength };
@@ -243,10 +179,10 @@ export class NaniumBuffer {
 		throw new Error(`Unsupported data type: ${Object.prototype.toString.call(part)}`);
 	}
 
-	asArrayBuffer(): ArrayBufferLike {
-		const data = this.asUint8Array();
+	async asArrayBuffer(): Promise<ArrayBufferLike> {
+		const data = await this.asUint8Array();
 		if (data.byteLength === data.buffer.byteLength) {
-			return (this.asUint8Array()).buffer;
+			return (await this.asUint8Array()).buffer;
 		} else {
 			return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
 		}
@@ -256,16 +192,18 @@ export class NaniumBuffer {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
 	}
 
-	asString(encoding: string = 'utf-8'): string {
+	async asString(encoding: string = 'utf-8'): Promise<string> {
 		const result: string[] = [];
 
-		for (const part of this[NaniumBuffer.naniumBufferInternalValueSymbol]) {
+		for await (const part of this[NaniumBuffer.naniumBufferInternalValueSymbol]) {
 			if (!part) {
 				continue;
 			}
 
 			try {
-				if (typeof part === 'string') {
+				if (this.isBlobLike(part)) {
+					result.push(await part.text());
+				} else if (typeof part === 'string') {
 					result.push(part);
 				} else if (this.isTypedArrayLike(part)) {
 					const uint8View = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
@@ -337,110 +275,15 @@ export class NaniumBuffer {
 		return result;
 	}
 
-	//#region Read Methods
-	startSequentialReadingAt(idx: number) {
-		this.readIndex = idx ?? 0;
+	async asReadable(): Promise<NaniumBufferReadable> {
+		return NaniumBufferReadable.from(this);
 	}
 
-	readString(length: number, startIdx: number = this.readIndex, encoding: string = 'utf-8'): string {
-		const bytes = this.slice(startIdx, startIdx + length);
-		this.readIndex += length;
-		return new TextDecoder(encoding).decode(bytes.asUint8Array());
-	};
-
-	readBigInt64LE(idx: number = this.readIndex): bigint {
-		this.readIndex += 8;
-		return this.slice(idx, idx + BigInt64Array.BYTES_PER_ELEMENT).as(BigInt64Array)[0];
-	}
-
-	readBigUInt64LE(idx: number = this.readIndex): bigint {
-		this.readIndex += 8;
-		return this.slice(idx, idx + BigUint64Array.BYTES_PER_ELEMENT).as(BigUint64Array)[0];
-	}
-
-	readFloat32LE(idx: number = this.readIndex): number {
-		this.readIndex += 4;
-		return this.slice(idx, idx + Float32Array.BYTES_PER_ELEMENT).as(Float32Array)[0];
-	}
-
-	readFloat64LE(idx: number = this.readIndex): number {
-		this.readIndex += 8;
-		return this.slice(idx, idx + Float64Array.BYTES_PER_ELEMENT).as(Float64Array)[0];
-	}
-
-	readInt8(idx: number = this.readIndex) {
-		this.readIndex += 1;
-		return this.slice(idx, idx + Int8Array.BYTES_PER_ELEMENT).as(Int8Array)[0];
-	}
-
-	readInt16LE(idx: number = this.readIndex) {
-		this.readIndex += 2;
-		return this.slice(idx, idx + Int16Array.BYTES_PER_ELEMENT).as(Int16Array)[0];
-	}
-
-	readInt32LE(idx: number = this.readIndex) {
-		this.readIndex += 4;
-		return this.slice(idx, idx + Int32Array.BYTES_PER_ELEMENT).as(Int32Array)[0];
-	}
-
-	readUInt8(idx: number = this.readIndex) {
-		this.readIndex += 1;
-		return this.slice(idx, idx + Uint8Array.BYTES_PER_ELEMENT).as(Uint8Array)[0];
-	}
-
-	readUInt16LE(idx: number = this.readIndex) {
-		this.readIndex += 2;
-		return this.slice(idx, idx + Uint16Array.BYTES_PER_ELEMENT).as(Uint16Array)[0];
-	}
-
-	readUInt32LE(idx: number = this.readIndex) {
-		this.readIndex += 4;
-		return this.slice(idx, idx + Uint32Array.BYTES_PER_ELEMENT).as(Uint32Array)[0];
-	}
-
-	readBE(idx: number = this.readIndex, byteCount: number, fn: keyof DataView) {
-		const bytes = this.slice(idx, idx + byteCount).asUint8Array();
-		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-		this.readIndex += byteCount;
-		return (view[fn] as Function)(0, false); // false = Big-Endian
-	}
-
-	readBigInt64BE(idx?: number): bigint {
-		return this.readBE(idx, BigInt64Array.BYTES_PER_ELEMENT, 'getBigInt64');
-	}
-
-	readBigUInt64BE(idx?: number): bigint {
-		return this.readBE(idx, BigUint64Array.BYTES_PER_ELEMENT, 'getBigUint64');
-	}
-
-	readFloat32BE(idx?: number): number {
-		return this.readBE(idx, Float32Array.BYTES_PER_ELEMENT, 'getFloat32');
-	}
-
-	readFloat64BE(idx?: number): number {
-		return this.readBE(idx, Float64Array.BYTES_PER_ELEMENT, 'getFloat64');
-	}
-
-	readInt16BE(idx: number = this.readIndex): number {
-		return this.readBE(idx, Int16Array.BYTES_PER_ELEMENT, 'getInt16');
-	}
-
-	readInt32BE(idx: number = this.readIndex): number {
-		return this.readBE(idx, Int32Array.BYTES_PER_ELEMENT, 'getInt32');
-	}
-
-	readUInt16BE(idx: number = this.readIndex): number {
-		return this.readBE(idx, Uint16Array.BYTES_PER_ELEMENT, 'getUint16');
-	}
-
-	readUInt32BE(idx: number = this.readIndex): number {
-		return this.readBE(idx, Uint32Array.BYTES_PER_ELEMENT, 'getUint32');
-	}
-	//#endregion Read Methods
 
 	//#region write methods
-	writeString(text: string): void {
+	writeString(text: string): NaniumBuffer {
 		this.write(new TextEncoder().encode(text));
+		return this;
 	};
 
 	writeCore(n: number, type: 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
@@ -449,49 +292,60 @@ export class NaniumBuffer {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol].push(buffer);
 	}
 
-	writeInt8(n: number): void {
+	writeInt8(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 8, 'LE');
+		return this;
 	}
 
-	writeInt16LE(n: number): void {
+	writeInt16LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 16, 'LE');
+		return this;
 	}
 
-	writeInt16BE(n: number): void {
+	writeInt16BE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 16, 'BE');
+		return this;
 	}
 
-	writeInt32LE(n: number): void {
+	writeInt32LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 32, 'LE');
+		return this;
 	}
 
-	writeInt32BE(n: number): void {
+	writeInt32BE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 32, 'BE');
+		return this;
 	}
 
-	writeInt64LE(n: number): void {
+	writeInt64LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 64, 'LE');
+		return this;
 	}
 
-	writeInt64BE(n: number): void {
+	writeInt64BE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 64, 'BE');
+		return this;
 	}
 
-	writeFloat32LE(n: number): void {
+	writeFloat32LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Float', 32, 'LE');
+		return this;
 	}
 
-	writeFloat64LE(n: number): void {
+	writeFloat64LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Float', 64, 'LE');
+		return this;
 	}
 
 
-	writeFloat32BE(n: number): void {
+	writeFloat32BE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Float', 32, 'BE');
+		return this;
 	}
 
-	writeFloat64BE(n: number): void {
+	writeFloat64BE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Float', 64, 'BE');
+		return this;
 	}
 	//#endregion write Methods
 
@@ -523,3 +377,128 @@ export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array
 	Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array;
 
 export type DataSource = (NaniumBuffer | ArrayBuffer | ArrayBufferLike | TypedArray | BlobLike | BufferLike | DataView | ArrayBufferView);
+
+
+export class NaniumBufferReadable {
+	readIndex: number = 0;
+
+	constructor(private data: DataView) {
+	}
+
+	static async from(...data: DataSource[]) {
+		let nb: NaniumBuffer;
+		if (data.length === 1 && data[0] instanceof NaniumBuffer) {
+			nb = data[0] as NaniumBuffer;
+		} else {
+			nb = new NaniumBuffer(data)
+		};
+		return new NaniumBufferReadable(new DataView(await nb.asArrayBuffer()));
+	}
+
+	//#region Read Methods
+	startSequentialReadingAt(idx: number) {
+		this.readIndex = idx ?? 0;
+	}
+
+	readString(length: number, startIdx: number = this.readIndex, encoding: string = 'utf-8'): string {
+		const stringView = new Uint8Array(
+			this.data.buffer,
+			this.data.byteOffset + startIdx,
+			length
+		);
+		this.readIndex += length;
+		return new TextDecoder(encoding).decode(stringView);
+	};
+
+	readFloat32LE(idx: number = this.readIndex): number {
+		this.readIndex += 4;
+		return this.data.getFloat32(idx, true);
+	}
+
+	readFloat64LE(idx: number = this.readIndex): number {
+		this.readIndex += 8;
+		return this.data.getFloat64(idx, true);
+	}
+
+	readInt8(idx: number = this.readIndex) {
+		this.readIndex += 1;
+		return this.data.getInt8(idx);
+	}
+
+	readInt16LE(idx: number = this.readIndex) {
+		this.readIndex += 2;
+		return this.data.getInt16(idx, true);
+	}
+
+	readInt32LE(idx: number = this.readIndex) {
+		this.readIndex += 4;
+		return this.data.getInt32(idx, true);
+	}
+	readBigInt64LE(idx: number = this.readIndex): bigint {
+		this.readIndex += 8;
+		return this.data.getBigInt64(idx, true);
+	}
+
+	readUInt8(idx: number = this.readIndex) {
+		this.readIndex += 1;
+		return this.data.getUint8(idx);
+	}
+
+	readUInt16LE(idx: number = this.readIndex) {
+		this.readIndex += 2;
+		return this.data.getUint16(idx, true);
+	}
+
+	readUInt32LE(idx: number = this.readIndex): number {
+		this.readIndex += 4;
+		return this.data.getUint32(idx, true);
+	}
+
+	readBigUInt64LE(idx: number = this.readIndex): bigint {
+		this.readIndex += 8;
+		return this.data.getBigUint64(idx, true);
+	}
+
+	// BE
+	readFloat32BE(idx?: number): number {
+		this.readIndex += 4;
+		return this.data.getFloat32(idx, false);
+	}
+
+	readFloat64BE(idx?: number): number {
+		this.readIndex += 8;
+		return this.data.getFloat64(idx, false);
+	}
+
+	readInt16BE(idx: number = this.readIndex): number {
+		this.readIndex += 2;
+		return this.data.getInt16(idx, false);
+	}
+
+	readInt32BE(idx: number = this.readIndex): number {
+		this.readIndex += 4;
+		return this.data.getInt16(idx, false);
+	}
+
+	readBigInt64BE(idx?: number): bigint {
+		this.readIndex += 8;
+		return this.data.getBigInt64(idx, false);
+	}
+
+	readUInt16BE(idx: number = this.readIndex): number {
+		this.readIndex += 2;
+		return this.data.getUint16(idx, false);
+	}
+
+	readUInt32BE(idx: number = this.readIndex): number {
+		this.readIndex += 4;
+		return this.data.getUint32(idx, false);
+	}
+
+	readBigUInt64BE(idx?: number): bigint {
+		this.readIndex += 8;
+		return this.data.getBigUint64(idx, false);
+	}
+	//#endregion Read Methods
+
+}

@@ -188,7 +188,7 @@ export class NaniumWebsocketChannel implements Channel {
 					type: 'service_response',
 					content: {
 						requestId: message.content.id,
-						response: result ? new NaniumBuffer((result as NaniumBuffer).id) : undefined
+						response: result ? new NaniumBuffer(undefined, (result as NaniumBuffer).id) : undefined
 					}
 				};
 				await sendMessage(responseMessage, this.config.serializer, data => ws.send(data));
@@ -245,7 +245,7 @@ export class NaniumWebsocketChannel implements Channel {
 							const prop = name[name.length - 1];
 							if (parent[prop]) {
 								resBuffers.push(parent[prop] as NaniumBuffer);
-								parent[prop] = new NaniumBuffer((parent[prop] as NaniumBuffer).id); // replace with buffer that only holds the id, not the data to send only this in the answer request
+								parent[prop] = new NaniumBuffer(undefined, (parent[prop] as NaniumBuffer).id); // replace with buffer that only holds the id, not the data to send only this in the answer request
 							}
 						}
 					});
@@ -341,7 +341,7 @@ export class NaniumWebsocketChannel implements Channel {
 		// 	const objects = NaniumObject.create(obj => {
 		// 	});
 		// } else {
-		streamInfo.stream.write(message.payload instanceof NaniumBuffer ? message.payload : await NaniumBuffer.create(message.payload));
+		streamInfo.stream.write(message.payload instanceof NaniumBuffer ? message.payload : new NaniumBuffer(message.payload));
 		// }
 	}
 

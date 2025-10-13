@@ -262,7 +262,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		// handle buffers inside object response
 		pendingRequest.pendingResponseBuffers = [];
 		if (NaniumBuffer.isNaniumBuffer(ResponseType) && message.content.response) {
-			pendingRequest.response = new NaniumBuffer(message.content.response.id);
+			pendingRequest.response = new NaniumBuffer(undefined, message.content.response.id);
 			pendingRequest.pendingResponseBuffers.push(pendingRequest.response);
 		} else {
 			pendingRequest.response = NaniumObject.create(message.content.response, ResponseType);

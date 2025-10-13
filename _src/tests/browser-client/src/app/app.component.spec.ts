@@ -165,59 +165,59 @@ describe('', function (): void {
 
 			describe('asString', function (): void {
 				it('with different types in constructor', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([
+					const buf = new NaniumBuffer([
 						arrayBuffer, blob, uint8Array, file
 					]);
 					expect(buf.id?.length > 0).toBeTruthy();
-					expect(buf.asString()).toBe('abcdefjklfff');
+					expect(await buf.asString()).toBe('abcdefjklfff');
 				});
 
 				it('asString with a single arrayBuffer', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([arrayBuffer]);
-					expect(buf.asString()).toBe('abc');
+					const buf = new NaniumBuffer([arrayBuffer]);
+					expect(await buf.asString()).toBe('abc');
 				});
 
 				it('asString write multiple different types', async function (): Promise<void> {
-					const buf = new NaniumBuffer('1');
+					const buf = new NaniumBuffer(undefined, '1');
 					expect(buf.id).toBe('1');
-					await buf.write(arrayBuffer);
-					await buf.write(blob);
-					await buf.write(uint8Array);
-					await buf.write(file);
-					expect(buf.asString()).toBe('abcdefjklfff');
+					buf.write(arrayBuffer);
+					buf.write(blob);
+					buf.write(uint8Array);
+					buf.write(file);
+					expect(await buf.asString()).toBe('abcdefjklfff');
 				});
 			});
 
 			describe('asUInt8Array', function (): void {
 				it('asUInt8Array with different types in constructor \n', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([
+					const buf = new NaniumBuffer([
 						arrayBuffer, blob, uint8Array, file
 					]);
-					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('abcdefjklfff');
+					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklfff');
 				});
 
 				it('asUInt8Array with a single arrayBuffer', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([arrayBuffer]);
-					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('abc');
+					const buf = new NaniumBuffer([arrayBuffer]);
+					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abc');
 				});
 
 				it('asUInt8Array with a single Blob', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([blob]);
-					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('def');
+					const buf = new NaniumBuffer([blob]);
+					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('def');
 				});
 
 				it('asUInt8Array with a single File', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([file]);
-					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('fff');
+					const buf = new NaniumBuffer([file]);
+					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('fff');
 				});
 			});
 
 			describe('as())', function (): void {
 				it('as(Blob) with different types in constructor \n', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([
+					const buf = new NaniumBuffer([
 						arrayBuffer, blob, uint8Array, file
 					]);
-					const b = buf.as(Blob);
+					const b = await buf.as(Blob);
 					expect(b instanceof Blob).toBeTruthy();
 					expect(new TextDecoder().decode(new Uint8Array(await b.arrayBuffer()))).toBe('abcdefjklfff');
 				});
@@ -225,16 +225,15 @@ describe('', function (): void {
 
 			describe('splice())', function (): void {
 				it('splice(Buffer) with different types in constructor \n', async function (): Promise<void> {
-					const buf = await NaniumBuffer.create([
+					const buf = new NaniumBuffer([
 						arrayBuffer, blob, uint8Array, file
 					]);
-					expect(buf.slice(3, 6).asString()).toBe('def');
-					expect(buf.slice(3, 5).asString()).toBe('de');
-					expect(buf.slice(4, 6).asString()).toBe('ef');
-					expect(buf.slice(4, 7).asString()).toBe('efj');
-					expect(buf.slice(9, 12).asString()).toBe('fff');
-					expect(buf.slice(2, 7).asString()).toBe('cdefj');
-
+					expect(await buf.slice(3, 6).asString()).toBe('def');
+					expect(await buf.slice(3, 5).asString()).toBe('de');
+					expect(await buf.slice(4, 6).asString()).toBe('ef');
+					expect(await buf.slice(4, 7).asString()).toBe('efj');
+					expect(await buf.slice(9, 12).asString()).toBe('fff');
+					expect(await buf.slice(2, 7).asString()).toBe('cdefj');
 				});
 			});
 		});

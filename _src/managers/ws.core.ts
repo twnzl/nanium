@@ -48,7 +48,7 @@ export async function sendBufferInChunks(
 	binaryChunkSize: number = 1024 * 1024,
 	streamId?: string,
 ) {
-	const data: NaniumBuffer = NaniumBuffer.isNaniumBuffer(buffer) ? buffer as NaniumBuffer : await NaniumBuffer.create(buffer);
+	const data: NaniumBuffer = NaniumBuffer.isNaniumBuffer(buffer) ? buffer as NaniumBuffer : new NaniumBuffer(buffer);
 	const totalBytes = data.length;
 	const totalChunks = Math.ceil(totalBytes / binaryChunkSize);
 
@@ -83,18 +83,20 @@ export async function sendBufferInChunks(
 }
 
 export async function parseMessage(data: any /* Blob | ArrayBuffer | Buffer */, serializer: NaniumSerializer): Promise<WsMessage> {
-	const nb = new NaniumBuffer(data);
-	const headerLength = await nb.readInt32LE(0);
-	const binary = await nb.asArrayBuffer();
-
-	// extract and parse message/header
-	const headerArray = new Uint8Array(binary, 4, headerLength);
-	const headerJson = new TextDecoder().decode(headerArray);
-	const result: WsMessage = serializer.deserialize(headerJson);
-
-	// extract appending data
-	if (binary.byteLength > 4 + headerLength) {
-		result.payload = new Uint8Array(binary, 4 + headerLength, binary.byteLength - 4 - headerLength);
+	let result: WsMessage;
+	if (typeof data === 'string') {
+		result = serializer.deserialize(data);
+	} else {
+		const nb = new NaniumBuffer(data);
+		const headerLength = (await nb.asReadable()).readInt32LE(0);
+		const binary = await nb.asArrayBuffer();
+		const headerArray = new Uint8Array(binary, 4, headerLength);
+		const headerJson = new TextDecoder().decode(headerArray);
+		result = serializer.deserialize(headerJson);
+		// extract appending data
+		if (binary.byteLength > 4 + headerLength) {
+			result.payload = new Uint8Array(binary, 4 + headerLength, binary.byteLength - 4 - headerLength);
+		}
 	}
 
 	return result;

@@ -10,8 +10,8 @@ export class TestBufferExecutor implements ServiceExecutor<TestBufferRequest, Te
 		await request.body.buffer2?.write(new TextEncoder().encode('*'));
 		return new TestBufferResponse({
 			id: request.body.id,
-			text1: request.body.buffer1?.asString(),
-			text2: request.body.buffer2?.asString(),
+			text1: await request.body.buffer1?.asString(),
+			text2: await request.body.buffer2?.asString(),
 			buffer1: request.body.buffer1,
 			buffer2: request.body.buffer2,
 		});

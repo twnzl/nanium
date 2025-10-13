@@ -48,8 +48,8 @@ export class AppComponent implements OnInit {
 			await this.testService.init();
 			const request = new TestBufferRequest({
 				id: '1',
-				buffer1: await NaniumBuffer.create(new TextEncoder().encode('123')),
-				buffer2: await NaniumBuffer.create(new TextEncoder().encode('456'))
+				buffer1: new NaniumBuffer().writeString('123'),
+				buffer2: new NaniumBuffer().writeString('456'),
 			});
 			const response = await request.execute();
 			console.log(response.id === '1');
@@ -128,8 +128,8 @@ export class AppComponent implements OnInit {
 		this.testService.initWs(8080, 1);
 		const request = new TestBufferRequest({
 			id: '1',
-			buffer1: await NaniumBuffer.create(new TextEncoder().encode('123')),
-			buffer2: undefined,// new NaniumBuffer(new TextEncoder().encode('456'))
+			buffer1: new NaniumBuffer().writeString('123'),
+			buffer2: undefined,
 		});
 		const response = await request.execute();
 		console.log('response.buffer1 should have same content as request.buffer1 + "*":', await response.buffer1.asString());

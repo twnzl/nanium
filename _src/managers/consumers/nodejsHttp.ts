@@ -197,7 +197,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					response.on('data', async chunk => {
 						try {
 							if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
-								resultStream.write(NaniumBuffer.isNaniumBuffer(chunk) ? chunk : await NaniumBuffer.create(chunk) as any);
+								resultStream.write(NaniumBuffer.isNaniumBuffer(chunk) ? chunk : new NaniumBuffer(chunk) as any);
 							} else {
 								deserialized = this.config.serializer.deserializePartial(chunk, restFromLastTime);
 								if (deserialized.data?.length) {

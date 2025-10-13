@@ -7,6 +7,6 @@ export class TestGetNaniumBufferExecutor implements ServiceExecutor<TestGetNaniu
 	static serviceName: string = 'NaniumTest:test/getNaniumBuffer';
 
 	async execute(request: TestGetNaniumBufferRequest, executionContext: TestExecutionContext): Promise<NaniumBuffer> {
-		return await NaniumBuffer.create(new TextEncoder().encode('this is a text that will be send as NaniumBuffer'));
+		return new NaniumBuffer().writeString('this is a text that will be send as NaniumBuffer');
 	}
 }

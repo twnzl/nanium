@@ -62,7 +62,7 @@ export class HttpCore {
 				body.append('request', tmp);
 
 				for (const buffer of buffers) {
-					body.append(buffer.id, buffer.as(Blob));
+					body.append(buffer.id, await buffer.as(Blob));
 				}
 			}
 
@@ -75,7 +75,7 @@ export class HttpCore {
 				return ResponseType !== String ? undefined : data;
 			}
 			if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
-				return await NaniumBuffer.create(data);
+				return new NaniumBuffer(data);
 			} else {
 				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),

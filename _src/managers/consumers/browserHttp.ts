@@ -150,7 +150,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 								}
 								try {
 									if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
-										resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : await NaniumBuffer.create(value) as any);
+										resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : new NaniumBuffer(value) as any);
 									} else {
 										deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 										if (deserialized.data?.length) {

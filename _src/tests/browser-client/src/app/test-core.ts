@@ -65,14 +65,14 @@ export class TestCore {
 
 	static async naniumBufferResponse() {
 		const result: NaniumBuffer = await new TestGetNaniumBufferRequest().execute();
-		expect(result.asString()).toBe('this is a text that will be send as NaniumBuffer');
+		expect(await result.asString()).toBe('this is a text that will be send as NaniumBuffer');
 	}
 
 	static async naniumBuffersRequest() {
 		const request = new TestBufferRequest({
 			id: '1',
-			buffer1: await NaniumBuffer.create(new TextEncoder().encode('123')),
-			buffer2: await NaniumBuffer.create(new TextEncoder().encode('456'))
+			buffer1: new NaniumBuffer().writeString('123'),
+			buffer2: new NaniumBuffer().writeString('456')
 		});
 		const response = await request.execute();
 		expect(response.id).toBe('1');
@@ -84,7 +84,7 @@ export class TestCore {
 	static async naniumBuffersRequestWithOneUndefined() {
 		const request = new TestBufferRequest({
 			id: '1',
-			buffer1: await NaniumBuffer.create(new TextEncoder().encode('123')),
+			buffer1: new NaniumBuffer().writeString('123'),
 			buffer2: undefined
 		});
 		const response = await request.execute();

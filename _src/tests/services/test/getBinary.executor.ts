@@ -8,6 +8,6 @@ export class TestGetBinaryExecutor implements ServiceExecutor<TestGetBinaryReque
 
 	async execute(request: TestGetBinaryRequest, executionContext: TestExecutionContext): Promise<NaniumBuffer> {
 		const result = new TextEncoder().encode('this is a text that will be send as binary data');
-		return await NaniumBuffer.create(result.buffer);
+		return new NaniumBuffer(result.buffer);
 	}
 }
