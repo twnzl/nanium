@@ -1,12 +1,12 @@
-import { EventHandler } from '../../interfaces/eventHandler';
-import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../objects';
-import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { EventSubscription } from '../../interfaces/eventSubscription';
 import { Nanium } from '../../core';
-import { NaniumBuffer } from '../../interfaces/naniumBuffer';
-import { ExecutionContext } from '../../interfaces/executionContext';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { EventHandler } from '../../interfaces/eventHandler';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
+import { ExecutionContext } from '../../interfaces/executionContext';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
+import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../objects';
 import { getPrimaryResponseType } from '../core';
 
 interface NaniumEventResponse {
@@ -35,7 +35,7 @@ export class HttpCore {
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => Promise<ArrayBuffer>
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => Promise<ArrayBufferView>
 	) {
 	}
 
@@ -62,20 +62,20 @@ export class HttpCore {
 				body.append('request', tmp);
 
 				for (const buffer of buffers) {
-					body.append(buffer.id, new Blob([await buffer.asUint8Array()]));
+					body.append(buffer.id, buffer.as(Blob));
 				}
 			}
 
 			// send the request
 			const ResponseType = getPrimaryResponseType(request);
-			const data: ArrayBuffer = await this.httpRequest('POST', uri, body);
+			const data: ArrayBufferView = await this.httpRequest('POST', uri, body);
 			if (data === undefined || data === null) {
 				return data;
 			} else if (data.byteLength === 0) {
 				return ResponseType !== String ? undefined : data;
 			}
 			if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
-				return new NaniumBuffer(data);
+				return await NaniumBuffer.create(data);
 			} else {
 				const r: any = NaniumObject.create(
 					this.config.serializer.deserialize(data),
@@ -192,7 +192,7 @@ export class HttpCore {
 				id: subscription.id
 			});
 			delete this.eventSubscriptions[eventName];
-			const error: ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl + '/delete' + '?' + eventName, requestBody);
+			const error = await this.httpRequest('POST', this.config.apiEventUrl + '/delete' + '?' + eventName, requestBody);
 			if (error.byteLength) {
 				Nanium.logger.error(this.config.serializer.deserialize(error));
 				return;
@@ -236,8 +236,8 @@ export class HttpCore {
 				}
 				this.config.onServerConnectionRestored();
 			}
-			const rawEventResponse: string | ArrayBuffer = await this.httpRequest('POST', this.config.apiEventUrl,
-				this.config.serializer.serialize({ clientId: this.id }));
+			const serialized = this.config.serializer.serialize({ clientId: this.id })
+			const rawEventResponse = await this.httpRequest('POST', this.config.apiEventUrl, serialized);
 			if (rawEventResponse) {
 				eventResponse = this.config.serializer.deserialize(rawEventResponse);
 			}

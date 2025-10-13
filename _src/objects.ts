@@ -1,6 +1,6 @@
+import { Nanium } from './core';
 import { ExecutionScope } from './interfaces/executionScope';
 import { ServiceRequestInterceptor } from './interfaces/serviceRequestInterceptor';
-import { Nanium } from './core';
 
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
 export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');
@@ -236,11 +236,16 @@ export class NaniumObject<T> {
 		core(obj, fn, []);
 	}
 
-	static traverseType(c: ConstructorType, fn: (name: string[], typeInfo?: NaniumPropertyInfoCore) => void, depth: number = 2) {
+	static traverseType(
+		c: ConstructorType,
+		fn: (name: string[], typeInfo?: NaniumPropertyInfoCore) => void,
+		genericTypes?: any,
+		depth: number = 2
+	) {
 		const knownTypes: ConstructorType[] = [];
 
 		const core = (name: string[], c: ConstructorType) => {
-			if (!c[propertyInfoSymbol]) {
+			if (!c || !c[propertyInfoSymbol]) {
 				return;
 			}
 			if (knownTypes.filter(t => t === c)?.length >= depth) {
@@ -250,7 +255,7 @@ export class NaniumObject<T> {
 			const info: NaniumPropertyInfo = c[propertyInfoSymbol];
 			for (const prop of Object.keys(info)) {
 				fn([...name, prop], info[prop]);
-				core([...name, prop], info[prop].ctor as ConstructorType);
+				core([...name, prop], (info[prop].ctor as ConstructorType) ?? genericTypes?.[info[prop].genericTypeId ?? '']);
 			}
 		};
 
@@ -268,7 +273,7 @@ export class NaniumObject<T> {
 
 	/**
 	 * generate a list of JSON schemas using the Type() annotations of NaniumObject
-	 * @param type constructor function for which the schemas schall be generated
+	 * @param type constructor function for which the schemas shall be generated
 	 * @param baseURI base URI for all generated schemas (the last part is the type name)
 	 * @param knownSchemas already known Schemas
 	 * @param fileMatch if set, the fileMatch property will be set to the main schema (the one for the given constructor function)

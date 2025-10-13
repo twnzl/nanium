@@ -3,10 +3,10 @@ export interface NaniumSerializer {
 
 	serializePartial(obj: any): string | ArrayBuffer;
 
-	deserialize(raw: string | ArrayBuffer): any;
+	deserialize(raw: string | ArrayBuffer | ArrayBufferView): any;
 
 	deserializePartial(
-		rawData: string | ArrayBuffer,
+		rawData: string | ArrayBuffer | ArrayBufferView,
 		restFromLastTime?: any
 	): {
 		data: any;

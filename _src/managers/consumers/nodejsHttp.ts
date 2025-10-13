@@ -1,20 +1,20 @@
-import { ServiceManager } from '../../interfaces/serviceManager';
-import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { NaniumJsonSerializer } from '../../serializers/json';
 import * as http from 'http';
 import { ClientRequest, RequestOptions as HttpRequestOptions } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { HttpCore } from './http.core';
 import { URL } from 'url';
-import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
 import { Nanium } from '../../core';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { EventHandler } from '../../interfaces/eventHandler';
+import { EventSubscription } from '../../interfaces/eventSubscription';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
+import { ServiceManager } from '../../interfaces/serviceManager';
+import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { NaniumJsonSerializer } from '../../serializers/json';
+import { HttpCore } from './http.core';
 
 export interface NaniumConsumerNodejsHttpConfig extends ServiceConsumerConfig {
 	apiUrl: string;
@@ -48,7 +48,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 			...(config || {})
 		};
 		this.httpCore = new HttpCore(this.config,
-			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+			async (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
 
@@ -63,17 +63,17 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		this.httpCore.id = undefined;
 		this.httpCore.terminated = true;
 		this.httpCore = new HttpCore(this.config,
-			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+			async (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<number> {
 		return await this.config.isResponsible(request, serviceName);
 	}
 
-	private async httpRequest(method: 'GET' | 'POST', url: string, body?: string, headers?: any): Promise<ArrayBuffer> {
+	private async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any): Promise<ArrayBufferView> {
 		const [baseUri, query]: string[] = url.split('?');
 		const uri: URL = new URL(baseUri);
-		return new Promise<ArrayBuffer>((resolve, reject) => {
+		return new Promise<ArrayBufferView>((resolve, reject) => {
 			let req: ClientRequest;
 			try {
 				const options: HttpRequestOptions | HttpsRequestOptions = {
@@ -102,11 +102,11 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					response.on('end', async () => {
 						this.activeRequests = this.activeRequests.filter(r => r !== req);
 						let buffer = Buffer.concat(chunks);
-						let arrayBuffer: Uint8Array = new Uint8Array(buffer, 0, buffer.length);
+						// let arrayBuffer: Uint8Array = new Uint8Array(buffer, 0, buffer.length);
 						if (response.statusCode === 500) {
-							reject(arrayBuffer.buffer);
+							reject(buffer);
 						}
-						resolve(arrayBuffer.buffer);
+						resolve(buffer);
 					});
 				});
 				req.on('error', (err) => {
@@ -194,10 +194,10 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 						resultStream.end();
 						return;
 					});
-					response.on('data', async (chunk: Buffer) => {
+					response.on('data', async chunk => {
 						try {
 							if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
-								resultStream.write(NaniumBuffer.isNaniumBuffer(chunk) ? chunk : new NaniumBuffer(chunk) as any);
+								resultStream.write(NaniumBuffer.isNaniumBuffer(chunk) ? chunk : await NaniumBuffer.create(chunk) as any);
 							} else {
 								deserialized = this.config.serializer.deserializePartial(chunk, restFromLastTime);
 								if (deserialized.data?.length) {

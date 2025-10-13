@@ -1,23 +1,23 @@
-import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
+import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http';
 import { Server as HttpsServer } from 'https';
 
-import { Nanium } from '../../../core';
-import { ChannelConfig } from '../../../interfaces/channelConfig';
-import { Channel } from '../../../interfaces/channel';
-import { NaniumRepository } from '../../../interfaces/serviceRepository';
-import { NaniumJsonSerializer } from '../../../serializers/json';
 import { randomUUID } from 'crypto';
-import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { Message } from '../../../interfaces/communicator';
 import * as multipart from 'parse-multipart-data';
+import { Nanium } from '../../../core';
+import { Channel } from '../../../interfaces/channel';
+import { ChannelConfig } from '../../../interfaces/channelConfig';
+import { Message } from '../../../interfaces/communicator';
+import { EventSubscription } from '../../../interfaces/eventSubscription';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import { NaniumStream } from '../../../interfaces/naniumStream';
+import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
+import { NaniumRepository } from '../../../interfaces/serviceRepository';
+import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
+import { NaniumJsonSerializer } from '../../../serializers/json';
 import { getPrimaryResponseType, getSecondaryResponseType } from '../../core';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
-	server: HttpServer | HttpsServer | { use: Function };
+	server: HttpServer | HttpsServer;
 	apiPath?: string;
 	eventPath?: string;
 	longPollingRequestTimeoutInSeconds?: number;
@@ -75,7 +75,7 @@ export class NaniumHttpChannel implements Channel {
 					await this.handleIncomingEventSubscription(req, res);
 				}
 
-				// event unsubscriptions
+					// event unsubscription
 				else if (url === this.config.eventPath + '/delete') {
 					await this.handleIncomingEventUnsubscription(req, res);
 				}
@@ -91,17 +91,8 @@ export class NaniumHttpChannel implements Channel {
 				}
 			};
 
-		if (typeof this.config.server['use'] === 'function') { // express-like
-			this.config.server['use'](handleFunction);
-		} else {
-			const server: HttpsServer | HttpServer = (this.config.server as HttpServer | HttpsServer);
-			const listeners: Function[] = server.listeners('request');
-			if (listeners.length === 1 && typeof listeners[0]['use'] === 'function') { // http(s) server from express-like
-				listeners[0]['use'](this.config.apiPath, handleFunction);
-			} else { // pure http(s) server
-				server.addListener('request', handleFunction);
-			}
-		}
+		const server: HttpsServer | HttpServer = (this.config.server as HttpServer | HttpsServer);
+		server.addListener('request', handleFunction);
 	}
 
 	//#region service request handling
@@ -181,7 +172,7 @@ export class NaniumHttpChannel implements Channel {
 						.onData(chunk => {
 							if (NaniumBuffer.isNaniumBuffer(getSecondaryResponseType(serviceRepository, serviceName))) {
 								if (chunk instanceof NaniumBuffer) {
-									(chunk as NaniumBuffer).asUint8Array().then(buffer => res.write(buffer));
+									res.write(chunk.asUint8Array());
 								} else {
 									res.write(chunk);
 								}

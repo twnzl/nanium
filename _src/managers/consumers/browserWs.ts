@@ -1,24 +1,24 @@
-import { ServiceManager } from '../../interfaces/serviceManager';
-import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { ExecutionContext } from '../../interfaces/executionContext';
+import { Nanium } from '../../core';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
-import { WebSocketClient } from './ws.core';
-import { ConsumerBase } from './base';
+import { ExecutionContext } from '../../interfaces/executionContext';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer';
+import { NaniumStream } from '../../interfaces/naniumStream';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
+import { ServiceManager } from '../../interfaces/serviceManager';
+import { NaniumObject, NaniumPropertyInfoCore } from '../../objects';
+import { getPrimaryResponseType } from '../core';
 import {
 	EmitEventMessageContent,
-	SubscribeEventmessageContent,
+	SubscribeEventMessageContent,
 	WsMessage,
 	WsServiceChunkMessage,
 	WsServiceRequestMessage
 } from '../providers/channels/ws.types';
-import { Nanium } from '../../core';
-import { NaniumObject, NaniumPropertyInfoCore } from '../../objects';
-import { getPrimaryResponseType } from '../core';
-import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../ws.core';
-import { NaniumStream } from '../../interfaces/naniumStream';
+import { ConsumerBase } from './base';
+import { WebSocketClient } from './ws.core';
 
 export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerConfig {
 	// apiUrl?: string;
@@ -137,7 +137,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				const message = new WsMessage<EmitEventMessageContent>(rawMessage, { 'TContent': EmitEventMessageContent });
 				await super.receiveEventLocal(message.content.eventName, message.content.event);
 			} else if (rawMessage.type === 'subscription_result') {
-				const message = new WsMessage<SubscribeEventmessageContent>(rawMessage, { 'TContent': SubscribeEventmessageContent });
+				const message = new WsMessage<SubscribeEventMessageContent>(rawMessage, { 'TContent': SubscribeEventMessageContent });
 				const promiseFunctions = this.pendingEventSubscriptions.get(message.content.eventName);
 				this.pendingEventSubscriptions.delete(message.content.eventName);
 				if (message.error) {
@@ -146,7 +146,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 					promiseFunctions.resolve();
 				}
 			} else if (rawMessage.type === 'unsubscription_result') {
-				const message = new WsMessage<SubscribeEventmessageContent>(rawMessage, { 'TContent': SubscribeEventmessageContent });
+				const message = new WsMessage<SubscribeEventMessageContent>(rawMessage, { 'TContent': SubscribeEventMessageContent });
 				const promiseFunctions = this.pendingEventUnSubscriptions.get(message.content.eventName);
 				this.pendingEventUnSubscriptions.delete(message.content.eventName);
 				if (message.error) {
@@ -262,7 +262,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		// handle buffers inside object response
 		pendingRequest.pendingResponseBuffers = [];
 		if (NaniumBuffer.isNaniumBuffer(ResponseType) && message.content.response) {
-			pendingRequest.response = new NaniumBuffer(undefined, message.content.response.id);
+			pendingRequest.response = new NaniumBuffer(message.content.response.id);
 			pendingRequest.pendingResponseBuffers.push(pendingRequest.response);
 		} else {
 			pendingRequest.response = NaniumObject.create(message.content.response, ResponseType);
@@ -271,13 +271,28 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 					const prop = name[name.length - 1];
 					if (parent[prop]) {
 						pendingRequest.pendingResponseBuffers.push(parent[prop] as NaniumBuffer);
-						parent[prop] = new NaniumBuffer(undefined, (parent[prop] as NaniumBuffer).id); // replace with buffer that only holds the id, not the data to send only this in the answer request
 					}
 				}
 			});
 		}
 
-		// todo: handle stream responses and streams inside object response
+		// handle stream responses and streams inside object response
+		pendingRequest.openResponseStreams = [];
+		if (NaniumStream.isNaniumStream(ResponseType) && message.content.response) {
+			pendingRequest.response = new NaniumStream(undefined, undefined, message.content.response.id);
+			pendingRequest.openResponseStreams.push(pendingRequest.response);
+		} else {
+			pendingRequest.response = NaniumObject.create(message.content.response, ResponseType);
+			// todo: performance - checking if ResponseType has NaniumStream properties is faster than checking the while response object (e.g. if response returns an array with 1000 objects)
+			NaniumObject.forEachProperty(pendingRequest.response, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+				if (typeInfo && NaniumStream.isNaniumStream(typeInfo.ctor)) {
+					const prop = name[name.length - 1];
+					if (parent[prop]) {
+						pendingRequest.openResponseStreams.push(parent[prop] as NaniumStream);
+					}
+				}
+			});
+		}
 
 		await this.tryFinalizeResponse(pendingRequest, message.content.requestId);
 	}
@@ -285,7 +300,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	async handleResponseBufferChunk(message: WsMessage<WsServiceChunkMessage>) {
 		const pendingRequest = this.pendingRequests.get(message.content.requestId);
 		const idx = pendingRequest.pendingResponseBuffers!.findIndex(b => b.id === message.content.bufferOrStreamId);
-		pendingRequest.pendingResponseBuffers[idx].write(message.payload);
+		await pendingRequest.pendingResponseBuffers[idx].write(message.payload);
 		if (message.content.isLastChunk) {
 			pendingRequest.pendingResponseBuffers.splice(idx, 1);
 		}
@@ -294,7 +309,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 	async handleResponseStreamChunk(message: WsMessage<WsServiceChunkMessage>) {
 		const pendingRequest = this.pendingRequests.get(message.content.requestId);
-		pendingRequest.openResponseStreams!.find(b => b.id === message.content.bufferOrStreamId)
+		await pendingRequest.openResponseStreams!.find(b => b.id === message.content.bufferOrStreamId)
 			?.write(message.payload);
 	}
 

@@ -45,7 +45,7 @@ export class WebSocketClient {
 		this.connected = undefined;
 	}
 
-	send(data: string | ArrayBuffer): void {
+	send(data: string | ArrayBuffer | ArrayBufferView): void {
 		if (this.socket && this.socket.readyState === (WebSocket as any).OPEN) {
 			this.socket.send(data);
 		} else {

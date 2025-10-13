@@ -1,19 +1,19 @@
+import * as fs from 'fs';
 import * as http from 'http';
-import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
+import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http';
 import * as https from 'https';
 import { Server as HttpsServer } from 'https';
 import * as path from 'path';
-import * as fs from 'fs';
 import { Nanium } from '../core';
-import { NaniumProviderNodejs } from '../managers/providers/nodejs';
-import { NaniumHttpChannel } from '../managers/providers/channels/http';
-import { TestExecutionContext } from './services/testExecutionContext';
-import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
-import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
 import { LogLevel } from '../interfaces/logger';
-import { TestLogger } from './testLogger';
+import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
+import { NaniumHttpChannel } from '../managers/providers/channels/http';
+import { NaniumProviderNodejs } from '../managers/providers/nodejs';
+import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
 import { TestEventSubscriptionSendInterceptor } from './interceptors/client/test.send-event-subscription.interceptor';
+import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
+import { TestExecutionContext } from './services/testExecutionContext';
+import { TestLogger } from './testLogger';
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;

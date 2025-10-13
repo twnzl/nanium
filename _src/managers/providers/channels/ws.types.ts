@@ -8,7 +8,7 @@ export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_even
 export class WsMessage<TContent = any> extends NaniumObject<WsMessage<TContent>> {
 	@Type(String) type: WsMessageType;
 	@Type('TContent') content: TContent;
-	@Type(Object) payload?: ArrayBuffer;
+	@Type(Object) payload?: Uint8Array;
 	@Type(Object) error?: any;
 }
 
@@ -17,7 +17,7 @@ export class EmitEventMessageContent extends NaniumObject<EmitEventMessageConten
 	@Type(Object) event: any;
 }
 
-export class SubscribeEventmessageContent extends NaniumObject<SubscribeEventmessageContent> {
+export class SubscribeEventMessageContent extends NaniumObject<SubscribeEventMessageContent> {
 	@Type(String) eventName: string;
 }
 

@@ -115,7 +115,7 @@ describe('host services via http \n', function (): void {
 			const result: NaniumBuffer = new NaniumBuffer();
 			await new Promise((resolve: Function) => {
 				stream.onData(async (chunk) => {
-					result.write(chunk);
+					await result.write(chunk);
 				}).onEnd(async () => {
 					expect(await result.asString()).toBe('1.2.3.');
 					resolve();
@@ -201,7 +201,8 @@ describe('host services via https \n', function (): void {
 	});
 
 	it('-->body = Date\n', async function (): Promise<void> {
-		const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute(executionContext);
+		const request = new TimeRequest(new Date(2000, 1, 1), { token: '1234' });
+		const result: ServiceResponseBase<Date> = await request.execute(executionContext);
 		expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 	});
 

@@ -1,21 +1,21 @@
-import { NaniumBuffer } from '../interfaces/naniumBuffer';
-import { WsMessage, WsMessageType, WsServiceChunkMessage } from './providers/channels/ws.types';
 import { Nanium } from '../core';
-import { NaniumSerializer } from '../interfaces/serializer';
+import { NaniumBuffer } from '../interfaces/naniumBuffer';
 import { NaniumStream } from '../interfaces/naniumStream';
+import { NaniumSerializer } from '../interfaces/serializer';
+import { WsMessage, WsMessageType, WsServiceChunkMessage } from './providers/channels/ws.types';
 
 export async function sendMessage(
 	msg: WsMessage,
 	serializer: NaniumSerializer,
-	send: (data: string | ArrayBuffer) => void,
+	send: (data: string | ArrayBuffer | Uint8Array) => void,
 	chunk?: NaniumBuffer,
 ) {
 	const serialized = serializer.serialize(msg);
 	const msgBuffer = new NaniumBuffer();
 	if (typeof serialized === 'string') {
-		msgBuffer.write(new TextEncoder().encode(serialized as string));
+		await msgBuffer.write(new TextEncoder().encode(serialized as string));
 	} else {
-		msgBuffer.write(serialized);
+		await msgBuffer.write(serialized);
 	}
 
 	const headerLengthArray = new Uint8Array(4);
@@ -29,7 +29,8 @@ export async function sendMessage(
 	message.set(headerLengthArray, 0);
 	message.set(await msgBuffer.asUint8Array(), 4);
 	if (chunk) {
-		message.set(await chunk.asUint8Array(), 4 + msgBuffer.length);
+		const ui8a = await chunk.asUint8Array();
+		message.set(ui8a, 4 + msgBuffer.length);
 	}
 
 	await new Promise<void>((resolve, _reject) => {
@@ -39,7 +40,7 @@ export async function sendMessage(
 }
 
 export async function sendBufferInChunks(
-	buffer: NaniumBuffer | ArrayBuffer,
+	buffer: NaniumBuffer | ArrayBuffer | Uint8Array,
 	requestId: string,
 	send: (data: string | ArrayBuffer) => void,
 	messageType: WsMessageType,
@@ -47,7 +48,7 @@ export async function sendBufferInChunks(
 	binaryChunkSize: number = 1024 * 1024,
 	streamId?: string,
 ) {
-	const data: NaniumBuffer = NaniumBuffer.isNaniumBuffer(buffer) ? buffer as NaniumBuffer : new NaniumBuffer(buffer);
+	const data: NaniumBuffer = NaniumBuffer.isNaniumBuffer(buffer) ? buffer as NaniumBuffer : await NaniumBuffer.create(buffer);
 	const totalBytes = data.length;
 	const totalChunks = Math.ceil(totalBytes / binaryChunkSize);
 

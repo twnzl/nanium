@@ -1,27 +1,23 @@
-import { TestGetRequest, TestGetResponse } from '../../../services/test/get.contract';
-import { ServiceResponseBase } from '../../../services/serviceResponseBase';
-import { NaniumJsonSerializer } from '../../../../serializers/json';
-import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
 import { Nanium } from '../../../../core';
-import { TestClientRequestInterceptor } from '../../../interceptors/client/test.request.interceptor';
-import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
-import { StuffEvent } from '../../../events/test/stuffEvent';
+import { AsyncHelper } from '../../../../helper';
+import { EventSubscription } from '../../../../interfaces/eventSubscription';
+import { LogLevel } from '../../../../interfaces/logger';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
+import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
+import { NaniumConsumerBrowserWebsocket } from '../../../../managers/consumers/browserWs';
+import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
+import { NaniumJsonSerializer } from '../../../../serializers/json';
+import { Stuff2Event } from '../../../events/test/stuff2Event';
+import { StuffEvent } from '../../../events/test/stuffEvent';
+import { TestClientRequestInterceptor } from '../../../interceptors/client/test.request.interceptor';
 import { TestClientResponseInterceptor } from '../../../interceptors/client/test.response.interceptor';
 import {
 	TestEventSubscriptionSendInterceptor
 } from '../../../interceptors/client/test.send-event-subscription.interceptor';
-import { EventSubscription } from '../../../../interfaces/eventSubscription';
-import { AsyncHelper } from '../../../../helper';
-import { session } from '../../../session';
-import { Stuff2Event } from '../../../events/test/stuff2Event';
+import { ServiceResponseBase } from '../../../services/serviceResponseBase';
+import { TestGetRequest, TestGetResponse } from '../../../services/test/get.contract';
 import { TimeRequest } from '../../../services/test/time.contract';
-import { TestDto } from '../../../services/test/contractparts';
-import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
-import { NaniumStream } from '../../../../interfaces/naniumStream';
-import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
-import { NaniumConsumerBrowserWebsocket } from '../../../../managers/consumers/browserWs';
-import { LogLevel } from '../../../../interfaces/logger';
+import { session } from '../../../session';
 import { TestLogger } from '../../../testLogger';
 import { TestCore } from './test-core';
 
@@ -119,48 +115,15 @@ describe('', function (): void {
 			});
 
 			it('response as json stream', async () => {
-				const dtoList: TestDto[] = [];
-				let portions = 0;
-				await new Promise(async (resolve: Function): Promise<void> => {
-					const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
-						{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
-					response.onData((value: TestDto): void => {
-						portions++;
-						dtoList.push(value);
-					});
-					response.onEnd(() => {
-						resolve();
-					});
-					response.onError((err: Error) => {
-						Nanium.logger.error(err.message, err.stack);
-					});
-				});
-				expect(portions).withContext('result array should be returned in multiple portions').toBe(6);
-				expect(dtoList.length).withContext('length of result list should be correct').toBe(6);
-				expect(dtoList[0].formatted()).toBe('1:1');
-				expect(dtoList[2].formatted()).toBe('3:3');
+				await TestCore.naniumStreamJson();
 			});
 
 			it('response as json stream toPromise()', async () => {
-				const responseStream: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
-					{ amount: 6, msGapTime: 0 }, { token: '1234' }).execute();
-				const dtoList: TestDto[] = await responseStream.toPromise();
-				expect(dtoList.length).withContext('length of result list should be correct').toBe(6);
-				expect(dtoList[0].formatted()).toBe('1:1');
-				expect(dtoList[2].formatted()).toBe('3:3');
+				await TestCore.naniumStreamToPromise();
 			});
 
 			it('response as binary stream', async () => {
-				const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
-				const result: NaniumBuffer = new NaniumBuffer();
-				await new Promise((resolve: Function) => {
-					stream.onData(async (chunk) => {
-						result.write(chunk);
-					}).onEnd(async () => {
-						expect(await result.asString()).toBe('1.2.3.');
-						resolve();
-					});
-				});
+				await TestCore.naniumStreamBinary();
 			});
 
 			it('call an url of the http server that is not managed by nanium', async () => {
@@ -198,63 +161,63 @@ describe('', function (): void {
 			const arrayBuffer: ArrayBuffer = new TextEncoder().encode('abc').buffer;
 			const blob = new Blob(['def']);
 			const file: File = new File([new Blob(['fff'])], 'test.bin');
-			const uint8Array: ArrayBuffer = new TextEncoder().encode('jkl');
+			const uint8Array = new TextEncoder().encode('jkl');
 
 			describe('asString', function (): void {
 				it('with different types in constructor', async function (): Promise<void> {
-					const buf = new NaniumBuffer([
+					const buf = await NaniumBuffer.create([
 						arrayBuffer, blob, uint8Array, file
 					]);
 					expect(buf.id?.length > 0).toBeTruthy();
-					expect(await buf.asString()).toBe('abcdefjklfff');
+					expect(buf.asString()).toBe('abcdefjklfff');
 				});
 
 				it('asString with a single arrayBuffer', async function (): Promise<void> {
-					const buf = new NaniumBuffer([arrayBuffer]);
-					expect(await buf.asString()).toBe('abc');
+					const buf = await NaniumBuffer.create([arrayBuffer]);
+					expect(buf.asString()).toBe('abc');
 				});
 
 				it('asString write multiple different types', async function (): Promise<void> {
-					const buf = new NaniumBuffer(undefined, '1');
+					const buf = new NaniumBuffer('1');
 					expect(buf.id).toBe('1');
-					buf.write(arrayBuffer);
-					buf.write(blob);
-					buf.write(uint8Array);
-					buf.write(file);
-					expect(await buf.asString()).toBe('abcdefjklfff');
+					await buf.write(arrayBuffer);
+					await buf.write(blob);
+					await buf.write(uint8Array);
+					await buf.write(file);
+					expect(buf.asString()).toBe('abcdefjklfff');
 				});
 			});
 
 			describe('asUInt8Array', function (): void {
 				it('asUInt8Array with different types in constructor \n', async function (): Promise<void> {
-					const buf = new NaniumBuffer([
+					const buf = await NaniumBuffer.create([
 						arrayBuffer, blob, uint8Array, file
 					]);
-					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abcdefjklfff');
+					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('abcdefjklfff');
 				});
 
 				it('asUInt8Array with a single arrayBuffer', async function (): Promise<void> {
-					const buf = new NaniumBuffer([arrayBuffer]);
-					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('abc');
+					const buf = await NaniumBuffer.create([arrayBuffer]);
+					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('abc');
 				});
 
 				it('asUInt8Array with a single Blob', async function (): Promise<void> {
-					const buf = new NaniumBuffer([blob]);
-					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('def');
+					const buf = await NaniumBuffer.create([blob]);
+					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('def');
 				});
 
 				it('asUInt8Array with a single File', async function (): Promise<void> {
-					const buf = new NaniumBuffer([file]);
-					expect(new TextDecoder().decode(await buf.asUint8Array())).toBe('fff');
+					const buf = await NaniumBuffer.create([file]);
+					expect(new TextDecoder().decode(buf.asUint8Array())).toBe('fff');
 				});
 			});
 
 			describe('as())', function (): void {
 				it('as(Blob) with different types in constructor \n', async function (): Promise<void> {
-					const buf = new NaniumBuffer([
+					const buf = await NaniumBuffer.create([
 						arrayBuffer, blob, uint8Array, file
 					]);
-					const b = await buf.as(Blob);
+					const b = buf.as(Blob);
 					expect(b instanceof Blob).toBeTruthy();
 					expect(new TextDecoder().decode(new Uint8Array(await b.arrayBuffer()))).toBe('abcdefjklfff');
 				});
@@ -262,15 +225,15 @@ describe('', function (): void {
 
 			describe('splice())', function (): void {
 				it('splice(Buffer) with different types in constructor \n', async function (): Promise<void> {
-					const buf = new NaniumBuffer([
+					const buf = await NaniumBuffer.create([
 						arrayBuffer, blob, uint8Array, file
 					]);
-					expect(await buf.slice(3, 6).asString()).toBe('def');
-					expect(await buf.slice(3, 5).asString()).toBe('de');
-					expect(await buf.slice(4, 6).asString()).toBe('ef');
-					expect(await buf.slice(4, 7).asString()).toBe('efj');
-					expect(await buf.slice(9, 12).asString()).toBe('fff');
-					expect(await buf.slice(2, 7).asString()).toBe('cdefj');
+					expect(buf.slice(3, 6).asString()).toBe('def');
+					expect(buf.slice(3, 5).asString()).toBe('de');
+					expect(buf.slice(4, 6).asString()).toBe('ef');
+					expect(buf.slice(4, 7).asString()).toBe('efj');
+					expect(buf.slice(9, 12).asString()).toBe('fff');
+					expect(buf.slice(2, 7).asString()).toBe('cdefj');
 
 				});
 			});
@@ -295,7 +258,12 @@ describe('', function (): void {
 		describe('execute request via the consumer \n', function (): void {
 
 			it('normal successful execution', async () => {
-				await TestCore.normalSuccessfulExecution();
+				try {
+					await TestCore.normalSuccessfulExecution();
+				} catch (e) {
+					console.error(JSON.stringify(e, null, 2));
+					throw e;
+				}
 			});
 
 			it('execute and skip interceptor', async function (): Promise<void> {
@@ -325,6 +293,24 @@ describe('', function (): void {
 			it('NaniumBuffers in request and response but one is undefined \n', async function (): Promise<void> {
 				await TestCore.naniumBuffersRequestWithOneUndefined();
 			});
+
+
+			it('response as json stream', async () => {
+				await TestCore.naniumStreamJson();
+			});
+
+			it('response as json stream toPromise()', async () => {
+				await TestCore.naniumStreamToPromise();
+			});
+
+			it('response as binary stream', async () => {
+				await TestCore.naniumStreamBinary();
+			});
+
+			it('response with multiple streams', async () => {
+				await TestCore.naniumStreamsInResponse();
+			});
+
 		});
 	});
 

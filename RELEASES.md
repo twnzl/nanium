@@ -13,14 +13,14 @@
 - new function NaniumObject.getRequestInfo
 - NaniumObject.createJsonSchema: supports TypeInformation of RequestType decorator
 - event subscriptions (via http): fix memory leak
-- optimized multi-buffer handling in http chanel
+- optimized multi-buffer handling in http channel
 - When the response is NaniumBuffer the executors are no longer allowed to return ArrayBuffers (only NaniumBuffers)
 - skipInterceptors: array of Interceptor instances or classes allowed
 - added a field "source" in ExecutionContext and EventSubscription to identify the same caller. E.g., to implement
   source-based rate limit interceptors
 - request.enqueue: supports execution context
 - request queues: transform request to instance with correct types before execution
-- NaniumBuffer: added methods for sequential writing, added Big-Endian-read methods, added readString & writeString, fix of asUInt8Array,
+- NaniumBuffer: added methods for sequential writing and reading, added Big-Endian-read methods, added readString & writeString, fix of asUInt8Array, added DataView support, making all read and convert functions synchron (adding a static async create function)
 
 # 1.25.2
 
@@ -48,7 +48,7 @@
 
 # 1.24.2
 
-- fixing broken detektion of NaniumStream instances and constructors, in minified code by the new function
+- fixing broken detection of NaniumStream instances and constructors, in minified code by the new function
   NaniumStream.isNaniumStream()
 
 # 1.24.1
@@ -164,7 +164,7 @@
 
 # 1.19.6
 
-- fixed bug: NaniumObject.Init: null or undefined ArrayProperties lead to in [ undefiend ] of [ null ].
+- fixed bug: NaniumObject.Init: null or undefined ArrayProperties lead to in [ undefined ] of [ null ].
 
 # 1.19.5
 
@@ -182,7 +182,7 @@
 
 # 1.19.3
 
-- Consumer request interceptor behaviour changed. If the interceptor returns undefined or the same request instance,
+- Consumer request interceptor behavior changed. If the interceptor returns undefined or the same request instance,
   execution will continue, but if something different is returned it is treated as the response for the request.
 - added possibility to define response interceptors for NaniumConsumerBrowserHttp. If the interceptor returns something
   different from undefined or the original response instance, the returned value will replace the original response.
@@ -192,7 +192,7 @@
 
 ## breaking changes
 
-The change of the request interceptor behaviour may be a breaking change if any of your interceptores returns something
+The change of the request interceptor behavior may be a breaking change if any of your interceptors returns something
 different from undefined or the request instance. But this should normally not be the case, because until now the return
 value of an interceptor had no effect.
 

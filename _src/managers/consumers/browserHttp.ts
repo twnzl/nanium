@@ -1,15 +1,15 @@
-import { ServiceManager } from '../../interfaces/serviceManager';
-import { NaniumJsonSerializer } from '../../serializers/json';
-import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { ExecutionContext } from '../../interfaces/executionContext';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
-import { HttpCore } from './http.core';
 import { EventSubscription } from '../../interfaces/eventSubscription';
-import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { ExecutionContext } from '../../interfaces/executionContext';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
+import { ServiceManager } from '../../interfaces/serviceManager';
+import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
+import { NaniumJsonSerializer } from '../../serializers/json';
 import { getPrimaryResponseType } from '../core';
+import { HttpCore } from './http.core';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;
@@ -41,7 +41,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			...(config || {})
 		};
 		this.httpCore = new HttpCore(this.config,
-			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+			async (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
 	async init(): Promise<void> {
@@ -141,7 +141,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 					},
 					start: (controller: ReadableStreamDefaultController<any>): void => {
 						const push: () => void = () => {
-							reader.read().then(({ done, value }) => {
+							reader.read().then(async ({ done, value }) => {
 								if (done) {
 									controller.close();
 									resultStream.end();
@@ -150,7 +150,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 								}
 								try {
 									if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
-										resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : new NaniumBuffer(value) as any);
+										resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : await NaniumBuffer.create(value) as any);
 									} else {
 										deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 										if (deserialized.data?.length) {
@@ -206,8 +206,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		throw new Error('not implemented');
 	}
 
-	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any): Promise<ArrayBuffer> {
-		return new Promise<ArrayBuffer>((resolve: Function, reject: Function) => {
+	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any): Promise<ArrayBufferView> {
+		return new Promise<ArrayBufferView>((resolve: Function, reject: Function) => {
 			// transmission
 			const abortController: AbortController = new AbortController();
 			this.activeRequests.push(abortController);

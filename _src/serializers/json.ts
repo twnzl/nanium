@@ -8,7 +8,7 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 	) {
 	}
 
-	deserialize(raw: string | ArrayBuffer): any {
+	deserialize(raw: string | ArrayBuffer | ArrayBufferView): any {
 		try {
 			if (typeof raw === 'string') {
 				return raw ? JSON.parse(raw) : undefined;
@@ -29,7 +29,7 @@ export class NaniumJsonSerializer implements NaniumSerializer {
 	}
 
 	deserializePartial(
-		raw: string | ArrayBuffer,
+		raw: string | ArrayBuffer | ArrayBufferView,
 		restFromLastTime?: string,
 	): {
 		data: any;

@@ -1,19 +1,19 @@
 import { Component, OnInit } from '@angular/core';
-import { TestGetRequest } from '../../../services/test/get.contract';
-import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
-import { TestBufferRequest } from '../../../services/test/buffer.contract';
-import { TestService } from './test.service';
-import { session } from '../../../session';
 import { Nanium } from '../../../../core';
-import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
-import { StuffEvent } from '../../../events/test/stuffEvent';
-import { Stuff2Event } from '../../../events/test/stuff2Event';
 import { AsyncHelper } from '../../../../helper';
-import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
-import { TestDto } from '../../../services/test/contractparts';
+import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../../interfaces/naniumStream';
-import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
+import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
+import { Stuff2Event } from '../../../events/test/stuff2Event';
+import { StuffEvent } from '../../../events/test/stuffEvent';
+import { TestBufferRequest } from '../../../services/test/buffer.contract';
+import { TestDto } from '../../../services/test/contractparts';
+import { TestGetRequest } from '../../../services/test/get.contract';
 import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
+import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
+import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
+import { session } from '../../../session';
+import { TestService } from './test.service';
 
 @Component({
 	selector: 'app-root',
@@ -48,8 +48,8 @@ export class AppComponent implements OnInit {
 			await this.testService.init();
 			const request = new TestBufferRequest({
 				id: '1',
-				buffer1: new NaniumBuffer(new TextEncoder().encode('123')),
-				buffer2: new NaniumBuffer(new TextEncoder().encode('456'))
+				buffer1: await NaniumBuffer.create(new TextEncoder().encode('123')),
+				buffer2: await NaniumBuffer.create(new TextEncoder().encode('456'))
 			});
 			const response = await request.execute();
 			console.log(response.id === '1');
@@ -101,7 +101,7 @@ export class AppComponent implements OnInit {
 		const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
 		const result: NaniumBuffer = new NaniumBuffer();
 		stream.onData(async (chunk) => {
-			result.write(chunk);
+			await result.write(chunk);
 			const text = await chunk.asString();
 			console.log(text);
 		}).onEnd(async () => {
@@ -128,11 +128,14 @@ export class AppComponent implements OnInit {
 		this.testService.initWs(8080, 1);
 		const request = new TestBufferRequest({
 			id: '1',
-			buffer1: new NaniumBuffer(new TextEncoder().encode('123')),
+			buffer1: await NaniumBuffer.create(new TextEncoder().encode('123')),
 			buffer2: undefined,// new NaniumBuffer(new TextEncoder().encode('456'))
 		});
 		const response = await request.execute();
-		console.log(JSON.stringify(response, null, 2));
+		console.log('response.buffer1 should have same content as request.buffer1 + "*":', await response.buffer1.asString());
+		console.log('response.buffer2 should be undefined: ', response.buffer2);
+		console.log('response.text1: should be the content of request.buffer1 + "*" as string:', response.text1);
+		console.log('response.text2: should be the content of request.buffer2 as string:', response.text2);
 	}
 
 	//#endregion ws
