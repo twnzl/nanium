@@ -32,6 +32,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	private pendingEventSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
 	private pendingEventUnSubscriptions: Map<string, { resolve: Function, reject: Function }> = new Map();
 	private pendingRequests: Map<string, PendingRequestInfo> = new Map();
+	// private responsePromises: Promise<unknown>[] = [];
 
 	constructor(config?: NaniumConsumerBrowserWebsocketConfig) {
 		super(config);
@@ -132,6 +133,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			}
 		});
 		this.websocket.on('message', async event => {
+			// todo: parseMessage ist unterschiedlich schnell und so überholen sich hier nachrichten, die sich nicht überholgen solten wie stream_chunk und stream_end
 			const rawMessage: WsMessage = await parseMessage(event.data, this.config.serializer);
 			if (rawMessage.type === 'emit_event') {
 				const message = new WsMessage<EmitEventMessageContent>(rawMessage, { 'TContent': EmitEventMessageContent });
@@ -155,6 +157,8 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 					promiseFunctions.resolve();
 				}
 			} else if (rawMessage.type === 'service_response') {
+				const requestId = (rawMessage as WsMessage<WsServiceChunkMessage>).content.requestId;
+				// this.responsePromises[requestId] =
 				await this.handleServiceResponse(rawMessage);
 			} else if (rawMessage.type === 'service_buffer_chunk') {
 				await this.handleResponseBufferChunk(rawMessage);
@@ -235,7 +239,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		throw new Error('NotImplemented');
 	}
 
-	private async handleServiceResponse(message: WsMessage): Promise<void> {
+	private async handleServiceResponse(message: WsMessage<WsServiceChunkMessage>): Promise<void> {
 		const pendingRequest = this.pendingRequests.get(message.content.requestId);
 		if (!pendingRequest) {
 			Nanium.logger.error('browserWS: no pending request found for response with id: ' + message.content.requestId);
@@ -308,23 +312,33 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	}
 
 	async handleResponseStreamChunk(message: WsMessage<WsServiceChunkMessage>) {
-		const pendingRequest = this.pendingRequests.get(message.content.requestId);
-		await pendingRequest.openResponseStreams!.find(b => b.id === message.content.bufferOrStreamId)
+		const requestId = message.content.requestId;
+		// await this.responsePromises[requestId];
+		const pendingRequest = this.pendingRequests.get(requestId);
+		pendingRequest.openResponseStreams!.find(b => b.id === message.content.bufferOrStreamId)
 			?.write(message.payload);
 	}
 
 	async handleResponseStreamEnd(message: WsMessage<WsServiceChunkMessage>) {
-		const pendingRequest = this.pendingRequests.get(message.content.requestId);
+		const requestId = message.content.requestId;
+		// await this.responsePromises[requestId];
+		// delete this.responsePromises[requestId];
+		const pendingRequest = this.pendingRequests.get(requestId);
 		const idx = pendingRequest.openResponseStreams!.findIndex(b => b.id === message.content.bufferOrStreamId);
 		pendingRequest.openResponseStreams[idx].end();
 		pendingRequest.openResponseStreams.splice(idx, 1);
+		this.pendingRequests.delete(requestId);
 	}
 
 	async handleResponseStreamError(message: WsMessage<WsServiceChunkMessage>) {
+		const requestId = message.content.requestId;
+		// await this.responsePromises[requestId];
+		// delete this.responsePromises[requestId];
 		const pendingRequest = this.pendingRequests.get(message.content.requestId);
 		const idx = pendingRequest.openResponseStreams!.findIndex(b => b.id === message.content.bufferOrStreamId);
 		pendingRequest.openResponseStreams[idx].error(message.error);
 		pendingRequest.openResponseStreams.splice(idx, 1);
+		this.pendingRequests.delete(requestId);
 	}
 
 	async tryFinalizeResponse(pendingRequest: PendingRequestInfo, requestId: string) {
@@ -347,7 +361,9 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		}
 
 		// resolve promise and remove from pending requests
-		this.pendingRequests.delete(requestId);
+		if (!pendingRequest.openResponseStreams?.length) {
+			this.pendingRequests.delete(requestId);
+		}
 		pendingRequest.resolve(pendingRequest.response);
 	}
 }

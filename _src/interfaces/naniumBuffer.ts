@@ -286,7 +286,7 @@ export class NaniumBuffer {
 		return this;
 	};
 
-	writeCore(n: number, type: 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
+	writeCore(n: number, type: 'Uint' | 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
 		const buffer = new ArrayBuffer(bits / 8);
 		new DataView(buffer)['set' + type + bits](0, n, endianness === 'LE');
 		this[NaniumBuffer.naniumBufferInternalValueSymbol].push(buffer);
@@ -297,8 +297,18 @@ export class NaniumBuffer {
 		return this;
 	}
 
+	writeUInt8(n: number): NaniumBuffer {
+		this.writeCore(n, 'Uint', 8, 'LE');
+		return this;
+	}
+
 	writeInt16LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 16, 'LE');
+		return this;
+	}
+
+	writeUInt16LE(n: number): NaniumBuffer {
+		this.writeCore(n, 'Uint', 16, 'LE');
 		return this;
 	}
 
@@ -307,8 +317,18 @@ export class NaniumBuffer {
 		return this;
 	}
 
+	writeUInt16BE(n: number): NaniumBuffer {
+		this.writeCore(n, 'Uint', 16, 'BE');
+		return this;
+	}
+
 	writeInt32LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 32, 'LE');
+		return this;
+	}
+
+	writeUInt32LE(n: number): NaniumBuffer {
+		this.writeCore(n, 'Uint', 32, 'LE');
 		return this;
 	}
 
@@ -317,13 +337,28 @@ export class NaniumBuffer {
 		return this;
 	}
 
+	writeUInt32BE(n: number): NaniumBuffer {
+		this.writeCore(n, 'Uint', 32, 'BE');
+		return this;
+	}
+
 	writeInt64LE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 64, 'LE');
 		return this;
 	}
 
+	writeUInt64LE(n: number): NaniumBuffer {
+		this.writeCore(n, 'Uint', 64, 'LE');
+		return this;
+	}
+
 	writeInt64BE(n: number): NaniumBuffer {
 		this.writeCore(n, 'Int', 64, 'BE');
+		return this;
+	}
+
+	writeUInt64BE(n: number): NaniumBuffer {
+		this.writeCore(n, 'Uint', 64, 'BE');
 		return this;
 	}
 
@@ -380,7 +415,15 @@ export type DataSource = (NaniumBuffer | ArrayBuffer | ArrayBufferLike | TypedAr
 
 
 export class NaniumBufferReadable {
-	readIndex: number = 0;
+	public readIndex: number = 0;
+
+	public get length(): number {
+		return this.data.byteLength;
+	};
+
+	public get eof(): boolean {
+		return this.readIndex === this.data.byteLength - 1;
+	}
 
 	constructor(private data: DataView) {
 	}
@@ -399,6 +442,7 @@ export class NaniumBufferReadable {
 	startSequentialReadingAt(idx: number) {
 		this.readIndex = idx ?? 0;
 	}
+
 
 	readString(length: number, startIdx: number = this.readIndex, encoding: string = 'utf-8'): string {
 		const stringView = new Uint8Array(

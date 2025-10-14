@@ -15,8 +15,6 @@ let uuidCounter: number = 0;
 export class NaniumStream<T = any> { //implements Promise<T> {
 	@Type(String) id: string;
 
-	test1: boolean = true;
-
 	get isBinary(): boolean {
 		return NaniumBuffer.isNaniumBuffer(this[responseTypeSymbol]);
 	}

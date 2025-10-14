@@ -134,6 +134,11 @@ export class TestCore {
 			// und dann ohne onData - function (in browserws.handleResponseStreamChunk) entgegengenommen wird,
 			// 	noch bevor es hier mit der Ausführung weiter geht und die onData - function registriert werden kann.
 			// wie kann ich sicher stellen, dass die Ausführung hier weiter geht, bevor der Inhalt des streams entgegengenommen wird ?
+			// ---
+			// weiterhin ist parseMessage für stream_chunk schneller, weil das string ist als für stream_chunk und da auf parseMessage auch mit
+			// await überholt _end in der Regel einige der _chunks oder einige chunks die früheren
+			// das muss alles serialisiert werden - end wartet auf den letzten chunk und chunk wartet auf den vorhergehenden
+			// evtl. ist die Reihenfolge auch nicht sicher, wenn alles als binary gesendet wird.
 
 			const result: NaniumBuffer = new NaniumBuffer();
 			await new Promise((resolve: Function) => {

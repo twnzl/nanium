@@ -21,7 +21,6 @@ import { TestService } from './test.service';
 	styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-
 	constructor(
 		public testService: TestService
 	) {
@@ -136,6 +135,50 @@ export class AppComponent implements OnInit {
 		console.log('response.buffer2 should be undefined: ', response.buffer2);
 		console.log('response.text1: should be the content of request.buffer1 + "*" as string:', response.text1);
 		console.log('response.text2: should be the content of request.buffer2 as string:', response.text2);
+	}
+
+	async wsStreamJson() {
+		this.testService.initWs(8080, 1);
+		const dtoList: TestDto[] = [];
+		let portions = 0;
+		await new Promise(async (resolve: Function): Promise<void> => {
+			const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
+				{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
+			response.onData((value: TestDto): void => {
+				portions++;
+				dtoList.push(value);
+			});
+			response.onEnd(() => {
+				resolve();
+			});
+			response.onError((err: Error) => {
+				Nanium.logger.error(err.message, err.stack);
+			});
+		});
+	}
+
+	async wsStreamBinary() {
+		this.testService.initWs(8080, 1);
+		try {
+			const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
+
+			// todo: problem ist, dass durch das await auf die response, der Inhalt des streams bereits übertragen wird
+			// und dann ohne onData - function (in browserws.handleResponseStreamChunk) entgegengenommen wird,
+			// 	noch bevor es hier mit der Ausführung weiter geht und die onData - function registriert werden kann.
+			// wie kann ich sicher stellen, dass die Ausführung hier weiter geht, bevor der Inhalt des streams entgegengenommen wird ?
+
+			const result: NaniumBuffer = new NaniumBuffer();
+			await new Promise((resolve: Function) => {
+				stream.onData(async (chunk) => {
+					await result.write(chunk);
+				}).onEnd(async () => {
+					console.log(await result.asString()) //.toBe('1.2.3.');
+					resolve();
+				});
+			});
+		} catch (err) {
+			console.error(err.message, err.stack);
+		}
 	}
 
 	//#endregion ws
