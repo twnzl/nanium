@@ -17,7 +17,7 @@ import { NaniumJsonSerializer } from '../../../serializers/json';
 import { getPrimaryResponseType, getSecondaryResponseType } from '../../core';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
-	server: HttpServer | HttpsServer;
+	server: HttpServer | HttpsServer | { use: Function };
 	apiPath?: string;
 	eventPath?: string;
 	longPollingRequestTimeoutInSeconds?: number;
@@ -91,8 +91,22 @@ export class NaniumHttpChannel implements Channel {
 				}
 			};
 
-		const server: HttpsServer | HttpServer = (this.config.server as HttpServer | HttpsServer);
-		server.addListener('request', handleFunction);
+		if (typeof this.config.server['use'] === 'function') { // express-like
+			this.config.server['use'](handleFunction);
+		} else {
+			const server: HttpsServer | HttpServer = (this.config.server as HttpServer | HttpsServer);
+			const listeners: Function[] = server.listeners('request');
+			if (listeners.length === 1 && typeof listeners[0]['use'] === 'function') { // http(s) server from express-like
+				listeners[0]['use'](this.config.apiPath, handleFunction);
+			} else { // pure http(s) server
+				if (typeof server.prependListener === 'function') {
+					server.prependListener('request', handleFunction);
+				}
+				else {
+					server.addListener('request', handleFunction);
+				}
+			}
+		}
 	}
 
 	//#region service request handling
