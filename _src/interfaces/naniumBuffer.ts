@@ -4,9 +4,11 @@ let uuidCounter: number = 0;
 
 export class NaniumBuffer {
 	@Type(String) id: string;
+
+	@Type(Number) private readIndex: number = 0;
+
 	private static naniumBufferInternalValueSymbol: symbol = Symbol.for('__Nanium__BufferInternalValueSymbol__');
 
-	private readIndex: number = 0;
 
 	constructor(data?: DataSource | DataSource[], id?: string) {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
