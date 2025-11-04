@@ -15,7 +15,7 @@ export class WebSocketClient {
 		this.reconnectInterval = reconnectInterval;
 	}
 
-	connect(): void {
+	async connect(): Promise<void> {
 		this.connected = new Promise<void>((resolve: Function, _reject: Function) => {
 			this.connectedResolve = resolve;
 		});
@@ -25,7 +25,7 @@ export class WebSocketClient {
 			this.socket = new WebSocket(this.url);
 		} else {
 			// Node.js environment
-			const WebSocket = require('ws');
+			const WebSocket = await import('ws');
 			this.socket = new WebSocket(this.url);
 		}
 

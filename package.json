@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "^1.0.5",
-    "@types/jest": "^27.4.1",
+    "@types/jest": "^28.0.0",
     "@types/jest-expect-message": "^1.0.3",
     "@types/node": "^14.18.63",
     "@types/recursive-readdir": "^2.2.0",
@@ -82,10 +82,10 @@
     "@types/typescript": "^2.0.0",
     "@types/unzipper": "^0.10.10",
     "@types/ws": "^8.5.12",
-    "jest": "^27.5.1",
-    "ts-jest": "^27.1.4",
+    "jest": "^28.0.0",
+    "ts-jest": "^28.0.0",
     "ts-node": "^8.3.0",
     "tslint": "^5.18.0",
-    "typescript": "^4.9.5"
+    "typescript": "^5.0.0"
   }
 }

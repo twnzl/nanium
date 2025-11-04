@@ -2,12 +2,12 @@
 import * as fs from 'fs';
 import { Stats } from 'fs';
 import * as path from 'path';
-import * as shell from 'shelljs';
-import * as findFiles from 'recursive-readdir';
-import * as util from 'util';
 import * as readline from 'readline';
 import { Interface } from 'readline';
+import * as findFiles from 'recursive-readdir';
+import * as shell from 'shelljs';
 import * as zip from 'unzipper';
+import * as util from 'util';
 
 let root: string;
 let config: NaniumToolConfig;
@@ -44,8 +44,8 @@ const rl: Interface = readline.createInterface({
 // arguments
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
 	console.log(`
-nanium new {folder} {namespace} 
-	generate a new client/server-app scaffold in folder {folder} and with nanium namespace {namespace} 
+nanium new {folder} {namespace}
+	generate a new client/server-app scaffold in folder {folder} and with nanium namespace {namespace}
 nanium init
 	generate nanium.json service+event directory and the nanium base classes within an existing app
 nanium g {directory/}*{service name} {private|public} {namespace}
@@ -390,7 +390,7 @@ function fromTemplate(name: string, data?: object): string {
 }
 
 async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
-	const packageJson = require(path.join(root, 'package.json'));
+	const packageJson = await import(path.join(root, 'package.json'));
 	// output directory
 	const outDir: string = path.join(root, config.outDir ?? '');
 	if (!fs.existsSync(outDir)) {

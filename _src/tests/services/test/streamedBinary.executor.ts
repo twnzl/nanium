@@ -1,7 +1,7 @@
-import { TestStreamedBinaryRequest } from './streamedBinary.contract';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import { TestStreamedBinaryRequest } from './streamedBinary.contract';
 
 export class TestStreamedBinaryExecutor implements ServiceExecutor<TestStreamedBinaryRequest, NaniumStream<NaniumBuffer>> {
 	static serviceName: string = 'NaniumTest:test/streamedBinary';
@@ -10,7 +10,7 @@ export class TestStreamedBinaryExecutor implements ServiceExecutor<TestStreamedB
 		const result = new NaniumStream<NaniumBuffer>();
 		let cnt: number = 1;
 		const next = () => {
-			if (cnt > request.body.amount ?? 3) {
+			if (cnt > (request.body.amount ?? 3)) {
 				result.end();
 				clearInterval(interval);
 			} else {

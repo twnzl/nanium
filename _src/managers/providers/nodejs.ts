@@ -1,23 +1,23 @@
 import { Stats } from 'fs';
 import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
-import { Channel } from '../../interfaces/channel';
-import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { Nanium } from '../../core';
-import { ServiceExecutor } from '../../interfaces/serviceExecutor';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { NaniumRepository } from '../../interfaces/serviceRepository';
-import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
-import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
+import { Channel } from '../../interfaces/channel';
+import { Message } from '../../interfaces/communicator';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
+import { EventSubscription } from '../../interfaces/eventSubscription';
 import {
 	EventEmissionSendInterceptor,
 	EventSubscriptionReceiveInterceptor
 } from '../../interfaces/eventSubscriptionInterceptor';
-import { EventSubscription } from '../../interfaces/eventSubscription';
+import { ExecutionContext } from '../../interfaces/executionContext';
+import { ServiceExecutor } from '../../interfaces/serviceExecutor';
+import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
+import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
+import { NaniumRepository } from '../../interfaces/serviceRepository';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
 import { ConstructorType, genericTypesSymbol, NaniumObject } from '../../objects';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
-import { Message } from '../../interfaces/communicator';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -129,13 +129,13 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			}
 			for (const file of files) {
 				try {
-					const request: any = NaniumProviderNodejs.findClassWithServiceNameProperty(require(path.resolve(file)));
+					const request: any = NaniumProviderNodejs.findClassWithServiceNameProperty(await import(path.resolve(file)));
 					if (!request) {
 						Nanium.logger.warn('invalid contract file (no request class found): ' + file);
 						continue;
 					}
 					const executor: any = NaniumProviderNodejs.findClassWithServiceNameProperty(
-						require(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
+						await import(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
 					this.addService(request, executor);
 					Nanium.logger.info('service ready: ' + executor.serviceName);
 				} catch (e) {

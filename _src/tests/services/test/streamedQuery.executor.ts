@@ -1,7 +1,7 @@
-import { TestDto } from './contractparts';
-import { TestStreamedQueryRequest } from './streamedQuery.contract';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
+import { TestDto } from './contractparts';
+import { TestStreamedQueryRequest } from './streamedQuery.contract';
 
 export class TestStreamedQueryExecutor implements ServiceExecutor<TestStreamedQueryRequest, NaniumStream<TestDto>> {
 	static serviceName: string = 'NaniumTest:test/streamedQuery';
@@ -10,7 +10,7 @@ export class TestStreamedQueryExecutor implements ServiceExecutor<TestStreamedQu
 		const result = new NaniumStream<TestDto>(TestDto);
 		let cnt: number = 1;
 		const next = () => {
-			if (cnt > request.body.amount ?? 3) {
+			if (cnt > (request.body.amount ?? 3)) {
 				result.end();
 				clearInterval(interval);
 			} else {
