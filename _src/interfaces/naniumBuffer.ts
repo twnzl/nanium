@@ -288,7 +288,7 @@ export class NaniumBuffer {
 		return this;
 	};
 
-	writeCore(n: number, type: 'Uint' | 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
+	writeCore(n: number, type: 'BigUint' | 'BigInt' | 'Uint' | 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
 		const buffer = new ArrayBuffer(bits / 8);
 		new DataView(buffer)['set' + type + bits](0, n, endianness === 'LE');
 		this[NaniumBuffer.naniumBufferInternalValueSymbol].push(buffer);
@@ -345,22 +345,22 @@ export class NaniumBuffer {
 	}
 
 	writeInt64LE(n: number): NaniumBuffer {
-		this.writeCore(n, 'Int', 64, 'LE');
+		this.writeCore(n, 'BigInt', 64, 'LE');
 		return this;
 	}
 
 	writeUInt64LE(n: number): NaniumBuffer {
-		this.writeCore(n, 'Uint', 64, 'LE');
+		this.writeCore(n, 'BigUint', 64, 'LE');
 		return this;
 	}
 
 	writeInt64BE(n: number): NaniumBuffer {
-		this.writeCore(n, 'Int', 64, 'BE');
+		this.writeCore(n, 'BigInt', 64, 'BE');
 		return this;
 	}
 
 	writeUInt64BE(n: number): NaniumBuffer {
-		this.writeCore(n, 'Uint', 64, 'BE');
+		this.writeCore(n, 'BigUint', 64, 'BE');
 		return this;
 	}
 
