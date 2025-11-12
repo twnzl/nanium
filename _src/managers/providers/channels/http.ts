@@ -99,12 +99,12 @@ export class NaniumHttpChannel implements Channel {
 			if (listeners.length === 1 && typeof listeners[0]['use'] === 'function') { // http(s) server from express-like
 				listeners[0]['use'](this.config.apiPath, handleFunction);
 			} else { // pure http(s) server
-				if (typeof server.prependListener === 'function') {
-					server.prependListener('request', handleFunction);
-				}
-				else {
+				// if (typeof server.prependListener === 'function') {
+				// 	server.prependListener('request', handleFunction);
+				// }
+				// else {
 					server.addListener('request', handleFunction);
-				}
+				// }
 			}
 		}
 	}
