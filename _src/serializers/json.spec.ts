@@ -1,3 +1,5 @@
+import { NaniumObject } from '../objects';
+import { ServiceResponseBase } from '../tests/services/serviceResponseBase';
 import {
 	GenericStuff,
 	Stuff,
@@ -8,8 +10,6 @@ import {
 } from '../tests/services/test/stuff.contract';
 import { TestExecutionContext } from '../tests/services/testExecutionContext';
 import { TestHelper } from '../tests/testHelper';
-import { ServiceResponseBase } from '../tests/services/serviceResponseBase';
-import { NaniumObject } from '../objects';
 
 let request: StuffRequest = null;
 let response: ServiceResponseBase<Stuff<Date>[]>;
@@ -25,18 +25,16 @@ describe('JsonSerializer: execution via client server szenario \n', function ():
 	});
 
 	describe('execute with all types of properties set in the request \n', function (): void {
-		beforeEach(async () => {
-			request = getRequest();
-			response = await request.execute(executionContext);
-		});
-
 		it(
 			'--> the request and all its properties should have the right types on the server \n' +
 			' and the response and all its properties should have the right types on the client ',
 			async () => {
+				request = getRequest();
+				response = await request.execute(executionContext);
 				// if something is wrong with the request on the server an exception would be thrown;
 				expect(Array.isArray(response)).toBeTruthy();
-				expect(response[0] instanceof Stuff).toBeTruthy();
+				let isStuff: boolean = (response[0] instanceof Stuff);
+				expect(isStuff).toBeTruthy();
 				expect(response[0].aDate instanceof Date).toBeTruthy();
 				expect(response[0].aDate.toISOString()).toBe(new Date(1600000000000).toISOString());
 				expect(response[0].aBoolean).toBe(true);
@@ -67,7 +65,8 @@ describe('JsonSerializer: execution via client server szenario \n', function ():
 				expect((response[0].aNumberDictionary as StuffDictionary<Number>).b).toBe(2);
 				expect((response[0].aBooleanDictionary).a).toBe(true);
 				expect((response[0].aBooleanDictionary).b).toBe(false);
-			});
+			}
+		);
 	});
 });
 

@@ -139,23 +139,26 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 						resultStream.error(reason);
 						this.activeRequests = this.activeRequests.filter(r => r !== abortController);
 					},
-					start: (controller: ReadableStreamDefaultController<any>): void => {
-						const push: () => void = () => {
-							reader.read().then(async ({ done, value }) => {
+					start: async (controller: ReadableStreamDefaultController<any>): Promise<void> => {
+						try {
+							while (true) {
+								const { done, value } = await reader.read();
+
 								if (done) {
 									controller.close();
 									resultStream.end();
 									this.activeRequests = this.activeRequests.filter(r => r !== abortController);
-									return;
+									break;
 								}
+
 								try {
 									if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
-										resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : new NaniumBuffer(value) as any);
+										await resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : new NaniumBuffer(value) as any);
 									} else {
 										deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
 										if (deserialized.data?.length) {
 											for (const data of deserialized.data) {
-												resultStream.write(NaniumObject.create(
+												await resultStream.write(NaniumObject.create(
 													data,
 													streamItemConstructor,
 													request.constructor[genericTypesSymbol]
@@ -168,16 +171,15 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 									this.activeRequests = this.activeRequests.filter(r => r !== abortController);
 									controller.close();
 									resultStream.error(e);
+									break;
 								}
-
-								// read next portion from stream
-								push();
-							});
-						};
-
-						// start reading from stream
-						push();
-					},
+							}
+						} catch (e) {
+							controller.close();
+							resultStream.error(e);
+							this.activeRequests = this.activeRequests.filter(r => r !== abortController);
+						}
+					}
 				});
 			});
 

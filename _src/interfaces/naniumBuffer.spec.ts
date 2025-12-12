@@ -233,7 +233,9 @@ describe('NaniumBuffer', function (): void {
 		expect(rb.readInt8()).toBe(4);
 		expect(rb.readString(5)).toBe('abcde');
 		expect(rb.readString(1)).toBe('f');
+		expect(rb.eof).toBeFalsy();
 		expect(rb.readInt8()).toBe(5);
+		expect(rb.eof).toBeTruthy();
 	});
 
 	it('--> writeString \n', async function (): Promise<void> {

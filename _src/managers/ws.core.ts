@@ -7,7 +7,7 @@ import { WsMessage, WsMessageType, WsServiceChunkMessage } from './providers/cha
 export async function sendMessage(
 	msg: WsMessage,
 	serializer: NaniumSerializer,
-	send: (data: string | ArrayBuffer | Uint8Array) => void,
+	send: (data: string | ArrayBuffer | Uint8Array) => Promise<void>,
 	chunk?: NaniumBuffer,
 ) {
 	const serialized = serializer.serialize(msg);
@@ -33,16 +33,13 @@ export async function sendMessage(
 		message.set(ui8a, 4 + msgBuffer.length);
 	}
 
-	await new Promise<void>((resolve, _reject) => {
-		send(message);
-		resolve();
-	});
+	await send(message);
 }
 
 export async function sendBufferInChunks(
 	buffer: NaniumBuffer | ArrayBuffer | Uint8Array,
 	requestId: string,
-	send: (data: string | ArrayBuffer) => void,
+	send: (data: string | ArrayBuffer) => Promise<void>,
 	messageType: WsMessageType,
 	serializer: NaniumSerializer,
 	binaryChunkSize: number = 1024 * 1024,
@@ -106,19 +103,19 @@ export function initStream(
 	stream: NaniumStream<any>,
 	subType: any,
 	requestId: string,
-	send: (data: string | ArrayBuffer) => void,
+	send: (data: string | ArrayBuffer) => Promise<void>,
 	serializer: NaniumSerializer,
 	binaryChunkSize: number = 1024 * 1024,
 ) {
 	stream.onData(async data => {
 		if (NaniumBuffer.isNaniumBuffer(subType)) {
 			await sendBufferInChunks(data, requestId,
-				data => send(data), 'service_stream_chunk',
+				async data => await send(data), 'service_stream_chunk',
 				serializer, binaryChunkSize, stream.id);
 		} else {
 			const serialized = serializer.serialize(data);
 			await sendBufferInChunks(typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized, requestId,
-				chunk => send(chunk), 'service_stream_chunk',
+				async chunk => await send(chunk), 'service_stream_chunk',
 				serializer, binaryChunkSize, stream.id);
 		}
 	});

@@ -38,7 +38,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 			try {
 				const objectList: any[] = [];
 				const buffer: NaniumBuffer = new NaniumBuffer();
-				this.onData((chunk): void => {
+				this.onData(async (chunk) => {
 					if (this.isBinary) {
 						buffer.write(chunk as DataSource);
 					} else {
@@ -58,7 +58,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	}
 
 	//#region readable
-	onData(handler: (chunk: T extends NaniumBuffer ? NaniumBuffer : T) => void) {
+	onData(handler: (chunk: T extends NaniumBuffer ? NaniumBuffer : T) => Promise<void>) {
 		this[NaniumStream.naniumStreamOnDataHandlerSymbol].push(handler);
 		return this;
 	}
@@ -74,7 +74,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	}
 
 	pipeTo(s: NaniumStream<T>) {
-		this.onData(chunk => s.write(chunk));
+		this.onData(async chunk => await s.write(chunk));
 		this.onEnd(() => s.end());
 		this.onError((err: Error) => s.error(err));
 	}
@@ -84,16 +84,15 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 	//#endregion readable
 
 	//#region writable
-	write(chunk: T extends NaniumBuffer ? DataSource : T | T[]) {
-		// if (NaniumBuffer.isNaniumBuffer(chunk)) {
-		// 	this.buffer.write(chunk);
-		// } else {
+	async write(chunk: T extends NaniumBuffer ? DataSource : T | T[]): Promise<void> {
+	// todo: it must be possible to return an array as a whole response
 		if (Array.isArray(chunk)) {
-			chunk.forEach(item => this[NaniumStream.naniumStreamOnDataHandlerSymbol].forEach(fn => fn(item)));
+			for (const item of chunk) {
+				await Promise.all(this[NaniumStream.naniumStreamOnDataHandlerSymbol].map(handler => handler(item)));
+			}
 		} else {
-			this[NaniumStream.naniumStreamOnDataHandlerSymbol].forEach(fn => fn(chunk));
+			await Promise.all(this[NaniumStream.naniumStreamOnDataHandlerSymbol].map(handler => handler(chunk)));
 		}
-		// }
 	}
 
 	error(error: any) {

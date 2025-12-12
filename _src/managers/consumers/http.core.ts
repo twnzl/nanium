@@ -86,7 +86,7 @@ export class HttpCore {
 			}
 		} catch (e) {
 			let error: any;
-			if (e instanceof ArrayBuffer) {
+			if (NaniumBuffer.isArrayBufferLike(e) || NaniumBuffer.isBufferLike(e) || NaniumBuffer.isBlobLike(e)) {
 				error = new TextDecoder().decode(e);
 			} else {
 				error = e;

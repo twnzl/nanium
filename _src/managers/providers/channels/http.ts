@@ -183,12 +183,13 @@ export class NaniumHttpChannel implements Channel {
 				} else if (NaniumStream.isNaniumStream(ResponseType)) {
 					const stream: NaniumStream = (result as NaniumStream);
 					stream
-						.onData(chunk => {
+						.onData(async chunk => {
 							if (NaniumBuffer.isNaniumBuffer(getSecondaryResponseType(serviceRepository, serviceName))) {
-								if (chunk instanceof NaniumBuffer) {
-									res.write(chunk.asUint8Array());
-								} else {
-									res.write(chunk);
+								const canContinue = (chunk instanceof NaniumBuffer)
+									? res.write(chunk.asUint8Array())
+									: res.write(chunk);
+								if (!canContinue) { // Wait until HTTP response is ready to take more data
+									await new Promise(resolve => res.once('drain', resolve));
 								}
 							} else {
 								res.write(config.serializer.serializePartial(chunk));

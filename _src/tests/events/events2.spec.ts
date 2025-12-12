@@ -1,11 +1,11 @@
-import { TestExecutionContext } from '../services/testExecutionContext';
-import { TestHelper } from '../testHelper';
-import { StuffEvent } from './test/stuffEvent';
 import { AsyncHelper } from '../../helper';
 import {
-	TestEventSubscriptionReceiveInterceptor
+  TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
+import { TestExecutionContext } from '../services/testExecutionContext';
 import { session } from '../session';
+import { TestHelper } from '../testHelper';
+import { StuffEvent } from './test/stuffEvent';
 
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 
@@ -15,8 +15,7 @@ describe('events \n', function (): void {
 		const sendEvent: StuffEvent = new StuffEvent(42, ':-)', new Date(2021, 12, 6));
 		let receivedEvent: StuffEvent;
 
-		it('--> subscribed handler should not have been executed\n', async () => {
-			await TestHelper.shutdown();
+    it('--> subscribed handler should not have been executed\n', async () => {
 			await TestHelper.initClientServerScenario('http', false);
 			receivedEvent = undefined;
 			TestHelper.provider.config.eventSubscriptionReceiveInterceptors = [TestEventSubscriptionReceiveInterceptor];

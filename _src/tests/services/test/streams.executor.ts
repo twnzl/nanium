@@ -12,15 +12,15 @@ export class TestStreamExecutor implements ServiceExecutor<TestStreamsRequest, T
 			stream1: new NaniumStream(),
 			stream2: new NaniumStream(),
 		});
-		request.body.stream1?.onData((data: Uint8Array) => {
-			response.stream1.write(data);
+		request.body.stream1?.onData(async (data: Uint8Array) => {
+			await response.stream1.write(data);
 		});
 		request.body.stream1?.onEnd(() => {
 			response.stream1.write(new TextEncoder().encode('*'));
 			response.stream1.end();
 		});
-		request.body.stream2?.onData((data: Uint8Array) => {
-			response.stream2.write(data);
+		request.body.stream2?.onData(async (data: Uint8Array) => {
+			await response.stream2.write(data);
 		});
 		request.body.stream2?.onEnd(() => {
 			response.stream2.write(new TextEncoder().encode('*'));

@@ -1,6 +1,6 @@
-import { NaniumStream } from './naniumStream';
-import { DataSource, NaniumBuffer } from './naniumBuffer';
 import { TestDto } from '../tests/services/test/contractparts';
+import { DataSource, NaniumBuffer } from './naniumBuffer';
+import { NaniumStream } from './naniumStream';
 
 describe('NaniumStream', function (): void {
 	test('isNaniumStream', async function (): Promise<void> {
@@ -11,9 +11,9 @@ describe('NaniumStream', function (): void {
 
 	test('Promise: then & finally', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
-		setTimeout(() => {
-			s.write([new TestDto('1', 1), new TestDto('2', 2)]);
-			s.write(new TestDto('3', 3));
+		setTimeout(async () => {
+			await s.write([new TestDto('1', 1), new TestDto('2', 2)]);
+			await s.write(new TestDto('3', 3));
 			s.end();
 		});
 		let result: TestDto[];
@@ -50,8 +50,8 @@ describe('NaniumStream', function (): void {
 	test('on data: objects', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
 		let result = [];
-		await new Promise<void>((resolve: Function, _reject: Function) => {
-			s.onData((chunk: TestDto) => {
+		await new Promise<void>(async (resolve: Function, _reject: Function) => {
+			s.onData(async (chunk: TestDto) => {
 				result.push(chunk);
 			});
 			s.onEnd(() => {
@@ -65,8 +65,8 @@ describe('NaniumStream', function (): void {
 				expect(result[2].b).toBe(3);
 				resolve();
 			});
-			s.write([new TestDto('1', 1), new TestDto('2', 2)]);
-			s.write(new TestDto('3', 3));
+			await s.write([new TestDto('1', 1), new TestDto('2', 2)]);
+			await s.write(new TestDto('3', 3));
 			s.end();
 		});
 	});
@@ -75,8 +75,8 @@ describe('NaniumStream', function (): void {
 		const s1 = new NaniumStream(TestDto);
 		const s2 = new NaniumStream(TestDto);
 		let result = [];
-		await new Promise<void>((resolve: Function, _reject: Function) => {
-			s2.onData((chunk: TestDto) => {
+		await new Promise<void>(async (resolve: Function, _reject: Function) => {
+			s2.onData(async (chunk: TestDto) => {
 				result.push(chunk);
 			});
 			s2.onEnd(() => {
@@ -91,8 +91,8 @@ describe('NaniumStream', function (): void {
 				resolve();
 			});
 			s1.pipeTo(s2);
-			s1.write([new TestDto('1', 1), new TestDto('2', 2)]);
-			s1.write(new TestDto('3', 3));
+			await s1.write([new TestDto('1', 1), new TestDto('2', 2)]);
+			await s1.write(new TestDto('3', 3));
 			s1.end();
 		});
 	});
@@ -115,7 +115,7 @@ describe('NaniumStream', function (): void {
 		const s = new NaniumStream(NaniumBuffer);
 		const result: NaniumBuffer = new NaniumBuffer();
 		await new Promise<void>((resolve: Function, _reject: Function) => {
-			s.onData((chunk: DataSource) => {
+			s.onData(async (chunk: DataSource) => {
 				result.write(chunk);
 			});
 			s.onEnd(async () => {

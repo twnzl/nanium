@@ -103,16 +103,16 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 					const prop = name[name.length - 1];
 					if (parent[prop]) {
 						initStream(parent[prop], typeInfo.localGenerics, msg.content.id,
-							data => this.websocket.send(data), this.config.serializer);
+							async data => this.websocket.send(data), this.config.serializer);
 					}
 				}
 			});
 
 			// send
-			await sendMessage(msg, this.config.serializer, data => this.websocket.send(data));
+			await sendMessage(msg, this.config.serializer, async data => await this.websocket.send(data));
 			for (const buffer of buffers) {
 				await sendBufferInChunks(buffer, msg.content.id,
-					data => this.websocket.send(data), 'service_buffer_chunk',
+					async data => await this.websocket.send(data), 'service_buffer_chunk',
 					this.config.serializer, this.config.binaryChunkSize);
 			}
 		});

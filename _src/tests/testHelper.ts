@@ -18,11 +18,15 @@ import { TestLogger } from './testLogger';
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
 	static port: number;
-	static hasServerBeenCalled: boolean;
 	static provider: NaniumProviderNodejs;
 	static consumer: NaniumConsumerNodejsHttp;
 
+	private static responsibility: 'consumer' | 'provider' = 'consumer';
+
 	private static async initHttpServer(protocol: 'http' | 'https'): Promise<void> {
+		if (this.httpServer) {
+			await this.shutdown();
+		}
 		this.port = protocol === 'http' ? 8888 : 9999;
 		if (protocol === 'http') {
 			// http server
@@ -59,7 +63,7 @@ export class TestHelper {
 
 	static async initClientServerScenario(protocol: 'http' | 'https', providerIsSubscriber: boolean = false): Promise<void> {
 		await this.initHttpServer(protocol);
-		this.hasServerBeenCalled = false;
+		this.responsibility = 'consumer';
 
 		// Logging
 		Nanium.logger = new TestLogger(LogLevel.info);
@@ -78,13 +82,13 @@ export class TestHelper {
 			requestInterceptors: [TestServerRequestInterceptor],
 			// todo: events: eventInterceptors: [TestServerEventInterceptor],
 			isResponsible: async (): Promise<number> => {
-				if (!this.hasServerBeenCalled) {
-					// the first Nanium.Execute will choose the consumer as the responsible manager, the second call from the
-					// httpServer will say it is responsible. This is a workaround because server and client run in the same tread
-					this.hasServerBeenCalled = true;
+				// the first Nanium.Execute will choose the consumer as the responsible manager, the second call from the
+				// httpServer will say it is responsible. This is a workaround because server and client run in the same tread
+				if (this.responsibility === 'consumer') {
+					this.responsibility = 'provider';
 					return 0;
 				} else {
-					this.hasServerBeenCalled = false;
+					this.responsibility = 'consumer';
 					return 2;
 				}
 			},
@@ -117,13 +121,27 @@ export class TestHelper {
 
 	static async shutdown(): Promise<void> {
 		await new Promise<void>((resolve: Function) => {
-			if (this.httpServer) {
-				this.httpServer.close();
-				setTimeout(() => {
-					this.httpServer = null;
+			try {
+				if (this.httpServer) {
+					this.httpServer.close(async () => {
+						try {
+							await Nanium.shutdown();
+							// setTimeout(() => {
+							this.httpServer = null;
+							resolve();
+							// }, 100);
+						} catch (e) {
+							console.error(e);
+						} finally {
+							resolve();
+						}
+					});
+				} else {
 					resolve();
-				}, 100);
-			} else {
+				}
+			} catch (e) {
+				console.error(e);
+			} finally {
 				resolve();
 			}
 		});

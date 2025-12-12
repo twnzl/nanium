@@ -1,17 +1,17 @@
 import { Nanium } from '../core';
+import { LogLevel } from '../interfaces/logger';
+import { NaniumStream } from '../interfaces/naniumStream';
 import { NaniumProviderNodejs } from '../managers/providers/nodejs';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
-import { TestDto } from './services/test/contractparts';
-import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { ServiceResponseBase } from './services/serviceResponseBase';
-import { TestExecutionContext } from './services/testExecutionContext';
-import { TimeRequest } from './services/test/time.contract';
-import { TestLogger } from './testLogger';
-import { LogLevel } from '../interfaces/logger';
+import { TestDto } from './services/test/contractparts';
+import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
+import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
 import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
 import { TestStreamedQueryExecutor } from './services/test/streamedQuery.executor';
-import { NaniumStream } from '../interfaces/naniumStream';
+import { TimeRequest } from './services/test/time.contract';
+import { TestExecutionContext } from './services/testExecutionContext';
+import { TestLogger } from './testLogger';
 
 describe('execute TestRequest on server \n', function (): void {
 	let request: TestGetRequest;
@@ -115,7 +115,7 @@ describe('execute TestRequest on server \n', function (): void {
 			await new Promise(async (resolve: Function): Promise<void> => {
 				const response: NaniumStream<TestDto> = await new TestStreamedQueryExecutor()
 					.execute(new TestStreamedQueryRequest({ amount: 6, msGapTime: 100 }, { token: '1234' }));
-				response.onData((value: TestDto): void => {
+				response.onData(async (value: TestDto) => {
 					portions++;
 					dtoList.push(value);
 				});

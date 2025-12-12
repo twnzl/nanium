@@ -3,6 +3,7 @@ type WebSocketType = WebSocket | import('ws');
 export class WebSocketClient {
 	connected: Promise<void>;
 	reconnectInterval: number;
+	maxBufferSize: number = 1024 * 1024; // 1Mb
 
 	private socket: WebSocketType | null = null;
 	private eventHandler: { [eventName: string]: Function[] } = {};
@@ -45,11 +46,14 @@ export class WebSocketClient {
 		this.connected = undefined;
 	}
 
-	send(data: string | ArrayBuffer | ArrayBufferView): void {
+	async send(data: string | ArrayBuffer | ArrayBufferView): Promise<void> {
 		if (this.socket && this.socket.readyState === (WebSocket as any).OPEN) {
 			this.socket.send(data);
+			while (this.socket.bufferedAmount > this.maxBufferSize) {
+				await new Promise(resolve => setTimeout(resolve, 10)); // Wait if buffer is too full
+			}
 		} else {
-			console.error('WebSocket is not open. Unable to send message.');
+			throw new Error('WebSocket is not open. Unable to send message.');
 		}
 	}
 

@@ -72,56 +72,17 @@ export class NaniumBuffer {
 	}
 
 	async as<T>(targetType: new (first?: any, second?: any, third?: any) => T): Promise<T> {
-		if (this.isArrayBufferLike(targetType)) {
+		if (NaniumBuffer.isArrayBufferLike(targetType)) {
 			return await this.asArrayBuffer() as unknown as T;
 		}
 		const data = await this.asUint8Array();
-		if (this.isBlobLike(targetType)) {
+		if (NaniumBuffer.isBlobLike(targetType)) {
 			return new targetType([data]);
-		} else if (this.isBufferLike(targetType)) {
+		} else if (NaniumBuffer.isBufferLike(targetType)) {
 			return targetType['from'](data);
 		} else { // any typed Array
 			return new targetType(data.buffer, data.byteOffset, data.byteLength / targetType['BYTES_PER_ELEMENT']);
 		}
-	}
-
-	private isBlobLike(objectOrConstructor: any) {
-		if (!objectOrConstructor) {
-			return false;
-		}
-		try {
-			const obj = NaniumObject.isConstructor(objectOrConstructor) ? new objectOrConstructor() : objectOrConstructor;
-			return typeof obj['arrayBuffer'] === 'function';
-		} catch {
-			return false;
-		}
-	}
-
-	private isArrayBufferLike(objectOrConstructor: any) {
-		if (!objectOrConstructor) {
-			return false;
-		}
-		const ctor = NaniumObject.isConstructor(objectOrConstructor) ? objectOrConstructor : objectOrConstructor.constructor;
-		return typeof ctor['isView'] === 'function';
-	}
-
-	private isBufferLike(objectOrConstructor: any) {
-		if (!objectOrConstructor) {
-			return false;
-		}
-		return (
-			NaniumObject.isConstructor(objectOrConstructor)
-				? typeof objectOrConstructor['alloc'] === 'function'
-				: typeof objectOrConstructor['readBigInt64BE'] === 'function'
-		);
-	}
-
-	private isTypedArrayLike(objectOrConstructor: any) {
-		if (!objectOrConstructor) {
-			return false;
-		}
-		const obj = NaniumObject.isConstructor(objectOrConstructor) ? new objectOrConstructor() : objectOrConstructor;
-		return typeof obj['forEach'] === 'function' && !this.isBufferLike(objectOrConstructor);
 	}
 
 	async asUint8Array(): Promise<Uint8Array> {
@@ -136,18 +97,59 @@ export class NaniumBuffer {
 	}
 
 	private async convertSinglePartToUint8Array(data: any): Promise<Uint8Array> {
-		if (this.isArrayBufferLike(data)) {
+		if (NaniumBuffer.isArrayBufferLike(data)) {
 			return new Uint8Array(data);
 		}
-		if (this.isBlobLike(data)) {
+		if (NaniumBuffer.isBlobLike(data)) {
 			const arrayBuffer = await data.arrayBuffer();
 			return new Uint8Array(arrayBuffer);
 		}
-		if (this.isTypedArrayLike(data) || this.isBufferLike(data)) {
+		if (NaniumBuffer.isTypedArrayLike(data) || NaniumBuffer.isBufferLike(data)) {
 			return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 		}
 		throw new Error(`Unsupported data type: ${Object.prototype.toString.call(data)}`);
 	}
+
+	//#region isLike...
+	static isBlobLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		try {
+			const obj = NaniumObject.isConstructor(objectOrConstructor) ? new objectOrConstructor() : objectOrConstructor;
+			return typeof obj['arrayBuffer'] === 'function';
+		} catch {
+			return false;
+		}
+	}
+
+	static isArrayBufferLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		const ctor = NaniumObject.isConstructor(objectOrConstructor) ? objectOrConstructor : objectOrConstructor.constructor;
+		return typeof ctor['isView'] === 'function';
+	}
+
+	static isBufferLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		return (
+			NaniumObject.isConstructor(objectOrConstructor)
+				? typeof objectOrConstructor['alloc'] === 'function'
+				: typeof objectOrConstructor['readBigInt64BE'] === 'function'
+		);
+	}
+
+	static isTypedArrayLike(objectOrConstructor: any) {
+		if (!objectOrConstructor) {
+			return false;
+		}
+		const obj = NaniumObject.isConstructor(objectOrConstructor) ? new objectOrConstructor() : objectOrConstructor;
+		return typeof obj['forEach'] === 'function' && !this.isBufferLike(objectOrConstructor);
+	}
+	//#endregion
 
 	private async concatenateMultiplePartsToUint8Array(internalValues: any[]): Promise<Uint8Array> {
 		const result = new Uint8Array(this.length);
@@ -165,16 +167,16 @@ export class NaniumBuffer {
 	}
 
 	private async preparePartForCopy(part: any): Promise<{ sourceBytes: Uint8Array, bytesToCopy: number }> {
-		if (this.isBlobLike(part)) {
+		if (NaniumBuffer.isBlobLike(part)) {
 			const arrayBuffer = await part.arrayBuffer();
 			const sourceBytes = new Uint8Array(arrayBuffer);
 			return { sourceBytes, bytesToCopy: sourceBytes.length };
 		}
-		if (this.isTypedArrayLike(part) || this.isBufferLike(part)) {
+		if (NaniumBuffer.isTypedArrayLike(part) || NaniumBuffer.isBufferLike(part)) {
 			const sourceBytes = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
 			return { sourceBytes, bytesToCopy: part.byteLength };
 		}
-		if (this.isArrayBufferLike(part)) {
+		if (NaniumBuffer.isArrayBufferLike(part)) {
 			const sourceBytes = new Uint8Array(part);
 			return { sourceBytes, bytesToCopy: part.byteLength };
 		}
@@ -203,17 +205,17 @@ export class NaniumBuffer {
 			}
 
 			try {
-				if (this.isBlobLike(part)) {
+				if (NaniumBuffer.isBlobLike(part)) {
 					result.push(await part.text());
 				} else if (typeof part === 'string') {
 					result.push(part);
-				} else if (this.isTypedArrayLike(part)) {
+				} else if (NaniumBuffer.isTypedArrayLike(part)) {
 					const uint8View = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
 					result.push(new TextDecoder(encoding).decode(uint8View));
-				} else if (this.isBufferLike(part)) {
+				} else if (NaniumBuffer.isBufferLike(part)) {
 					const uint8View = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
 					result.push(new TextDecoder(encoding).decode(uint8View));
-				} else if (this.isArrayBufferLike(part)) {
+				} else if (NaniumBuffer.isArrayBufferLike(part)) {
 					result.push(new TextDecoder(encoding).decode(part));
 				} else { // Fallback: try as ArrayBufferView
 					result.push(new TextDecoder(encoding).decode(part));
@@ -424,7 +426,7 @@ export class NaniumBufferReadable {
 	};
 
 	public get eof(): boolean {
-		return this.readIndex === this.data.byteLength - 1;
+		return this.readIndex >= this.data.byteLength;
 	}
 
 	constructor(private data: DataView) {
@@ -480,7 +482,7 @@ export class NaniumBufferReadable {
 		this.readIndex += 4;
 		return this.data.getInt32(idx, true);
 	}
-	readBigInt64LE(idx: number = this.readIndex): bigint {
+	readInt64LE(idx: number = this.readIndex): bigint {
 		this.readIndex += 8;
 		return this.data.getBigInt64(idx, true);
 	}
@@ -500,7 +502,7 @@ export class NaniumBufferReadable {
 		return this.data.getUint32(idx, true);
 	}
 
-	readBigUInt64LE(idx: number = this.readIndex): bigint {
+	readUInt64LE(idx: number = this.readIndex): bigint {
 		this.readIndex += 8;
 		return this.data.getBigUint64(idx, true);
 	}
@@ -526,7 +528,7 @@ export class NaniumBufferReadable {
 		return this.data.getInt16(idx, false);
 	}
 
-	readBigInt64BE(idx?: number): bigint {
+	readInt64BE(idx?: number): bigint {
 		this.readIndex += 8;
 		return this.data.getBigInt64(idx, false);
 	}
@@ -541,7 +543,7 @@ export class NaniumBufferReadable {
 		return this.data.getUint32(idx, false);
 	}
 
-	readBigUInt64BE(idx?: number): bigint {
+	readUInt64BE(idx?: number): bigint {
 		this.readIndex += 8;
 		return this.data.getBigUint64(idx, false);
 	}
