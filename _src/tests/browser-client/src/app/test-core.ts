@@ -100,9 +100,10 @@ export class TestCore {
 		await new Promise(async (resolve: Function): Promise<void> => {
 			const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
 				{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
-			response.onData((value: TestDto): void => {
+			response.onData((value: TestDto) => {
 				portions++;
 				dtoList.push(value);
+				return Promise.resolve();
 			});
 			response.onEnd(() => {
 				resolve();

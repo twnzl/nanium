@@ -13,27 +13,17 @@ export async function sendMessage(
 	const serialized = serializer.serialize(msg);
 	const msgBuffer = new NaniumBuffer();
 	if (typeof serialized === 'string') {
-		await msgBuffer.write(new TextEncoder().encode(serialized as string));
+		msgBuffer.write(new TextEncoder().encode(serialized as string));
 	} else {
-		await msgBuffer.write(serialized);
+		msgBuffer.write(serialized);
 	}
-
-	const headerLengthArray = new Uint8Array(4);
-	new DataView(headerLengthArray.buffer)
-		.setUint32(0, msgBuffer.length, true); // true for Little-Endian
-
-	// total message: length of the message/header (4 byte number) + message + chunk
-	const message = new Uint8Array(
-		4 + msgBuffer.length + (chunk?.length ?? 0)
-	);
-	message.set(headerLengthArray, 0);
-	message.set(await msgBuffer.asUint8Array(), 4);
+	const message = new NaniumBuffer();
+	message.writeUInt32LE(msgBuffer.length);
+	message.write(msgBuffer);
 	if (chunk) {
-		const ui8a = await chunk.asUint8Array();
-		message.set(ui8a, 4 + msgBuffer.length);
+		message.write(chunk);
 	}
-
-	await send(message);
+	await send(await message.asUint8Array());
 }
 
 export async function sendBufferInChunks(
@@ -81,19 +71,34 @@ export async function sendBufferInChunks(
 
 export async function parseMessage(data: any /* Blob | ArrayBuffer | Buffer */, serializer: NaniumSerializer): Promise<WsMessage> {
 	let result: WsMessage;
-	if (typeof data === 'string') {
-		result = serializer.deserialize(data);
-	} else {
-		const nb = new NaniumBuffer(data);
-		const headerLength = (await nb.asReadable()).readInt32LE(0);
-		const binary = await nb.asArrayBuffer();
-		const headerArray = new Uint8Array(binary, 4, headerLength);
-		const headerJson = new TextDecoder().decode(headerArray);
-		result = serializer.deserialize(headerJson);
-		// extract appending data
-		if (binary.byteLength > 4 + headerLength) {
-			result.payload = new Uint8Array(binary, 4 + headerLength, binary.byteLength - 4 - headerLength);
+	try {
+		if (typeof data === 'string') {
+			result = serializer.deserialize(data);
+		} else {
+			const nb = new NaniumBuffer(data);
+			const headerLength = (await nb.asReadable()).readInt32LE(0);
+			const binary = await nb.asArrayBuffer();
+			if (headerLength < 0 || headerLength > data.length) {
+				result = new WsMessage({
+					error: 'bad message format',
+					type: 'unknown'
+				});
+				return result;
+			}
+			const headerArray = new Uint8Array(binary, 4, headerLength);
+			const headerJson = new TextDecoder().decode(headerArray);
+			result = serializer.deserialize(headerJson);
+			// extract appending data
+			if (binary.byteLength > 4 + headerLength) {
+				result.payload = new Uint8Array(binary, 4 + headerLength, binary.byteLength - 4 - headerLength);
+			}
 		}
+	} catch (e) {
+		result = new WsMessage({
+			error: e,
+			type: 'unknown'
+		});
+		return result;
 	}
 
 	return result;
@@ -119,25 +124,43 @@ export function initStream(
 				serializer, binaryChunkSize, stream.id);
 		}
 	});
-	stream.onEnd(() => {
-		send(
-			serializer.serialize(new WsMessage<WsServiceChunkMessage>({
+	stream.onEnd(async () => {
+		const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
 				type: 'service_stream_end',
-				content: {
-					requestId,
-					bufferOrStreamId: stream.id
-				}
-			}))
-		);
-	});
-	stream.onError(error => {
-		this.websocket.send(serializer.serialize(new WsMessage<WsServiceChunkMessage>({
-			type: 'service_stream_error',
-			content: {
+			content: new WsServiceChunkMessage({
+				requestId: requestId,
 				bufferOrStreamId: stream.id,
-				requestId
-			},
+			})
+		});
+		await sendMessage(msg, serializer, send);
+
+		// void send(
+		// 	serializer.serialize(new WsMessage<WsServiceChunkMessage>({
+		// 		type: 'service_stream_end',
+		// 		content: {
+		// 			requestId,
+		// 			bufferOrStreamId: stream.id
+		// 		}
+		// 	}))
+		// );
+	});
+	stream.onError(async error => {
+		const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
+			type: 'service_stream_error',
+			content: new WsServiceChunkMessage({
+				requestId: requestId,
+				bufferOrStreamId: stream.id,
+				}),
 			error: error,
-		})));
+		});
+		await sendMessage(msg, serializer, send);
+		// void send(serializer.serialize(new WsMessage<WsServiceChunkMessage>({
+		// 	type: 'service_stream_error',
+		// 	content: {
+		// 		bufferOrStreamId: stream.id,
+		// 		requestId
+		// 	},
+		// 	error: error,
+		// })));
 	});
 }

@@ -14,13 +14,12 @@ export class TestStreamedBinaryExecutor implements ServiceExecutor<TestStreamedB
 				result.end();
 				clearInterval(interval);
 			} else {
-				result.write(new TextEncoder().encode(cnt.toString() + '.'));
+				void result.write(new TextEncoder().encode(cnt.toString() + '.'));
 				cnt++;
 			}
 		};
-		// next();
 		const interval = setInterval(() => next(), request.body.msGapTime ?? 1);
-		return result;
+		return Promise.resolve(result);
 	}
 }
 

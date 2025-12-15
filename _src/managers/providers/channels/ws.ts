@@ -2,6 +2,7 @@ import { Server as HttpServer, IncomingMessage } from 'http';
 import { Server as HttpsServer } from 'https';
 import * as WebSocket from 'ws';
 import { Nanium } from '../../../core';
+import { criticalSection, Mutex } from '../../../helper';
 import { Channel } from '../../../interfaces/channel';
 import { ChannelConfig } from '../../../interfaces/channelConfig';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
@@ -11,7 +12,7 @@ import { ServiceProviderManager } from '../../../interfaces/serviceProviderManag
 import { NaniumRepository } from '../../../interfaces/serviceRepository';
 import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../../objects';
 import { NaniumJsonSerializer } from '../../../serializers/json';
-import { getPrimaryResponseType } from '../../core';
+import { getPrimaryResponseType, getSecondaryResponseType } from '../../core';
 import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../../ws.core';
 import { SubscribeEventMessageContent, WsMessage, WsServiceChunkMessage, WsServiceRequestMessage } from './ws.types';
 
@@ -34,16 +35,18 @@ export class NaniumWebsocketChannel implements Channel {
 	private wss: WebSocket.Server;
 	private clientSubscriptionInfo: Map<string, ClientSubscriptionInfo> = new Map(); // first client ID
 	private serviceRepository: NaniumRepository;
+	private parseMessageMutex: Mutex = new Mutex();
 	private arrivingRequests: Map<string, {
 		request?: any,
 		buffers?: NaniumBuffer[],
-		resolve?: Function,
-		reject?: Function,
+		resolve?: (result?: unknown) => void,
+		reject?: (err?: unknown) => void,
 	}> = new Map();
 	private openRequestStreams: Map<string, {
 		type: NaniumPropertyInfoCore,
 		stream?: NaniumStream,
 	}> = new Map();
+
 	// private openResponseStreams: Map<string, {
 	// 	type: NaniumPropertyInfoCore,
 	// 	stream?: NaniumStream,
@@ -69,7 +72,7 @@ export class NaniumWebsocketChannel implements Channel {
 		}
 	}
 
-	async init(serviceRepository: NaniumRepository, _manager: ServiceProviderManager): Promise<void> {
+	init(serviceRepository: NaniumRepository, _manager: ServiceProviderManager): Promise<void> {
 		this.serviceRepository = serviceRepository;
 		this.wss = new WebSocket.Server({ server: this.config.server });
 		this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
@@ -78,9 +81,9 @@ export class NaniumWebsocketChannel implements Channel {
 			// Handle messages from the client
 			ws.on('message', (rawMessage: ArrayBuffer | string) => {
 				try {
-					this.handleIncomingMessage(rawMessage, ws);
+					void this.handleIncomingMessage(rawMessage, ws);
 				} catch (e) {
-					sendMessage(<WsMessage>{
+					void sendMessage(<WsMessage>{
 						type: 'service_response',
 						error: e,
 						content: null
@@ -99,14 +102,16 @@ export class NaniumWebsocketChannel implements Channel {
 				throw error;
 			});
 		});
+		return Promise.resolve();
 	}
 
-	async terminate(): Promise<void> {
+	terminate(): Promise<void> {
 		const perClient = this.clientSubscriptionInfo.values();
 		for (const clientSubscription of perClient) {
 			clientSubscription.websocket.terminate();
 		}
 		this.clientSubscriptionInfo = new Map();
+		return Promise.resolve();
 	};
 
 	getClientIp(req: IncomingMessage): string {
@@ -127,8 +132,12 @@ export class NaniumWebsocketChannel implements Channel {
 	}
 
 	private async handleIncomingMessage(rawMessage: ArrayBuffer | string, ws: WebSocket): Promise<void> {
-		const message: WsMessage = await parseMessage(rawMessage, this.config.serializer);
-		// const message: WsMessage = this.config.serializer.deserialize(rawMessage);
+		let message: WsMessage;
+		// parseMessage has different speeds for different messages and so messages overtake each other
+		// what is critical e.g. for thinks like stream_chunk and stream_end -> criticalSection ensures order
+		await criticalSection(this.parseMessageMutex, async () => {
+			message = await parseMessage(rawMessage, this.config.serializer);
+		});
 		switch (message.type) {
 			case 'subscribe_event':
 				return this.handleIncomingEventSubscription(message, ws);
@@ -146,19 +155,22 @@ export class NaniumWebsocketChannel implements Channel {
 				return this.handleIncomingServiceRequestStreamEnd(message, ws);
 			case 'service_stream_error':
 				return this.handleIncomingServiceRequestStreamError(message, ws);
+			default:
+				Nanium.logger.error(message.error ?? 'unknown ws message');
 		}
 	}
 
 	//#region service request handling
 	async handleIncomingServiceRequest(message: WsMessage<WsServiceRequestMessage>, ws: WebSocket): Promise<any> {
 		const serviceName: string = message.content.serviceName;
-		let ResponseType = getPrimaryResponseType(this.serviceRepository, serviceName);
+		const ResponseType = getPrimaryResponseType(this.serviceRepository, serviceName);
+		const SubType = getSecondaryResponseType(this.serviceRepository, serviceName);
 		try {
 			const request = NaniumObject.create(message.content.request, this.serviceRepository[serviceName].Request);
 
 			// buffers in request
 			const buffers: NaniumBuffer[] = [];
-			NaniumObject.forEachProperty(request, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+			NaniumObject.forEachProperty(request, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
 				if (typeInfo && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
 					const prop = name[name.length - 1];
 					buffers.push(parent[prop] as NaniumBuffer);
@@ -166,14 +178,14 @@ export class NaniumWebsocketChannel implements Channel {
 			});
 			if (buffers?.length) {
 				this.arrivingRequests.set(message.content.id, { request, buffers });
-				await new Promise(async (resolve: Function, reject: Function): Promise<void> => {
+				await new Promise<void>((resolve: (result: void) => void, reject: (err: Error | unknown) => void) => {
 					this.arrivingRequests.get(message.content.id).resolve = resolve;
 					this.arrivingRequests.get(message.content.id).reject = reject;
 					// handleIncomingServiceRequestBufferChunk will resolve this when all request data arrived
 				});
 			}
 			// streams in request
-			NaniumObject.forEachProperty(request, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+			NaniumObject.forEachProperty(request, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
 				if (typeInfo && NaniumStream.isNaniumStream(typeInfo.ctor)) {
 					const prop = name[name.length - 1];
 					if (parent[prop]) {
@@ -208,8 +220,6 @@ export class NaniumWebsocketChannel implements Channel {
 
 			// stream response
 			else if (NaniumStream.isNaniumStream(ResponseType)) {
-				// todo: add handling of Streams
-
 				const responseMessage: WsMessage<WsServiceChunkMessage> = {
 					type: 'service_response',
 					content: {
@@ -223,7 +233,7 @@ export class NaniumWebsocketChannel implements Channel {
 					// this.openResponseStreams.set(result.id, { stream: result, type: typeInfo });
 					initStream(
 						result,
-						ResponseType?.[genericTypesSymbol],
+						SubType ?? NaniumBuffer,
 						message.content.id,
 						async data => this.send(ws, data),
 						this.config.serializer,
@@ -234,8 +244,8 @@ export class NaniumWebsocketChannel implements Channel {
 
 			// normal response
 			else {
-				let hasGenericBuffers: Boolean;
-				let hasGenericStreams: Boolean;
+				let hasGenericBuffers: boolean;
+				let hasGenericStreams: boolean;
 				if (ResponseType?.[genericTypesSymbol]) {
 					hasGenericBuffers = Object.values(ResponseType[genericTypesSymbol]).some((t: any) => NaniumBuffer.isNaniumBuffer(t))
 					hasGenericStreams = Object.values(ResponseType[genericTypesSymbol]).some((t: any) => NaniumStream.isNaniumStream(t))
@@ -255,7 +265,7 @@ export class NaniumWebsocketChannel implements Channel {
 				// buffers inside response object
 				const resBuffers: NaniumBuffer[] = [];
 				if (ResponseType?.[hasBuffersSymbol] || hasGenericBuffers) {
-					NaniumObject.forEachProperty(result, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+					NaniumObject.forEachProperty(result, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
 						if (typeInfo && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
 							const prop = name[name.length - 1];
 							if (parent[prop]) {
@@ -268,7 +278,7 @@ export class NaniumWebsocketChannel implements Channel {
 
 				// streams inside response object
 				if (ResponseType?.[hasStreamsSymbol] || hasGenericStreams) {
-					NaniumObject.forEachProperty(result, (name: string[], parent: Object, typeInfo: NaniumPropertyInfoCore) => {
+					NaniumObject.forEachProperty(result, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
 						if (typeInfo && NaniumStream.isNaniumStream(typeInfo.ctor)) {
 							const prop = name[name.length - 1];
 							if (parent[prop]) {
@@ -306,12 +316,9 @@ export class NaniumWebsocketChannel implements Channel {
 				}
 			}
 		} catch (e) {
-			if (e instanceof Error) {
-				e = e.message;
-			}
 			const responseMessage: WsMessage<WsServiceChunkMessage> = {
 				type: 'service_response',
-				error: e,
+				error: e instanceof Error ? e.message : e,
 				content: {
 					requestId: message.content.id,
 				}
@@ -342,12 +349,9 @@ export class NaniumWebsocketChannel implements Channel {
 				arrivingRequest.resolve();
 			}
 		} catch (e) {
-			if (e instanceof Error) {
-				e = e.message;
-			}
 			const responseMessage: WsMessage<WsServiceChunkMessage> = {
 				type: 'service_response',
-				error: e,
+				error: e instanceof Error ? e.message : e,
 				content: message.content
 			};
 			await sendMessage(responseMessage, this.config.serializer, async data => this.send(ws, data));

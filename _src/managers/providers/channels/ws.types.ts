@@ -6,7 +6,7 @@ export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_even
 	| 'service_stream_chunk' | 'service_stream_error' | 'service_stream_end';
 
 export class WsMessage<TContent = any> extends NaniumObject<WsMessage<TContent>> {
-	@Type(String) type: WsMessageType;
+	@Type(String) type: WsMessageType | 'unknown';
 	@Type('TContent') content: TContent;
 	@Type(Object) payload?: Uint8Array;
 	@Type(Object) error?: any;

@@ -12,6 +12,7 @@ import { TestGetRequest } from '../../../services/test/get.contract';
 import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
 import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
 import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
+import { TestUpstreamBinaryRequest } from '../../../services/test/upstreamBinary.contract';
 import { session } from '../../../session';
 import { TestService } from './test.service';
 
@@ -84,6 +85,7 @@ export class AppComponent implements OnInit {
 		(stream as NaniumStream).onData(dto => {
 			result.push(dto as TestDto);
 			console.log(JSON.stringify(dto));
+			return Promise.resolve();
 		}).onEnd(() => {
 			console.log(JSON.stringify(result));
 		});
@@ -137,16 +139,18 @@ export class AppComponent implements OnInit {
 		console.log('response.text2: should be the content of request.buffer2 as string:', response.text2);
 	}
 
-	async wsStreamJson() {
+	async wsStreamObjects() {
 		this.testService.initWs(8080, 1);
 		const dtoList: TestDto[] = [];
 		let portions = 0;
 		await new Promise(async (resolve: Function): Promise<void> => {
 			const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
 				{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
-			response.onData((value: TestDto): void => {
+			response.onData((value: TestDto): Promise<void> => {
 				portions++;
+				console.log(value);
 				dtoList.push(value);
+				return Promise.resolve();
 			});
 			response.onEnd(() => {
 				resolve();
@@ -163,22 +167,64 @@ export class AppComponent implements OnInit {
 			const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
 
 			// todo: problem ist, dass durch das await auf die response, der Inhalt des streams bereits übertragen wird
-			// und dann ohne onData - function (in browserws.handleResponseStreamChunk) entgegengenommen wird,
+			// und dann ohne onData - function (in browserWs.handleResponseStreamChunk) entgegengenommen wird,
 			// 	noch bevor es hier mit der Ausführung weiter geht und die onData - function registriert werden kann.
 			// wie kann ich sicher stellen, dass die Ausführung hier weiter geht, bevor der Inhalt des streams entgegengenommen wird ?
 
 			const result: NaniumBuffer = new NaniumBuffer();
 			await new Promise((resolve: Function) => {
 				stream.onData(async (chunk) => {
-					await result.write(chunk);
-				}).onEnd(async () => {
-					console.log(await result.asString()) //.toBe('1.2.3.');
+					result.write(chunk);
+					console.log(new NaniumBuffer(chunk).asString()); //.toBe('1.2.3.');
+				})
+				stream.onEnd(async () => {
+					console.log(await result.asString())
 					resolve();
 				});
 			});
 		} catch (err) {
 			console.error(err.message, err.stack);
 		}
+	}
+
+	wsStreamBinaryToServer() {
+		this.testService.initWs(8080, 1);
+		const upstream1 = new NaniumStream<NaniumBuffer>();
+		const upstream2 = new NaniumStream<NaniumBuffer>();
+		const request = new TestUpstreamBinaryRequest({});
+		request.body.upstream1 = upstream1;
+		request.body.upstream2 = upstream2;
+		request.execute().then(result => {
+			if (result.upstream1NumberOfReceivedBytes !== 12) {
+				throw new Error('upstream1: expected length of received binary data: 12 but received: ' + result.upstream1NumberOfReceivedBytes);
+			} else {
+				console.log('✅ upstream1: length of received binary data:', result.upstream1NumberOfReceivedBytes);
+			}
+			if (result.upstream2NumberOfReceivedBytes !== 6) {
+				throw new Error('upstream2: expected length of received binary data: 6 but received: ' + result.upstream2NumberOfReceivedBytes);
+			} else {
+				console.log('✅ upstream2: length of received binary data:', result.upstream2NumberOfReceivedBytes);
+			}
+		});
+		const chunk = new NaniumBuffer(new TextEncoder().encode('abc'));
+		let cnt = 1;
+		const interval = setInterval(() => {
+			if (cnt > 4) {
+				clearInterval(interval);
+				upstream1.end();
+				upstream2.end();
+			} else {
+				upstream1.write(chunk);
+				if (cnt < 3) {
+					upstream2.write(chunk);
+				}
+			}
+			cnt++
+		}, 100);
+	}
+
+	wsStreamObjectsToServer() {
+		throw new Error('Method not implemented.');
 	}
 
 	//#endregion ws

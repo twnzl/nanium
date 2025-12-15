@@ -1,8 +1,9 @@
-import { EmitEventMessage, Message, NaniumCommunicator } from '../interfaces/communicator';
 import * as cluster from 'cluster';
 import { Nanium } from '../core';
-import { ExecutionContext } from '../interfaces/executionContext';
+import { RejectFunction, ResolveFunction } from '../helper';
+import { EmitEventMessage, Message, NaniumCommunicator } from '../interfaces/communicator';
 import { EventSubscription } from '../interfaces/eventSubscription';
+import { ExecutionContext } from '../interfaces/executionContext';
 import { ServiceProviderManager } from '../interfaces/serviceProviderManager';
 
 export class ClusterCommunicator<TExecutionContext extends ExecutionContext> implements NaniumCommunicator {
@@ -72,7 +73,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	}
 
 	async broadcastEvent(event: any, eventName: string, context?: ExecutionContext): Promise<void> {
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_emit message to primary ');
 				process.send(
@@ -101,7 +102,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	}
 
 	async broadcastSubscription(subscription: EventSubscription): Promise<void> {
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_subscribe message to primary ');
 				process.send(
@@ -114,7 +115,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	}
 
 	async broadcastUnsubscription(subscription: EventSubscription): Promise<void> {
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
 				process.send(
@@ -127,7 +128,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	}
 
 	async broadcastRemoveClient(clientId: string): Promise<void> {
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send remove_client message to primary ');
 				process.send(
@@ -140,7 +141,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	}
 
 	async broadcast(message: any): Promise<void> {
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
 				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
 				process.send(
