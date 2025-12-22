@@ -187,7 +187,7 @@ export class AppComponent implements OnInit {
 		}
 	}
 
-	wsStreamBinaryToServer() {
+	async wsStreamBinaryToServer() {
 		this.testService.initWs(8080, 1);
 		const upstream1 = new NaniumStream<NaniumBuffer>();
 		const upstream2 = new NaniumStream<NaniumBuffer>();
@@ -208,6 +208,10 @@ export class AppComponent implements OnInit {
 		});
 		const chunk = new NaniumBuffer(new TextEncoder().encode('abc'));
 		let cnt = 1;
+		await Promise.all([
+			request.body.upstream1.isReceiverReady(),
+			request.body.upstream2.isReceiverReady(),
+		]);
 		const interval = setInterval(() => {
 			if (cnt > 4) {
 				clearInterval(interval);
@@ -227,5 +231,52 @@ export class AppComponent implements OnInit {
 		throw new Error('Method not implemented.');
 	}
 
+	async wsUpstreamReadyTimeout() {
+		try {
+			this.testService.initWs(8080, 1);
+			const upstream1 = new NaniumStream<NaniumBuffer>();
+			const request = new TestUpstreamBinaryRequest({
+				doNotSendReadySignal: true,
+			});
+			request.body.upstream1 = upstream1;
+			request.execute().then(result => {
+				throw new Error('wsStreamReadyTimeout: upstream1: should have been run into ready timeout');
+			});
+
+			await request.body.upstream1.isReceiverReady(); // should be rejected -> throw error
+		} catch (e) {
+			console.log('received error while waiting on isReceiverReady');
+			return;
+		}
+		throw new Error('wsStreamReadyTimeout: upstream1: should have been run into ready timeout');
+	}
+
+	async wsUpstreamDataTimeout() {
+		this.testService.initWs(8080, 1);
+		const upstream1 = new NaniumStream<NaniumBuffer>();
+		const request = new TestUpstreamBinaryRequest({});
+		request.body.upstream1 = upstream1;
+		const responsePromise = request.execute();
+		const chunk = new NaniumBuffer(new TextEncoder().encode('abc'));
+		let cnt = 1;
+		try {
+			await request.body.upstream1.isReceiverReady();
+			const interval = setInterval(() => {
+				if (cnt > 2) {
+					clearInterval(interval);
+					AsyncHelper.pause(6000).then(() => upstream1.end());
+				} else {
+					upstream1.write(chunk);
+				}
+				cnt++
+			}, 100);
+			await responsePromise;
+			throw new Error('wsStreamDataTimeout: upstream1: should have been run into data timeout');
+		} catch (e) {
+			console.log('received expected error: ', e);
+			return
+		}
+		throw new Error('wsStreamDataTimeout: upstream1: should have been canceled');
+	}
 	//#endregion ws
 }

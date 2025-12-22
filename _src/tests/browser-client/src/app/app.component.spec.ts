@@ -53,7 +53,7 @@ async function addWebsocketConsumer(
 	const serializer = new NaniumJsonSerializer();
 	serializer.packageSeparator = '\0';
 	const naniumConsumer = new NaniumConsumerBrowserWebsocket({
-		apiEventUrl: baseUrl + '/events',
+		connectUrl: baseUrl,
 		serializer: serializer,
 		requestInterceptors: [TestClientRequestInterceptor],
 		responseInterceptors: [TestClientResponseInterceptor],

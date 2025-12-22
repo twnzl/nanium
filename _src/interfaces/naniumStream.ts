@@ -1,3 +1,4 @@
+import { ExtendedPromise } from '../helper';
 import {
 	ConstructorType,
 	genericTypesSymbol,
@@ -12,16 +13,25 @@ import { DataSource, NaniumBuffer } from './naniumBuffer';
 let uuidCounter: number = 0;
 
 
-export class NaniumStream<T = any> { //implements Promise<T> {
+export class NaniumStream<T = any> {
 	@Type(String) id: string;
 
-	get isBinary(): boolean {
+	async isReceiverReady(): Promise<boolean> {
+		return await this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol];
+	};
+
+	cancelWaitingForReceiver(msg: string = 'NaniumStream: canceled'): void {
+		this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol].cancel(msg);
+	}
+
+	isBinary(): boolean {
 		return NaniumBuffer.isNaniumBuffer(this[responseTypeSymbol]);
 	}
 
 	static naniumStreamOnDataHandlerSymbol: symbol = Symbol.for('NaniumStream_OnDataHandlerSymbol');
 	static naniumStreamOnErrorHandlerSymbol: symbol = Symbol.for('NaniumStream_OnErrorHandlerSymbol');
 	static naniumStreamOnEndHandlerSymbol: symbol = Symbol.for('NaniumStream_OnEndHandlerSymbol');
+	static naniumStreamIdReceiverReadyPromiseSymbol: symbol = Symbol.for('NaniumStream_OnReceiverSymbol');
 
 	constructor(itemConstructor?: new (...data: any) => T, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
 		this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
@@ -30,6 +40,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 		this[NaniumStream.naniumStreamOnDataHandlerSymbol] = [];
 		this[NaniumStream.naniumStreamOnErrorHandlerSymbol] = [];
 		this[NaniumStream.naniumStreamOnEndHandlerSymbol] = [];
+		this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol] = new ExtendedPromise<boolean>();
 	}
 
 	//#region Promise
@@ -55,6 +66,10 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 				reject(err);
 			}
 		});
+	}
+
+	receiverReady() {
+		this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol].resolve();
 	}
 
 	//#region readable
@@ -107,7 +122,7 @@ export class NaniumStream<T = any> { //implements Promise<T> {
 
 	//#endregion Stream
 
-	static forEachStream(obj: Object, fn: (stream: NaniumStream, type: ConstructorType) => void) {
+	static forEachStream(obj: object, fn: (stream: NaniumStream, type: ConstructorType) => void) {
 		if (NaniumStream.isNaniumStream(obj?.constructor)) {
 			fn(obj as NaniumStream, undefined); // todo: item type with generic parameter
 		}

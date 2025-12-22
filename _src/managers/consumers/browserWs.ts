@@ -22,9 +22,10 @@ import { ConsumerBase } from './base';
 import { WebSocketClient } from './ws.core';
 
 export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerConfig {
-	// apiUrl?: string;
-	apiEventUrl?: string;
+	connectUrl?: string;
 	binaryChunkSize?: number;
+	streamReadyTimeout?: number;
+	streamDataTimeout?: number;
 	// onServerConnectionRestored?: () => void;
 }
 
@@ -38,13 +39,17 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 	constructor(config?: NaniumConsumerBrowserWebsocketConfig) {
 		super(config);
-		this.config.apiEventUrl = config.apiEventUrl ?? '';
+		this.config.connectUrl = config.connectUrl ?? '';
+		this.config.streamReadyTimeout = config.streamReadyTimeout ?? 5000;
+		this.config.streamDataTimeout = config.streamDataTimeout ?? 5000;
 	}
 
 	init(): Promise<void> {
-		if (!this.config.apiEventUrl.startsWith('ws://') && !this.config.apiEventUrl.startsWith('wss://')) {
-			this.config.apiEventUrl = (window.location.protocol === 'http:') ? 'ws://' : 'wss://' + window.location.host +
-				(this.config.apiEventUrl.startsWith('/') ? '' : '/') + this.config.apiEventUrl;
+		if (!this.config.connectUrl.startsWith('ws://') && !this.config.connectUrl.startsWith('wss://')) {
+			this.config.connectUrl = ((window.location.protocol === 'http:') ? 'ws://' : 'wss://')
+				+ window.location.host
+				+ (this.config.connectUrl.startsWith('/') ? '' : '/')
+				+ this.config.connectUrl;
 		}
 		return Promise.resolve();
 	}
@@ -84,7 +89,8 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 					request,
 				}
 			};
-			this.pendingRequests.set(msg.content.id, { request, resolve, reject });
+			const pendingRequest = { request, resolve, reject, openRequestStreams: [] };
+			this.pendingRequests.set(msg.content.id, pendingRequest);
 
 			// buffers in request
 			const buffers: NaniumBuffer[] = [];
@@ -109,8 +115,12 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				if (typeInfo?.ctor && NaniumStream.isNaniumStream(typeInfo.ctor)) {
 					const prop = name[name.length - 1];
 					if (parent[prop]) {
-						initStream(parent[prop], typeInfo.localGenerics, msg.content.id,
-							async data => this.websocket.send(data), this.config.serializer);
+						pendingRequest.openRequestStreams.push(parent[prop]);
+						initStream(
+							parent[prop], typeInfo.localGenerics, msg.content.id,
+							async data => this.websocket.send(data), this.config.serializer,
+							this.config.binaryChunkSize, this.config.streamReadyTimeout, this.config.streamDataTimeout
+						);
 					}
 				}
 			});
@@ -130,7 +140,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			return;
 		}
 		this.parseMessageMutex = new Mutex();
-		this.websocket = new WebSocketClient(this.config.apiEventUrl);
+		this.websocket = new WebSocketClient(this.config.connectUrl);
 		this.websocket.on('open', async (): Promise<void> => {
 			// if reconnected, resubscribe to events
 			if (this.eventSubscriptions) {
@@ -174,6 +184,8 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				await this.handleServiceResponse(rawMessage);
 			} else if (rawMessage.type === 'service_buffer_chunk') {
 				await this.handleResponseBufferChunk(rawMessage);
+			} else if (rawMessage.type === 'service_stream_start') {
+				await this.handleResponseStreamStart(rawMessage);
 			} else if (rawMessage.type === 'service_stream_chunk') {
 				await this.handleResponseStreamChunk(rawMessage);
 			} else if (rawMessage.type === 'service_stream_end') {
@@ -183,7 +195,6 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			}
 		});
 		await this.websocket.connect();
-		await this.websocket.connected;
 	}
 
 	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
@@ -218,7 +229,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		subscription = await super.unsubscribeLocal(subscription, eventName);
 		if (this.websocket?.connected) {
 			await this.websocket.connected;
-			// no mor handlers for this event registered - so unsubscribe on server
+			// if no more handlers for this event registered, unsubscribe on server
 			if (!this.eventSubscriptions[eventName]?.eventHandlers?.size) {
 				await this.sendEventUnSubscription(eventName, subscription?.additionalData);
 			}
@@ -320,11 +331,17 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	async handleResponseBufferChunk(message: WsMessage<WsServiceChunkMessage>) {
 		const pendingRequest = this.pendingRequests.get(message.content.requestId);
 		const idx = pendingRequest.pendingResponseBuffers!.findIndex(b => b.id === message.content.bufferOrStreamId);
-		await pendingRequest.pendingResponseBuffers[idx].write(message.payload);
+		pendingRequest.pendingResponseBuffers[idx].write(message.payload);
 		if (message.content.isLastChunk) {
 			pendingRequest.pendingResponseBuffers.splice(idx, 1);
 		}
 		await this.tryFinalizeResponse(pendingRequest, message.content.requestId);
+	}
+
+	handleResponseStreamStart(message: WsMessage<WsServiceChunkMessage>) {
+		const pendingRequest = this.pendingRequests.get(message.content.requestId);
+		const stream = pendingRequest.openRequestStreams!.find(b => b.id === message.content.bufferOrStreamId);
+		stream.receiverReady();
 	}
 
 	async handleResponseStreamChunk(message: WsMessage<WsServiceChunkMessage>) {
@@ -397,4 +414,5 @@ class PendingRequestInfo {
 	reject: RejectFunction;
 	pendingResponseBuffers?: NaniumBuffer[];
 	openResponseStreams?: NaniumStream[];
+	openRequestStreams?: NaniumStream[];
 }

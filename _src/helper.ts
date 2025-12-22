@@ -23,7 +23,7 @@ export class AsyncHelper {
 	static async waitUntil(isReady: () => boolean, checkInterval: number = 50, timeout: number = 10000): Promise<void> {
 		const start: number = Date.now();
 		return new Promise<void>((resolve, reject) => {
-			const checkFn: Function = () => {
+			const checkFn = () => {
 				try {
 					if (isReady()) {
 						resolve();
@@ -78,3 +78,50 @@ export function criticalSection<T>(mutex: Mutex, action: () => Promise<T> | T): 
 
 export type ResolveFunction<T = unknown> = (result?: T) => void;
 export type RejectFunction = (error?: unknown) => void;
+
+
+export class ExtendedPromise<T = void> extends Promise<T> {
+	resolve: (value?: T) => void;
+	reject: (reason?: unknown) => void;
+	isResolved: boolean = false;
+	isPending: boolean = false;
+
+	#timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+
+	constructor(executor = (_rs: (result: T) => void, _rj: (err: unknown) => void) => { }, timeout?: number) {
+		let resolve, reject;
+		super((res, rej) => {
+			resolve = res;
+			reject = rej;
+			executor(res, rej);
+		});
+		this.resolve = (value?: T) => {
+			if (this.#timeoutId) {
+				clearTimeout(this.#timeoutId);
+			}
+			resolve!(value);
+			this.isResolved = true;
+			this.isPending = false;
+		};
+		this.reject = reject!;
+		this.isResolved = false;
+		this.isPending = true;
+		if (timeout) {
+			this.#timeoutId = setTimeout(() => {
+				this.reject(new Error('timeout'));
+			}, timeout);
+		}
+	}
+
+	cancel(msg: string = 'canceled') {
+		if (this.isPending) {
+			this.reject(new Error(msg));
+		}
+	}
+
+	// setTimeout(milliseconds: number, msg: string = 'timeout') {
+	// 	this.#timeoutId = setTimeout(() => {
+	// 		this.reject(new Error(msg));
+	// 	}, milliseconds);
+	// }
+}

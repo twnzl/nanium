@@ -1,21 +1,21 @@
+import * as cluster from 'cluster';
 import * as http from 'http';
 import { IncomingMessage, ServerResponse } from 'http';
-import { NaniumJsonSerializer } from '../../serializers/json';
-import { Nanium } from '../../core';
-import { NaniumProviderNodejs } from '../../managers/providers/nodejs';
-import { NaniumHttpChannel } from '../../managers/providers/channels/http';
 import * as path from 'path';
-import { TestServerRequestInterceptor } from '../interceptors/server/test.request.interceptor';
-import * as cluster from 'cluster';
 import { ClusterCommunicator } from '../../communicators/clusterCommunicator';
-import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws';
+import { Nanium } from '../../core';
 import { ExecutionContext } from '../../interfaces/executionContext';
-import { TestEventEmissionSendInterceptor } from '../interceptors/server/test.send-event-emission.interceptor';
+import { LogLevel } from '../../interfaces/logger';
+import { NaniumHttpChannel } from '../../managers/providers/channels/http';
+import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws';
+import { NaniumProviderNodejs } from '../../managers/providers/nodejs';
+import { NaniumJsonSerializer } from '../../serializers/json';
 import {
 	TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
+import { TestServerRequestInterceptor } from '../interceptors/server/test.request.interceptor';
+import { TestEventEmissionSendInterceptor } from '../interceptors/server/test.send-event-emission.interceptor';
 import { TestLogger } from '../testLogger';
-import { LogLevel } from '../../interfaces/logger';
 
 async function runPrimary(workerCount: number) {
 	console.log(`Primary ${process.pid} is running`);
@@ -86,6 +86,8 @@ async function runWorker() {
 			new NaniumWebsocketChannel('2', {
 				server: httpServer,
 				serializer: serializer,
+				streamReadyTimeout: 1000,
+				streamDataTimeout: 1000,
 			}),
 		],
 		isResponsible: () => Promise.resolve(2),
@@ -130,7 +132,7 @@ async function run(workerCount: number = 2) {
 }
 
 async function handleError(err: any, _serviceName: string, _request: any, _executionContext: ExecutionContext): Promise<any> {
-	throw { message: err.message ?? err };
+	throw { message: err?.message ?? err };
 }
 
 async function handleException(error: any): Promise<void> {

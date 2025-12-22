@@ -1,14 +1,15 @@
+import { ExtendedPromise } from '../../helper';
+
 type WebSocketType = WebSocket | import('ws');
 
 export class WebSocketClient {
-	connected: Promise<void>;
+	connected: ExtendedPromise<void>;
 	reconnectInterval: number;
 	maxBufferSize: number = 1024 * 1024; // 1Mb
 
 	private socket: WebSocketType | null = null;
 	private eventHandler: { [eventName: string]: Function[] } = {};
 	private readonly url: string;
-	private connectedResolve: Function;
 	private closedOnPurpose: boolean;
 
 	constructor(url: string, reconnectInterval: number = 1000) {
@@ -17,9 +18,7 @@ export class WebSocketClient {
 	}
 
 	async connect(): Promise<void> {
-		this.connected = new Promise<void>((resolve: Function, _reject: Function) => {
-			this.connectedResolve = resolve;
-		});
+		this.connected = new ExtendedPromise<void>();
 
 		if (typeof window !== 'undefined' && window.WebSocket) {
 			// Browser environment
@@ -34,16 +33,14 @@ export class WebSocketClient {
 		this.socket.onmessage = this.onMessage.bind(this);
 		this.socket.onclose = this.onClose.bind(this);
 		this.socket.onerror = this.onError.bind(this);
+
+		return this.connected;
 	}
 
 	close(): void {
 		this.closedOnPurpose = true;
 		this.socket.close();
-		if (this.connectedResolve) {
-			this.connectedResolve();
-			this.connectedResolve = undefined;
-		}
-		this.connected = undefined;
+		this.connected?.reject();
 	}
 
 	async send(data: string | ArrayBuffer | ArrayBufferView): Promise<void> {
@@ -66,10 +63,7 @@ export class WebSocketClient {
 		for (const handler of this.eventHandler['open'] ?? []) {
 			handler(event);
 		}
-		if (this.connectedResolve) {
-			this.connectedResolve();
-			this.connectedResolve = undefined;
-		}
+		this.connected?.resolve();
 	}
 
 	private onMessage(event: MessageEvent): void {

@@ -25,6 +25,8 @@ export interface NaniumWebsocketChannelConfig extends ChannelConfig {
 	server: HttpServer | HttpsServer;
 	binaryChunkSize?: number;
 	maxBufferSize?: number;
+	streamReadyTimeout?: number;
+	streamDataTimeout?: number;
 }
 
 export class NaniumWebsocketChannel implements Channel {
@@ -60,6 +62,8 @@ export class NaniumWebsocketChannel implements Channel {
 				executionContextConstructor: Object,
 				binaryChunkSize: 1024 * 1024, // 1MB
 				maxBufferSize: 1024 * 1024, // 1Mb
+				streamReadyTimeout: 5000,
+				streamDataTimeout: 5000,
 			},
 			...(config || {})
 		};
@@ -147,6 +151,8 @@ export class NaniumWebsocketChannel implements Channel {
 				return this.handleIncomingServiceRequest(message, ws);
 			case 'service_buffer_chunk':
 				return this.handleIncomingServiceRequestBufferChunk(message, ws);
+			case 'service_stream_start':
+				return this.handleIncomingServiceRequestStreamStart(message, ws);
 			case 'service_stream_chunk':
 				return this.handleIncomingServiceRequestStreamChunk(message, ws);
 			// case 'service_request_stream_objects':
@@ -190,6 +196,16 @@ export class NaniumWebsocketChannel implements Channel {
 					const prop = name[name.length - 1];
 					if (parent[prop]) {
 						const stream: NaniumStream = parent[prop];
+						void stream.isReceiverReady().then(() => {
+							const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
+								type: 'service_stream_start',
+								content: new WsServiceChunkMessage({
+									requestId: message.content.id,
+									bufferOrStreamId: stream.id,
+								})
+							});
+							void sendMessage(msg, this.config.serializer, async data => this.send(ws, data),);
+						});
 						this.openRequestStreams.set(stream.id, { stream: stream, type: typeInfo });
 						// todo: timeouts to close/cleanup streams if not used for a while
 					}
@@ -237,7 +253,9 @@ export class NaniumWebsocketChannel implements Channel {
 						message.content.id,
 						async data => this.send(ws, data),
 						this.config.serializer,
-						this.config.binaryChunkSize
+						this.config.binaryChunkSize,
+						this.config.streamReadyTimeout,
+						this.config.streamDataTimeout
 					);
 				}
 			}
@@ -371,16 +389,20 @@ export class NaniumWebsocketChannel implements Channel {
 		// }
 	}
 
-	async handleIncomingServiceRequestStreamEnd(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
+	handleIncomingServiceRequestStreamStart(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket) {
+		const streamInfo = this.openRequestStreams.get(message.content.bufferOrStreamId);
+		streamInfo.stream.receiverReady();
+	}
+
+	handleIncomingServiceRequestStreamEnd(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket) {
 		const streamInfo = this.openRequestStreams.get(message.content.bufferOrStreamId);
 		streamInfo.stream.end();
 		this.openRequestStreams.delete(message.content.bufferOrStreamId);
 	}
 
-	async handleIncomingServiceRequestStreamError(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
+	handleIncomingServiceRequestStreamError(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket) {
 		const streamInfo = this.openRequestStreams.get(message.content.bufferOrStreamId);
-		const deserialized = this.config.serializer.deserialize(message.payload);
-		streamInfo.stream.error(deserialized);
+		streamInfo.stream.error(message.error);
 		this.openRequestStreams.delete(message.content.bufferOrStreamId);
 	}
 

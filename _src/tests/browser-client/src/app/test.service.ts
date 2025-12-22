@@ -1,16 +1,16 @@
 import { Injectable } from '@angular/core';
-import { NaniumJsonSerializer } from '../../../../serializers/json';
+import { Nanium } from '../../../../core';
 import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
+import { NaniumConsumerBrowserWebsocket } from '../../../../managers/consumers/browserWs';
+import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
+import { NaniumJsonSerializer } from '../../../../serializers/json';
 import { TestClientRequestInterceptor } from '../../../interceptors/client/test.request.interceptor';
 import { TestClientResponseInterceptor } from '../../../interceptors/client/test.response.interceptor';
 import {
 	TestEventSubscriptionSendInterceptor
 } from '../../../interceptors/client/test.send-event-subscription.interceptor';
-import { Nanium } from '../../../../core';
-import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
 import { ServiceRequestBase } from '../../../services/serviceRequestBase';
 import { ClientServiceExecutionContext } from '../services/clientServiceExecutionContext';
-import { NaniumConsumerBrowserWebsocket } from '../../../../managers/consumers/browserWs';
 
 @Injectable({
 	providedIn: 'root'
@@ -50,7 +50,9 @@ export class TestService {
 
 	initWs(eventPort: 8080 | 8081, isResponsible: number = 0) {
 		this.naniumConsumerWs = new NaniumConsumerBrowserWebsocket({
-			apiEventUrl: `ws://localhost:${eventPort}`,
+			connectUrl: `ws://localhost:${eventPort}`,
+			streamDataTimeout: 1000,
+			streamReadyTimeout: 1000,
 			serializer: this.jsonSerializer,
 			requestInterceptors: [TestClientRequestInterceptor],
 			responseInterceptors: [TestClientResponseInterceptor],

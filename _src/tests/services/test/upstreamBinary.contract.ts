@@ -4,8 +4,9 @@ import { NaniumObject, RequestType, Type } from '../../../objects';
 import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
 
 export class TestUpstreamBinaryRequestBody extends NaniumObject<TestUpstreamBinaryRequestBody> {
-	@Type(NaniumStream, NaniumBuffer) upstream1?: NaniumStream<NaniumBuffer>
-	@Type(NaniumStream, NaniumBuffer) upstream2?: NaniumStream<NaniumBuffer>
+	@Type(NaniumStream, NaniumBuffer) upstream1?: NaniumStream<NaniumBuffer>;
+	@Type(NaniumStream, NaniumBuffer) upstream2?: NaniumStream<NaniumBuffer>;
+	@Type(Boolean) doNotSendReadySignal?: boolean;
 }
 
 export class TestUpstreamBinaryResponse extends NaniumObject<TestUpstreamBinaryResponse> {
