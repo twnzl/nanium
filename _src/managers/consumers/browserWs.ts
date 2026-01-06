@@ -24,24 +24,20 @@ import { WebSocketClient } from './ws.core';
 export interface NaniumConsumerBrowserWebsocketConfig extends ServiceConsumerConfig {
 	connectUrl?: string;
 	binaryChunkSize?: number;
-	streamReadyTimeout?: number;
-	streamDataTimeout?: number;
-	// onServerConnectionRestored?: () => void;
+	streamAndBufferTimeout?: number;
 }
 
 export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerBrowserWebsocketConfig> implements ServiceManager {
 	private websocket?: WebSocketClient;
 	private pendingEventSubscriptions: Map<string, { resolve: ResolveFunction, reject: RejectFunction }> = new Map();
 	private pendingEventUnSubscriptions: Map<string, { resolve: ResolveFunction, reject: RejectFunction }> = new Map();
-	private pendingRequests: Map<string, PendingRequestInfo> = new Map();
+	private pendingRequests: { [key: string]: PendingRequestInfo } = {};
 	private parseMessageMutex: Mutex;
 	// private responsePromises: Promise<unknown>[] = [];
 
 	constructor(config?: NaniumConsumerBrowserWebsocketConfig) {
 		super(config);
 		this.config.connectUrl = config.connectUrl ?? '';
-		this.config.streamReadyTimeout = config.streamReadyTimeout ?? 5000;
-		this.config.streamDataTimeout = config.streamDataTimeout ?? 5000;
 	}
 
 	init(): Promise<void> {
@@ -90,7 +86,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				}
 			};
 			const pendingRequest = { request, resolve, reject, openRequestStreams: [] };
-			this.pendingRequests.set(msg.content.id, pendingRequest);
+			this.pendingRequests[msg.content.id] = pendingRequest;
 
 			// buffers in request
 			const buffers: NaniumBuffer[] = [];
@@ -119,7 +115,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 						initStream(
 							parent[prop], typeInfo.localGenerics, msg.content.id,
 							async data => this.websocket.send(data), this.config.serializer,
-							this.config.binaryChunkSize, this.config.streamReadyTimeout, this.config.streamDataTimeout
+							this.config.binaryChunkSize
 						);
 					}
 				}
@@ -179,19 +175,17 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 					promiseFunctions.resolve();
 				}
 			} else if (rawMessage.type === 'service_response') {
-				const requestId = (rawMessage as WsMessage<WsServiceChunkMessage>).content.requestId;
+				// const requestId = (rawMessage as WsMessage<WsServiceChunkMessage>).content.requestId;
 				// this.responsePromises[requestId] =
 				await this.handleServiceResponse(rawMessage);
 			} else if (rawMessage.type === 'service_buffer_chunk') {
 				await this.handleResponseBufferChunk(rawMessage);
-			} else if (rawMessage.type === 'service_stream_start') {
-				await this.handleResponseStreamStart(rawMessage);
 			} else if (rawMessage.type === 'service_stream_chunk') {
 				await this.handleResponseStreamChunk(rawMessage);
 			} else if (rawMessage.type === 'service_stream_end') {
-				await this.handleResponseStreamEnd(rawMessage);
+				this.handleResponseStreamEnd(rawMessage);
 			} else if (rawMessage.type === 'service_stream_error') {
-				await this.handleResponseStreamError(rawMessage);
+				this.handleResponseStreamError(rawMessage);
 			}
 		});
 		await this.websocket.connect();
@@ -267,7 +261,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	}
 
 	private async handleServiceResponse(message: WsMessage<WsServiceChunkMessage>): Promise<void> {
-		const pendingRequest = this.pendingRequests.get(message.content.requestId);
+		const pendingRequest = this.pendingRequests[message.content.requestId];
 		if (!pendingRequest) {
 			Nanium.logger.error('browserWS: no pending request found for response with id: ' + message.content.requestId);
 			return;
@@ -313,7 +307,6 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			pendingRequest.response = new NaniumStream(undefined, undefined, message.content.response.id);
 			pendingRequest.openResponseStreams.push(pendingRequest.response);
 		} else {
-			pendingRequest.response = NaniumObject.create(message.content.response, ResponseType);
 			// todo: performance - checking if ResponseType has NaniumStream properties is faster than checking the while response object (e.g. if response returns an array with 1000 objects)
 			NaniumObject.forEachProperty(pendingRequest.response, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
 				if (typeInfo && NaniumStream.isNaniumStream(typeInfo.ctor)) {
@@ -329,7 +322,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	}
 
 	async handleResponseBufferChunk(message: WsMessage<WsServiceChunkMessage>) {
-		const pendingRequest = this.pendingRequests.get(message.content.requestId);
+		const pendingRequest = this.pendingRequests[message.content.requestId];
 		const idx = pendingRequest.pendingResponseBuffers!.findIndex(b => b.id === message.content.bufferOrStreamId);
 		pendingRequest.pendingResponseBuffers[idx].write(message.payload);
 		if (message.content.isLastChunk) {
@@ -338,23 +331,17 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		await this.tryFinalizeResponse(pendingRequest, message.content.requestId);
 	}
 
-	handleResponseStreamStart(message: WsMessage<WsServiceChunkMessage>) {
-		const pendingRequest = this.pendingRequests.get(message.content.requestId);
-		const stream = pendingRequest.openRequestStreams!.find(b => b.id === message.content.bufferOrStreamId);
-		stream.receiverReady();
-	}
-
 	async handleResponseStreamChunk(message: WsMessage<WsServiceChunkMessage>) {
 		const requestId = message.content.requestId;
 		// await this.responsePromises[requestId];
-		const pendingRequest = this.pendingRequests.get(requestId);
+		const pendingRequest = this.pendingRequests[requestId];
 		const ContentType = pendingRequest.request.constructor[responseTypeSymbol]?.[1];
 		const stream = pendingRequest.openResponseStreams!.find(b => b.id === message.content.bufferOrStreamId)
 		if (!ContentType || NaniumBuffer.isNaniumBuffer(ContentType)) {
-			await stream?.write(message.payload);
+			stream?.write(message.payload);
 		} else {
 			const deserialized = this.config.serializer.deserialize(message.payload);
-			await stream?.write(NaniumObject.create(deserialized, ContentType));
+			stream?.write(NaniumObject.create(deserialized, ContentType));
 		}
 	}
 
@@ -362,22 +349,22 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		const requestId = message.content.requestId;
 		// await this.responsePromises[requestId];
 		// delete this.responsePromises[requestId];
-		const pendingRequest = this.pendingRequests.get(requestId);
+		const pendingRequest = this.pendingRequests[requestId];
 		const idx = pendingRequest.openResponseStreams!.findIndex(b => b.id === message.content.bufferOrStreamId);
 		pendingRequest.openResponseStreams[idx].end();
 		pendingRequest.openResponseStreams.splice(idx, 1);
-		this.pendingRequests.delete(requestId);
+		delete this.pendingRequests[requestId];
 	}
 
 	handleResponseStreamError(message: WsMessage<WsServiceChunkMessage>) {
 		const requestId = message.content.requestId;
 		// await this.responsePromises[requestId];
 		// delete this.responsePromises[requestId];
-		const pendingRequest = this.pendingRequests.get(message.content.requestId);
+		const pendingRequest = this.pendingRequests[message.content.requestId];
 		const idx = pendingRequest.openResponseStreams!.findIndex(b => b.id === message.content.bufferOrStreamId);
 		pendingRequest.openResponseStreams[idx].error(message.error);
 		pendingRequest.openResponseStreams.splice(idx, 1);
-		this.pendingRequests.delete(requestId);
+		delete this.pendingRequests[requestId];
 	}
 
 	async tryFinalizeResponse(pendingRequest: PendingRequestInfo, requestId: string) {
@@ -401,7 +388,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 		// resolve promise and remove from pending requests
 		if (!pendingRequest.openResponseStreams?.length) {
-			this.pendingRequests.delete(requestId);
+			delete this.pendingRequests[requestId];
 		}
 		pendingRequest.resolve(pendingRequest.response);
 	}

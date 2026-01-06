@@ -1,9 +1,9 @@
 import { TestDto } from '../tests/services/test/contractparts';
-import { DataSource, NaniumBuffer } from './naniumBuffer';
+import { NaniumBuffer } from './naniumBuffer';
 import { NaniumStream } from './naniumStream';
 
 describe('NaniumStream', function (): void {
-	test('isNaniumStream', async function (): Promise<void> {
+	test('isNaniumStream', function (): void {
 		expect(NaniumStream.isNaniumStream(NaniumStream)).toBeTruthy();
 		expect(NaniumStream.isNaniumStream(new NaniumStream())).toBeTruthy();
 		expect(NaniumStream.isNaniumStream(new NaniumBuffer())).toBeFalsy();
@@ -11,9 +11,10 @@ describe('NaniumStream', function (): void {
 
 	test('Promise: then & finally', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
-		setTimeout(async () => {
-			await s.write([new TestDto('1', 1), new TestDto('2', 2)]);
-			await s.write(new TestDto('3', 3));
+		setTimeout(() => {
+			s.write(new TestDto('1', 1));
+			s.write(new TestDto('2', 2));
+			s.write(new TestDto('3', 3));
 			s.end();
 		});
 		let result: TestDto[];
@@ -28,12 +29,12 @@ describe('NaniumStream', function (): void {
 		expect(result).toBeUndefined();
 	});
 
-	test('Promise: catch & finally', async function (): Promise<void> {
+	test('toPromise: catch & finally', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
 		setTimeout(() => {
-			s.write([new TestDto('1', 1), new TestDto('2', 2)]);
+			s.write(new TestDto('1', 1))
+			s.write(new TestDto('2', 2))
 			s.error(':-(');
-			s.end();
 		});
 		let result: TestDto[];
 		try {
@@ -50,81 +51,87 @@ describe('NaniumStream', function (): void {
 	test('on data: objects', async function (): Promise<void> {
 		const s = new NaniumStream(TestDto);
 		let result = [];
-		await new Promise<void>(async (resolve: Function, _reject: Function) => {
-			s.onData(async (chunk: TestDto) => {
-				result.push(chunk);
-			});
-			s.onEnd(() => {
-				result = result.flat(Infinity);
-				expect(result.length).toBe(3);
-				expect(result[0].a).toBe('1');
-				expect(result[0].b).toBe(1);
-				expect(result[1].a).toBe('2');
-				expect(result[1].b).toBe(2);
-				expect(result[2].a).toBe('3');
-				expect(result[2].b).toBe(3);
-				resolve();
-			});
-			await s.write([new TestDto('1', 1), new TestDto('2', 2)]);
-			await s.write(new TestDto('3', 3));
+		setTimeout(() => {
+			s.write(new TestDto('1', 1));
+			s.write(new TestDto('2', 2));
+			s.write(new TestDto('3', 3));
 			s.end();
-		});
+		}, 10);
+		for await (const chunk of s) {
+			result.push(chunk);
+		}
+		result = result.flat(Infinity);
+		expect(result.length).toBe(3);
+		expect(result[0].a).toBe('1');
+		expect(result[0].b).toBe(1);
+		expect(result[1].a).toBe('2');
+		expect(result[1].b).toBe(2);
+		expect(result[2].a).toBe('3');
+		expect(result[2].b).toBe(3);
 	});
 
 	test('pipeTo: success', async function (): Promise<void> {
 		const s1 = new NaniumStream(TestDto);
 		const s2 = new NaniumStream(TestDto);
-		let result = [];
-		await new Promise<void>(async (resolve: Function, _reject: Function) => {
-			s2.onData(async (chunk: TestDto) => {
-				result.push(chunk);
-			});
-			s2.onEnd(() => {
-				result = result.flat(Infinity);
-				expect(result.length).toBe(3);
-				expect(result[0].a).toBe('1');
-				expect(result[0].b).toBe(1);
-				expect(result[1].a).toBe('2');
-				expect(result[1].b).toBe(2);
-				expect(result[2].a).toBe('3');
-				expect(result[2].b).toBe(3);
-				resolve();
-			});
-			s1.pipeTo(s2);
-			await s1.write([new TestDto('1', 1), new TestDto('2', 2)]);
-			await s1.write(new TestDto('3', 3));
+		s1.pipeTo(s2);
+
+		setTimeout(() => {
+			s1.write(new TestDto('1', 1));
+			s1.write(new TestDto('2', 2));
+			s1.write(new TestDto('3', 3));
 			s1.end();
 		});
+
+		let result = [];
+		for await (const chunk of s2) {
+			result.push(chunk);
+		}
+		result = result.flat(Infinity);
+		expect(result.length).toBe(3);
+		expect(result[0].a).toBe('1');
+		expect(result[0].b).toBe(1);
+		expect(result[1].a).toBe('2');
+		expect(result[1].b).toBe(2);
+		expect(result[2].a).toBe('3');
+		expect(result[2].b).toBe(3);
 	});
 
 	test('pipeTo: error', async function (): Promise<void> {
 		const s1 = new NaniumStream(TestDto);
 		const s2 = new NaniumStream(TestDto);
-		await new Promise<void>((resolve: Function, _reject: Function) => {
-			s2.onError((err: any[]) => {
-				expect(err).toBe(':-(');
-				resolve();
-			});
-			s1.pipeTo(s2);
-			s1.write([new TestDto('1', 1), new TestDto('2', 2)]);
+		s1.pipeTo(s2);
+
+		setTimeout(() => {
+			s1.write(new TestDto('1', 1));
 			s1.error(':-(');
-		});
+		})
+
+		try {
+			for await (const _chunk of s2) {
+				;
+			}
+			expect('expected error not thrown').toBe('');
+		} catch (err) {
+			expect(err).toBe(':-(');
+		}
 	});
 
 	test('on data: binary', async function (): Promise<void> {
 		const s = new NaniumStream(NaniumBuffer);
 		const result: NaniumBuffer = new NaniumBuffer();
-		await new Promise<void>((resolve: Function, _reject: Function) => {
-			s.onData(async (chunk: DataSource) => {
-				result.write(chunk);
-			});
-			s.onEnd(async () => {
-				expect(await result.asString()).toBe('123');
-				resolve();
-			});
-			s.write(new TextEncoder().encode('12'));
-			s.write(new TextEncoder().encode('3'));
+
+		s.write(new NaniumBuffer(new TextEncoder().encode('12')));
+
+		setTimeout(() => {
+			s.write(new NaniumBuffer(new TextEncoder().encode('3')));
+			s.write(new NaniumBuffer(new TextEncoder().encode('4')));
 			s.end();
-		});
+		})
+
+		for await (const chunk of s) {
+			result.write(chunk);
+		}
+		expect(await result.asString()).toBe('1234');
+
 	});
 });

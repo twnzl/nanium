@@ -111,66 +111,40 @@ export function initStream(
 	send: (data: string | ArrayBuffer) => Promise<void>,
 	serializer: NaniumSerializer,
 	binaryChunkSize: number = 1024 * 1024,
-	readyTimeoutMs: number = 5000,
-	dataTimeoutMs: number = 5000,
 ) {
-	const readyTimeout = setTimeout(() => stream.cancelWaitingForReceiver('NaniumStream: Receiver not ready for too long'), readyTimeoutMs);
-	let dataTimeout: ReturnType<typeof setTimeout>;
-	void stream.isReceiverReady().then(async () => {
-		clearTimeout(readyTimeout);
-		dataTimeout = setTimeout(() => stream.error('NaniumStream: no data received for too long'), dataTimeoutMs);
-		// if receiver says he is ready - inform the sender to start
-		const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
-			type: 'service_stream_start',
-			content: new WsServiceChunkMessage({
-				requestId: requestId,
-				bufferOrStreamId: stream.id,
-			})
-		});
-		await sendMessage(msg, serializer, send);
-	});
-	stream.onData(async data => {
-		clearTimeout(dataTimeout);
-		dataTimeout = setTimeout(() => stream.error('NaniumStream: no data received for too long'), dataTimeoutMs);
-		if (NaniumBuffer.isNaniumBuffer(subType)) {
-			await sendBufferInChunks(data, requestId,
-				async data => await send(data), 'service_stream_chunk',
-				serializer, binaryChunkSize, stream.id);
-		} else {
-			const serialized = serializer.serialize(data);
-			await sendBufferInChunks(typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized, requestId,
-				async chunk => await send(chunk), 'service_stream_chunk',
-				serializer, binaryChunkSize, stream.id);
-		}
-	});
-	stream.onEnd(async () => {
-		clearTimeout(dataTimeout);
-		const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
+	void (async () => {
+		try {
+			for await (const chunk of stream) {
+				if (NaniumBuffer.isNaniumBuffer(subType)) {
+					await sendBufferInChunks(chunk, requestId,
+						async data => await send(data), 'service_stream_chunk',
+						serializer, binaryChunkSize, stream.id);
+				} else {
+					const serialized = serializer.serialize(chunk);
+					await sendBufferInChunks(typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized, requestId,
+						async chunk => await send(chunk), 'service_stream_chunk',
+						serializer, binaryChunkSize, stream.id);
+				}
+			}
+
+			const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
 				type: 'service_stream_end',
-			content: new WsServiceChunkMessage({
-				requestId: requestId,
-				bufferOrStreamId: stream.id,
-			})
-		});
-		await sendMessage(msg, serializer, send);
-	});
-	stream.onError(async error => {
-		const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
-			type: 'service_stream_error',
-			content: new WsServiceChunkMessage({
-				requestId: requestId,
-				bufferOrStreamId: stream.id,
+				content: new WsServiceChunkMessage({
+					requestId: requestId,
+					bufferOrStreamId: stream.id,
+				})
+			});
+			await sendMessage(msg, serializer, send);
+		} catch (err) {
+			const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
+				type: 'service_stream_error',
+				content: new WsServiceChunkMessage({
+					requestId: requestId,
+					bufferOrStreamId: stream.id,
 				}),
-			error: error,
-		});
-		await sendMessage(msg, serializer, send);
-		// void send(serializer.serialize(new WsMessage<WsServiceChunkMessage>({
-		// 	type: 'service_stream_error',
-		// 	content: {
-		// 		bufferOrStreamId: stream.id,
-		// 		requestId
-		// 	},
-		// 	error: error,
-		// })));
-	});
+				error: err,
+			});
+			await sendMessage(msg, serializer, send);
+		}
+	})();
 }

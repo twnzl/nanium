@@ -14,7 +14,7 @@ export class TestStreamedBinaryExecutor implements ServiceExecutor<TestStreamedB
 				result.end();
 				clearInterval(interval);
 			} else {
-				void result.write(new TextEncoder().encode(cnt.toString() + '.'));
+				void result.write(new NaniumBuffer(new TextEncoder().encode(cnt.toString() + '.')));
 				cnt++;
 			}
 		};

@@ -112,20 +112,13 @@ describe('execute TestRequest on server \n', function (): void {
 		test('-->', async function (): Promise<void> {
 			const dtoList: TestDto[] = [];
 			let portions = 0;
-			await new Promise(async (resolve: Function): Promise<void> => {
-				const response: NaniumStream<TestDto> = await new TestStreamedQueryExecutor()
-					.execute(new TestStreamedQueryRequest({ amount: 6, msGapTime: 100 }, { token: '1234' }));
-				response.onData(async (value: TestDto) => {
-					portions++;
-					dtoList.push(value);
-				});
-				response.onEnd(() => {
-					resolve();
-				});
-				response.onError((err: Error) => {
-					Nanium.logger.error(err.message, err.stack);
-				});
-			});
+			const response: NaniumStream<TestDto> = await new TestStreamedQueryExecutor()
+				.execute(new TestStreamedQueryRequest({ amount: 6, msGapTime: 100 }, { token: '1234' }));
+			for await (const dto of response) {
+				portions++;
+				dtoList.push(dto);
+
+			}
 			expect(portions, 'result array should be returned in multiple portions').toBe(6);
 			expect(dtoList.length, 'length of result list should be correct').toBe(6);
 			expect(dtoList[0].formatted()).toBe('1:1');

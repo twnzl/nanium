@@ -125,3 +125,32 @@ export class ExtendedPromise<T = void> extends Promise<T> {
 	// 	}, milliseconds);
 	// }
 }
+
+export class ExtendedTimeout {
+	#timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+	#milliseconds: number | undefined = undefined;
+	#callback: (...args: unknown[]) => void;
+
+	constructor(callback: (...args: unknown[]) => void, milliseconds?: number) {
+		this.restart(milliseconds, callback);
+	}
+
+	restart(milliseconds?: number, callback?: (...args: unknown[]) => void) {
+		if (this.#timeoutId) {
+			clearTimeout(this.#timeoutId);
+		}
+		this.#milliseconds = milliseconds ?? this.#milliseconds;
+		this.#callback = callback ?? this.#callback;
+		this.#timeoutId = setTimeout(this.#callback, this.#milliseconds);
+	}
+
+	cancel() {
+		if (this.#timeoutId) {
+			clearTimeout(this.#timeoutId);
+		}
+	}
+}
+
+export function setExtendedTimeout(callback: (...args: unknown[]) => void, milliseconds?: number): ExtendedTimeout {
+	return new ExtendedTimeout(callback, milliseconds);
+}

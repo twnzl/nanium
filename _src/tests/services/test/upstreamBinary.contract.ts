@@ -6,7 +6,6 @@ import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
 export class TestUpstreamBinaryRequestBody extends NaniumObject<TestUpstreamBinaryRequestBody> {
 	@Type(NaniumStream, NaniumBuffer) upstream1?: NaniumStream<NaniumBuffer>;
 	@Type(NaniumStream, NaniumBuffer) upstream2?: NaniumStream<NaniumBuffer>;
-	@Type(Boolean) doNotSendReadySignal?: boolean;
 }
 
 export class TestUpstreamBinaryResponse extends NaniumObject<TestUpstreamBinaryResponse> {
@@ -19,6 +18,6 @@ export class TestUpstreamBinaryResponse extends NaniumObject<TestUpstreamBinaryR
 	genericTypes: { TRequestBody: TestUpstreamBinaryRequestBody },
 	scope: 'public'
 })
-export class TestUpstreamBinaryRequest extends SimpleServiceRequestBase<TestUpstreamBinaryRequestBody, TestUpstreamBinaryResponse> { // returns number of received bytes
+export class TestUpstreamBinaryRequest extends SimpleServiceRequestBase<TestUpstreamBinaryRequestBody, TestUpstreamBinaryResponse> {
 	static serviceName: string = 'NaniumTest:test/upstreamBinary';
 }

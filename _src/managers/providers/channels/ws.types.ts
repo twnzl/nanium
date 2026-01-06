@@ -3,7 +3,7 @@ import { NaniumObject, Type } from '../../../objects';
 export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_event'
 	| 'subscription_result' | 'unsubscription_result' | 'service_request' | 'service_response'
 	| 'service_buffer_chunk'
-	| 'service_stream_chunk' | 'service_stream_error' | 'service_stream_start' | 'service_stream_end';
+	| 'service_stream_chunk' | 'service_stream_error' | 'service_stream_end';
 
 export class WsMessage<TContent = any> extends NaniumObject<WsMessage<TContent>> {
 	@Type(String) type: WsMessageType | 'unknown';

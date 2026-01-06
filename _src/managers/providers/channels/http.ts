@@ -4,6 +4,7 @@ import { Server as HttpsServer } from 'https';
 import { randomUUID } from 'crypto';
 import * as multipart from 'parse-multipart-data';
 import { Nanium } from '../../../core';
+import { RejectFunction, ResolveFunction } from '../../../helper';
 import { Channel } from '../../../interfaces/channel';
 import { ChannelConfig } from '../../../interfaces/channelConfig';
 import { Message } from '../../../interfaces/communicator';
@@ -17,6 +18,7 @@ import { NaniumJsonSerializer } from '../../../serializers/json';
 import { getPrimaryResponseType, getSecondaryResponseType } from '../../core';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 	server: HttpServer | HttpsServer | { use: Function };
 	apiPath?: string;
 	eventPath?: string;
@@ -61,14 +63,14 @@ export class NaniumHttpChannel implements Channel {
 		this.serviceRepository = serviceRepository;
 		this.manager = manager;
 
-		const handleFunction: (req: IncomingMessage, res: ServerResponse, next?: Function) => Promise<void> =
+		const handleFunction: (req: IncomingMessage, res: ServerResponse, next?: () => void) => Promise<void> =
 			async (
-				req: IncomingMessage, res: ServerResponse, next?: Function
+				req: IncomingMessage, res: ServerResponse, next?: () => void
 			): Promise<void> => {
 				if (res.writableFinished) {
 					return;
 				}
-				let url: string = this.getRootUrl(req['originalUrl'] || req.url);
+				const url: string = this.getRootUrl(req['originalUrl'] || req.url);
 
 				// event subscriptions
 				if (url === this.config.eventPath) {
@@ -95,6 +97,7 @@ export class NaniumHttpChannel implements Channel {
 			this.config.server['use'](handleFunction);
 		} else {
 			const server: HttpsServer | HttpServer = (this.config.server as HttpServer | HttpsServer);
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 			const listeners: Function[] = server.listeners('request');
 			if (listeners.length === 1 && typeof listeners[0]['use'] === 'function') { // http(s) server from express-like
 				listeners[0]['use'](this.config.apiPath, handleFunction);
@@ -112,7 +115,7 @@ export class NaniumHttpChannel implements Channel {
 	//#region service request handling
 	private async handleIncomingServiceRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
 		const data: any[] = [];
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			let deserialized: NaniumHttpChannelBody;
 			let request: any;
 
@@ -151,7 +154,7 @@ export class NaniumHttpChannel implements Channel {
 		const txt = parts.find(p => p.name === 'request').data.toString();
 		const deserialized = this.config.serializer.deserialize(txt);
 		const request = NaniumObject.create(deserialized.request, this.serviceRepository[deserialized.serviceName].Request);
-		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
+		NaniumObject.forEachProperty(request, (name: string[], parent?: object, typeInfo?: NaniumPropertyInfoCore) => {
 			if (
 				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
 				(parent[name[name.length - 1]]?.constructor && parent[name[name.length - 1]]?.constructor['naniumBufferInternalValueSymbol'])
@@ -169,7 +172,7 @@ export class NaniumHttpChannel implements Channel {
 
 	static async processCore(config: ChannelConfig, serviceRepository: NaniumRepository, request: any, req: IncomingMessage, res: ServerResponse): Promise<any> {
 		const serviceName: string = request.constructor.serviceName;
-		let ResponseType = getPrimaryResponseType(serviceRepository, serviceName);
+		const ResponseType = getPrimaryResponseType(serviceRepository, serviceName);
 		try {
 			res.setHeader('Content-Type', config.serializer.mimeType);
 			const executionContext = new config.executionContextConstructor({
@@ -182,11 +185,11 @@ export class NaniumHttpChannel implements Channel {
 					res.write(await NaniumBuffer.as(Uint8Array, result));
 				} else if (NaniumStream.isNaniumStream(ResponseType)) {
 					const stream: NaniumStream = (result as NaniumStream);
-					stream
-						.onData(async chunk => {
+					try {
+						for await (const chunk of stream) {
 							if (NaniumBuffer.isNaniumBuffer(getSecondaryResponseType(serviceRepository, serviceName))) {
-								const canContinue = (chunk instanceof NaniumBuffer)
-									? res.write(chunk.asUint8Array())
+								const canContinue = NaniumBuffer.isNaniumBuffer(chunk)
+									? res.write(await chunk.asUint8Array())
 									: res.write(chunk);
 								if (!canContinue) { // Wait until HTTP response is ready to take more data
 									await new Promise(resolve => res.once('drain', resolve));
@@ -194,15 +197,13 @@ export class NaniumHttpChannel implements Channel {
 							} else {
 								res.write(config.serializer.serializePartial(chunk));
 							}
-						})
-						.onError(err => {
-							res.statusCode = 500;
-							res.write(config.serializer.serializePartial(err));
-						})
-						.onEnd(() => {
-							res.end();
-						});
-					// res.write(config.serializer.serialize(result) + 'response_end\0');
+						}
+					} catch (err) {
+						res.statusCode = 500;
+						res.write(config.serializer.serializePartial(err));
+					} finally {
+						res.end();
+					}
 				} else {
 					res.write(config.serializer.serialize(result));
 				}
@@ -247,7 +248,7 @@ export class NaniumHttpChannel implements Channel {
 		}
 		// subscription
 		else if (req.method.toLowerCase() === 'post') {
-			await new Promise<void>((resolve: Function, reject: Function) => {
+			await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 				const data: any[] = [];
 				req.on('data', (chunk: any) => {
 					data.push(chunk);
@@ -312,7 +313,7 @@ export class NaniumHttpChannel implements Channel {
 			return;
 		}
 
-		await new Promise<void>((resolve: Function, reject: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			const data: any[] = [];
 			req.on('data', (chunk: any) => {
 				data.push(chunk);
@@ -372,7 +373,7 @@ export class NaniumHttpChannel implements Channel {
 				this.pendingEvents[subscription.clientId].push({ event, eventName: subscription.eventName });
 			}
 			tryStart = tryStart ?? Date.now();
-			return new Promise<boolean>((resolve: Function, _reject: Function) => {
+			return new Promise<boolean>((resolve: ResolveFunction<boolean>, reject: RejectFunction) => {
 				setTimeout(async () => {
 					resolve(await this.emitEventCore(undefined, subscription, tryStart));
 				}, 500);
@@ -400,6 +401,7 @@ export class NaniumHttpChannel implements Channel {
 				delete this.longPollingResponses[subscription.clientId];
 				delete this.pendingEvents[subscription.clientId];
 			} catch (e) {
+				Nanium.logger.error('emitEventCore', e);
 			}
 			return false;
 		}
@@ -408,13 +410,13 @@ export class NaniumHttpChannel implements Channel {
 	receiveCommunicatorMessage(msg: Message): void {
 		if (msg.type === 'event_subscribe') {
 			const eventMessage = msg as Message<EventSubscription>;
-			Nanium.receiveSubscription(eventMessage.data, false).then();
+			void Nanium.receiveSubscription(eventMessage.data, false);
 		} else if (msg.type === 'event_unsubscribe') {
 			const eventMessage = msg as Message<EventSubscription>;
-			Nanium.unsubscribe(eventMessage.data, undefined, false).then();
+			void Nanium.unsubscribe(eventMessage.data, undefined, false);
 		} else if (msg.type === 'remove_client') {
 			const eventMessage = msg as Message<string>;
-			Nanium.removeClient(eventMessage.data, false).then();
+			void Nanium.removeClient(eventMessage.data, false);
 		} else if (msg.type === 'generic') {
 			const message = msg.data as CommunicatorMessage;
 			if (message.type === 'long_polling_response_received') {

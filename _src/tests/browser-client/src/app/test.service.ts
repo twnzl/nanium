@@ -51,8 +51,7 @@ export class TestService {
 	initWs(eventPort: 8080 | 8081, isResponsible: number = 0) {
 		this.naniumConsumerWs = new NaniumConsumerBrowserWebsocket({
 			connectUrl: `ws://localhost:${eventPort}`,
-			streamDataTimeout: 1000,
-			streamReadyTimeout: 1000,
+			streamAndBufferTimeout: 1000,
 			serializer: this.jsonSerializer,
 			requestInterceptors: [TestClientRequestInterceptor],
 			responseInterceptors: [TestClientResponseInterceptor],

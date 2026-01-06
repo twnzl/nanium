@@ -97,21 +97,17 @@ export class TestCore {
 	static async naniumStreamJson() {
 		const dtoList: TestDto[] = [];
 		let portions = 0;
-		await new Promise(async (resolve: Function): Promise<void> => {
+		try {
 			const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
 				{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
-			response.onData((value: TestDto) => {
+			for await (const chunk of response) {
 				portions++;
-				dtoList.push(value);
-				return Promise.resolve();
-			});
-			response.onEnd(() => {
-				resolve();
-			});
-			response.onError((err: Error) => {
-				Nanium.logger.error(err.message, err.stack);
-			});
-		});
+				dtoList.push(chunk);
+			}
+		}
+		catch (err) {
+			Nanium.logger.error(err.message, err.stack);
+		}
 		expect(portions).withContext('result array should be returned in multiple portions').toBe(6);
 		expect(dtoList.length).withContext('length of result list should be correct').toBe(6);
 		expect(dtoList[0].formatted()).toBe('1:1');
@@ -128,31 +124,12 @@ export class TestCore {
 	}
 
 	static async naniumStreamBinary() {
-		try {
-			const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
-
-			// todo: problem ist, dass durch das await auf die response, der Inhalt des streams bereits übertragen wird
-			// und dann ohne onData - function (in browserws.handleResponseStreamChunk) entgegengenommen wird,
-			// 	noch bevor es hier mit der Ausführung weiter geht und die onData - function registriert werden kann.
-			// wie kann ich sicher stellen, dass die Ausführung hier weiter geht, bevor der Inhalt des streams entgegengenommen wird ?
-			// ---
-			// weiterhin ist parseMessage für stream_chunk schneller, weil das string ist als für stream_chunk und da auf parseMessage auch mit
-			// await überholt _end in der Regel einige der _chunks oder einige chunks die früheren
-			// das muss alles serialisiert werden - end wartet auf den letzten chunk und chunk wartet auf den vorhergehenden
-			// evtl. ist die Reihenfolge auch nicht sicher, wenn alles als binary gesendet wird.
-
-			const result: NaniumBuffer = new NaniumBuffer();
-			await new Promise((resolve: Function) => {
-				stream.onData(async (chunk) => {
-					await result.write(chunk);
-				}).onEnd(async () => {
-					expect(await result.asString()).toBe('1.2.3.');
-					resolve();
-				});
-			});
-		} catch (err) {
-			console.error(err.message, err.stack);
+		const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
+		const result: NaniumBuffer = new NaniumBuffer();
+		for await (const chunk of stream) {
+			result.write(chunk);
 		}
+		expect(await result.asString()).toBe('1.2.3.');
 	}
 
 	static async naniumStreamsInResponse() {
@@ -169,24 +146,16 @@ export class TestCore {
 		const data1: NaniumBuffer = new NaniumBuffer();
 		const data2: NaniumBuffer = new NaniumBuffer();
 		await Promise.all([
-			new Promise<void>((resolve) => {
-				response.stream1.onData(async (data: Uint8Array) => {
-					const text = new TextDecoder().decode(data);
-					await data1.write(data);
-				});
-				response.stream1.onEnd(() => {
-					resolve();
-				});
-			}),
-			new Promise<void>((resolve) => {
-				response.stream2.onData(async (data: Uint8Array) => {
-					const text = new TextDecoder().decode(data);
-					await data2.write(data);
-				});
-				response.stream2.onEnd(() => {
-					resolve();
-				});
-			})
+			(async () => {
+				for await (const chunk of response.stream1) {
+					data1.write(chunk);
+				}
+			})(),
+			(async () => {
+				for await (const chunk of response.stream2) {
+					data2.write(chunk);
+				}
+			})()
 		]);
 		expect(await data1.asString()).toBe('123*');
 		expect(await data2.asString()).toBe('456*');

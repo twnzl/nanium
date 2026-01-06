@@ -9,9 +9,9 @@ module.exports = function (config) {
 			require('karma-jasmine-html-reporter'),
 			require('karma-coverage'),
 			require('@angular-devkit/build-angular/plugins/karma'),
-			require('karma-spec-reporter')
+			// require('karma-spec-reporter')
 		],
-		reporters: ['spec', 'kjhtml'],
+		reporters: ['kjhtml'],
 		specReporter: {
 			maxLogLines: 5,
 			suppressErrorSummary: false,
@@ -43,7 +43,8 @@ module.exports = function (config) {
 		},
 
 		client: {
-			clearContext: false,
+			clearContext: true,
+			// useIframe: true,
 			jasmine: {
 				random: false,
 				failFast: false,
@@ -51,15 +52,36 @@ module.exports = function (config) {
 			}
 		},
 
+		browserDisconnectTolerance: 0,
+		browserDisconnectTimeout: 5000,
+		browserNoActivityTimeout: 10000,
+
+		// Important: prevents “eternal idleness”
+		processKillTimeout: 2000,
+
 		// Increase logging detail
 		logLevel: config.LOG_INFO,
 
 		// Other standard config...
 		port: 9876,
 		colors: true,
-		autoWatch: false,
-		browsers: ['ChromeHeadless'],
-		singleRun: true,
-		restartOnFileChange: true
+		// browsers: ['Chrome'],
+		browsers: ['ChromeDebugging'],
+		customLaunchers: {
+			ChromeDebugging: {
+				base: 'Chrome',
+				flags: [
+					'--remote-debugging-port=9222',
+					'--disable-background-timer-throttling',
+					'--disable-backgrounding-occluded-windows',
+					'--disable-renderer-backgrounding',
+					'--no-sandbox'
+				]
+			}
+		},
+		singleRun: false,
+		autoWatch: true,
+		// browsers: ['ChromeHeadless'],
+		restartOnFileChange: false
 	});
 };

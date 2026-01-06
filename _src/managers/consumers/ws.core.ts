@@ -1,4 +1,4 @@
-import { ExtendedPromise } from '../../helper';
+import { AsyncHelper, ExtendedPromise } from '../../helper';
 
 type WebSocketType = WebSocket | import('ws');
 
@@ -47,7 +47,7 @@ export class WebSocketClient {
 		if (this.socket && this.socket.readyState === (WebSocket as any).OPEN) {
 			this.socket.send(data);
 			while (this.socket.bufferedAmount > this.maxBufferSize) {
-				await new Promise(resolve => setTimeout(resolve, 10)); // Wait if buffer is too full
+				await AsyncHelper.pause(10); // Wait if buffer is too full
 			}
 		} else {
 			throw new Error('WebSocket is not open. Unable to send message.');

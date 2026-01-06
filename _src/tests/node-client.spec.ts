@@ -3,7 +3,6 @@ import { IncomingMessage } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
-import { Nanium } from '../core';
 import { NaniumBuffer } from '../interfaces/naniumBuffer';
 import { NaniumStream } from '../interfaces/naniumStream';
 import { ServiceResponseBase } from './services/serviceResponseBase';
@@ -88,20 +87,13 @@ describe('http & https\n', () => {
 			it('response as json stream', async () => {
 				const dtoList: TestDto[] = [];
 				let portions = 0;
-				await new Promise(async (resolve: Function): Promise<void> => {
-					const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
-						{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
-					response.onData(async (value: TestDto) => {
-						portions++;
-						dtoList.push(value);
-					});
-					response.onEnd(() => {
-						resolve();
-					});
-					response.onError((err: Error) => {
-						Nanium.logger.error(err.message, err.stack);
-					});
-				});
+				const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
+					{ amount: 6, msGapTime: 100 }, { token: '1234' }
+				).execute();
+				for await (const value of response) {
+					portions++;
+					dtoList.push(value);
+				}
 				expect(portions, 'result array should be returned in multiple portions').toBe(6);
 				expect(dtoList.length, 'length of result list should be correct').toBe(6);
 				expect(dtoList[0].formatted()).toBe('1:1');
@@ -111,14 +103,10 @@ describe('http & https\n', () => {
 			it('response as binary stream', async () => {
 				const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
 				const result: NaniumBuffer = new NaniumBuffer();
-				await new Promise((resolve: Function) => {
-					stream.onData(async (chunk) => {
-						await result.write(chunk);
-					}).onEnd(async () => {
-						expect(await result.asString()).toBe('1.2.3.');
-						resolve();
-					});
-				});
+				for await (const chunk of stream) {
+					result.write(chunk);
+				}
+				expect(await result.asString()).toBe('1.2.3.');
 			});
 		});
 

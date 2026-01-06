@@ -8,6 +8,7 @@
 		"watch": "ng build --watch --configuration development",
 		"start:testserver": "cd ../test-server && tsc && cd ../browser-client && node ../test-server/dst/tests/test-server/testserver.js",
 		"test": "start-server-and-test start:testserver http://localhost:8080/ready 'ng test --watch=false --browsers=ChromeHeadless'",
+		"debug:test": "npx ng test --browsers=Chrome --source-map=true --no-single-run",
 		"test:noserver": "ng test --watch=false --browsers=ChromeHeadless"
 	},
 	"private": true,

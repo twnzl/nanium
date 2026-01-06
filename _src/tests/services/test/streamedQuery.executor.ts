@@ -14,13 +14,13 @@ export class TestStreamedQueryExecutor implements ServiceExecutor<TestStreamedQu
 				result.end();
 				clearInterval(interval);
 			} else {
-				result.write([new TestDto(cnt.toString(), cnt++), new TestDto(cnt.toString(), cnt++)]);
+				result.write(new TestDto(cnt.toString(), cnt++));
 			}
 		};
 		// next();
 		const interval = setInterval(() => next(), request.body.msGapTime ?? 1);
 
-		return result;
+		return Promise.resolve(result);
 	}
 
 

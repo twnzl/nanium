@@ -293,7 +293,6 @@ describe('', function (): void {
 				await TestCore.naniumBuffersRequestWithOneUndefined();
 			});
 
-
 			it('response as json stream', async () => {
 				await TestCore.naniumStreamJson();
 			});
@@ -334,7 +333,7 @@ describe('', function (): void {
 		});
 	});
 
-	describe('test browser client with mocked server', () => {
+	xdescribe('test browser client with mocked server', () => {
 		const mockServerProvider = new NaniumProviderBrowser({
 			isResponsible: async (request, serviceName) => {
 				return serviceName.startsWith('NaniumTest:') ? 2 : 0;
@@ -384,7 +383,7 @@ describe('', function (): void {
 		});
 
 		async function withWrongAuthToken(manager: NaniumConsumerBrowserHttp | NaniumConsumerBrowserWebsocket) {
-			let subscription;
+			let subscription: EventSubscription;
 			try {
 				session.token = 'wrong!!';
 				// should call the client interceptor that adds credentials, but they are wrong

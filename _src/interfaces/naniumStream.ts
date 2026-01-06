@@ -8,119 +8,134 @@ import {
 	responseTypeSymbol,
 	Type
 } from '../objects';
-import { DataSource, NaniumBuffer } from './naniumBuffer';
+import { NaniumBuffer } from './naniumBuffer';
 
 let uuidCounter: number = 0;
 
+type Chunk<T> = { value: T } | { end: true } | { error: any };
 
-export class NaniumStream<T = any> {
+export class NaniumStream<T = any> implements AsyncIterable<T> {
 	@Type(String) id: string;
 
-	async isReceiverReady(): Promise<boolean> {
-		return await this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol];
-	};
-
-	cancelWaitingForReceiver(msg: string = 'NaniumStream: canceled'): void {
-		this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol].cancel(msg);
-	}
+	#buffer: Chunk<T>[] = [];
+	#promises: ExtendedPromise<IteratorResult<T>>[] = [];
+	#ended = false;
+	#failed: any = null;
 
 	isBinary(): boolean {
 		return NaniumBuffer.isNaniumBuffer(this[responseTypeSymbol]);
 	}
 
-	static naniumStreamOnDataHandlerSymbol: symbol = Symbol.for('NaniumStream_OnDataHandlerSymbol');
-	static naniumStreamOnErrorHandlerSymbol: symbol = Symbol.for('NaniumStream_OnErrorHandlerSymbol');
-	static naniumStreamOnEndHandlerSymbol: symbol = Symbol.for('NaniumStream_OnEndHandlerSymbol');
-	static naniumStreamIdReceiverReadyPromiseSymbol: symbol = Symbol.for('NaniumStream_OnReceiverSymbol');
+	static naniumIsNaniumStreamSymbol: symbol = Symbol.for('NaniumStream_IsNaniumStreamSymbol');
 
 	constructor(itemConstructor?: new (...data: any) => T, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
 		this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
 		this[genericTypesSymbol] = genericTypeInfo;
 		this.id = id ?? Date.now() + '-' + Math.random().toFixed(20).substring(2) + '-' + (++uuidCounter);
-		this[NaniumStream.naniumStreamOnDataHandlerSymbol] = [];
-		this[NaniumStream.naniumStreamOnErrorHandlerSymbol] = [];
-		this[NaniumStream.naniumStreamOnEndHandlerSymbol] = [];
-		this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol] = new ExtendedPromise<boolean>();
 	}
 
-	//#region Promise
-	toPromise(): Promise<T extends NaniumBuffer ? NaniumBuffer : T[]> {
-		return new Promise<T extends NaniumBuffer ? NaniumBuffer : T[]>((resolve: Function, reject: Function) => {
-			try {
-				const objectList: any[] = [];
-				const buffer: NaniumBuffer = new NaniumBuffer();
-				this.onData(async (chunk) => {
-					if (this.isBinary) {
-						buffer.write(chunk as DataSource);
-					} else {
-						objectList.push(chunk as any | any[]);
-					}
-				});
-				this.onEnd(() => {
-					resolve(this.isBinary ? buffer : objectList.flat(Infinity));
-				});
-				this.onError((err: Error) => {
-					reject(err);
-				});
-			} catch (err) {
-				reject(err);
-			}
-		});
-	}
+	//#region sender/writer
+	write(value: T): void {
+		if (this.#ended || this.#failed) return;
 
-	receiverReady() {
-		this[NaniumStream.naniumStreamIdReceiverReadyPromiseSymbol].resolve();
-	}
-
-	//#region readable
-	onData(handler: (chunk: T extends NaniumBuffer ? NaniumBuffer : T) => Promise<void>) {
-		this[NaniumStream.naniumStreamOnDataHandlerSymbol].push(handler);
-		return this;
-	}
-
-	onError(handler: (err: any) => void) {
-		this[NaniumStream.naniumStreamOnErrorHandlerSymbol].push(handler);
-		return this;
-	}
-
-	onEnd(handler: () => void) {
-		this[NaniumStream.naniumStreamOnEndHandlerSymbol].push(handler);
-		return this;
-	}
-
-	pipeTo(s: NaniumStream<T>) {
-		this.onData(async chunk => await s.write(chunk));
-		this.onEnd(() => s.end());
-		this.onError((err: Error) => s.error(err));
-	}
-
-	// pipeThrough()
-
-	//#endregion readable
-
-	//#region writable
-	async write(chunk: T extends NaniumBuffer ? DataSource : T | T[]): Promise<void> {
-	// todo: it must be possible to return an array as a whole response
-		if (Array.isArray(chunk)) {
-			for (const item of chunk) {
-				await Promise.all(this[NaniumStream.naniumStreamOnDataHandlerSymbol].map(handler => handler(item)));
-			}
+		// for (const value of values) {
+		// If a consumer is waiting, resolve immediately
+		const promise = this.#promises.shift();
+		if (promise) {
+			promise.resolve({ value, done: false });
 		} else {
-			await Promise.all(this[NaniumStream.naniumStreamOnDataHandlerSymbol].map(handler => handler(chunk)));
+			// Otherwise buffer the chunk
+			this.#buffer.push({ value });
+		}
+		// }
+	}
+
+	error(err: any) {
+		if (this.#ended || this.#failed) {
+			return;
+		}
+		this.#failed = err;
+		while (this.#promises.length) {
+			const promise = this.#promises.shift();
+			promise?.reject(err);
 		}
 	}
 
-	error(error: any) {
-		this[NaniumStream.naniumStreamOnErrorHandlerSymbol].forEach(fn => fn(error));
-	}
-
 	end() {
-		this[NaniumStream.naniumStreamOnEndHandlerSymbol].forEach(fn => fn());
+		if (this.#ended || this.#failed) {
+			return;
+		}
+		this.#ended = true;
+
+		// Flush any waiting consumers with done = true
+		while (this.#promises.length) {
+			const promise = this.#promises.shift();
+			if (promise) {
+				promise.resolve({ value: undefined as any, done: true });
+			}
+		}
+	}
+	//#endregion sender/writer
+
+
+	//#region receiver/reader
+	// AsyncIterable implementation
+	[Symbol.asyncIterator](): AsyncIterator<T> {
+		return {
+			next: () => this.next()
+		};
 	}
 
-	//#end region writable
+	private next(): Promise<IteratorResult<T>> {
+		// If there was an error, throw it on next()
+		if (this.#failed) {
+			return Promise.reject(this.#failed);
+		}
 
-	//#endregion Stream
+		// If buffer has data, deliver immediately
+		const chunk = this.#buffer.shift();
+		if (chunk && "value" in chunk) {
+			return Promise.resolve({ value: chunk.value, done: false });
+		}
+
+		// If stream ended and buffer is empty, signal done
+		if (this.#ended) {
+			return Promise.resolve({ value: undefined as any, done: true });
+		}
+
+		// Otherwise wait for data/end/error
+		const promise = new ExtendedPromise<IteratorResult<T>>();
+		this.#promises.push(promise);
+		return promise;
+	}
+
+	pipeTo(destination: NaniumStream<T>) {
+		void (async () => {
+			try {
+				for await (const chunk of this) {
+					destination.write(chunk);
+				}
+				destination.end();
+			} catch (err) {
+				destination.error(err);
+			}
+		})();
+	}
+
+	async toPromise(): Promise<T extends NaniumBuffer ? NaniumBuffer : T[]> {
+		const objectList: any[] = [];
+		const buffer: NaniumBuffer = new NaniumBuffer();
+		for await (const chunk of this) {
+			if (chunk instanceof NaniumBuffer) {
+				buffer.write(chunk);
+			} else {
+				objectList.push(chunk as any | any[]);
+			}
+		}
+		return (objectList?.length ? objectList.flat(Infinity) : buffer) as T extends NaniumBuffer ? NaniumBuffer : T[];
+	}
+	//#endregion receiver/reader
+
 
 	static forEachStream(obj: object, fn: (stream: NaniumStream, type: ConstructorType) => void) {
 		if (NaniumStream.isNaniumStream(obj?.constructor)) {
@@ -137,7 +152,8 @@ export class NaniumStream<T = any> {
 	}
 
 	static isNaniumStream(objectOrConstructor: ConstructorType | object): boolean {
-		return objectOrConstructor?.['naniumStreamOnEndHandlerSymbol'] != undefined ||
-			objectOrConstructor?.constructor?.['naniumStreamOnEndHandlerSymbol'] != undefined;
+		const prop: keyof typeof NaniumStream = 'naniumIsNaniumStreamSymbol';
+		return objectOrConstructor?.[prop] != undefined ||
+			objectOrConstructor?.constructor?.[prop] != undefined;
 	}
 }

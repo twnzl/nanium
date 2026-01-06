@@ -13,6 +13,7 @@ import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract'
 import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
 import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
 import { TestUpstreamBinaryRequest } from '../../../services/test/upstreamBinary.contract';
+import { TestUpstreamObjectsRequest } from '../../../services/test/upstreamObjects.contract';
 import { session } from '../../../session';
 import { TestService } from './test.service';
 
@@ -36,7 +37,11 @@ export class AppComponent implements OnInit {
 				await this.testService.init();
 			}
 			const response = await new TestGetRequest({ input1: 'hello world' }).execute();
-			console.log(response.body.output1);
+			if (response.body.output1 !== 'hello world :-)') {
+				throw new Error('unexpected response: ' + response.body.output1);
+			} else {
+				console.log('✅ simple: received expected response');
+			}
 		} catch (e) {
 			console.log(e);
 			alert('An error occurred. see console for details.');
@@ -79,16 +84,14 @@ export class AppComponent implements OnInit {
 	// execute request via the consumer
 	async objectResponseStream() {
 		await this.testService.init();
-		const stream = await new TestStreamedQueryRequest({ amount: 6, msGapTime: 500 }).execute();
+		const stream: NaniumStream<TestDto> = await new TestStreamedQueryRequest({ amount: 6, msGapTime: 500 }).execute();
 		// const result = await stream.toPromise();
 		const result: TestDto[] = [];
-		(stream as NaniumStream).onData(dto => {
+		for await (const dto of stream) {
 			result.push(dto as TestDto);
 			console.log(JSON.stringify(dto));
-			return Promise.resolve();
-		}).onEnd(() => {
-			console.log(JSON.stringify(result));
-		});
+		}
+		console.log(JSON.stringify(result));
 	}
 
 	async objectResponseStreamPromise() {
@@ -101,13 +104,16 @@ export class AppComponent implements OnInit {
 		await this.testService.init();
 		const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
 		const result: NaniumBuffer = new NaniumBuffer();
-		stream.onData(async (chunk) => {
-			await result.write(chunk);
+		for await (const chunk of stream) {
+			result.write(chunk);
 			const text = await chunk.asString();
 			console.log(text);
-		}).onEnd(async () => {
-			console.log(await result.asString());
-		});
+		}
+		if ((await result.asString()) !== '1.2.3.') {
+			throw new Error('expected result: "1.2.3." but received: ' + await result.asString());
+		} else {
+			console.log('✅ binaryResponseStream: received expected result: ' + await result.asString());
+		}
 	}
 
 
@@ -122,7 +128,11 @@ export class AppComponent implements OnInit {
 		const request = new TestGetBinaryRequest();
 		const response = await request.execute();
 		const text = new TextDecoder().decode(await response.asUint8Array());
-		console.log(text, text === 'this is a text that will be send as binary data');
+		if (text !== 'this is a text that will be send as binary data') {
+			throw new Error('response content mismatch: ' + text);
+		} else {
+			console.log('✅ wsBufferResponse: received expected binary data');
+		}
 	}
 
 	async wsBufferRequest() {
@@ -133,32 +143,44 @@ export class AppComponent implements OnInit {
 			buffer2: undefined,
 		});
 		const response = await request.execute();
-		console.log('response.buffer1 should have same content as request.buffer1 + "*":', await response.buffer1.asString());
-		console.log('response.buffer2 should be undefined: ', response.buffer2);
-		console.log('response.text1: should be the content of request.buffer1 + "*" as string:', response.text1);
-		console.log('response.text2: should be the content of request.buffer2 as string:', response.text2);
+		const txt1 = await response.buffer1.asString();
+		if (txt1 !== '123*') {
+			throw new Error('response.buffer1 should have same content as request.buffer1 + "*" but received: ' + txt1);
+		}
+		if (response.buffer2 !== undefined) {
+			throw new Error('response.buffer2 should be undefined but received: ' + response.buffer2);
+		}
+		if (response.text1 !== '123*') {
+			throw new Error('response.text1: should be the content of request.buffer1 + "*" as string but received: ' + response.text1);
+		}
+		if (response.text2 !== undefined) {
+			throw new Error('response.text2: should be the content of request.buffer2 as string but received: ' + response.text2);
+		}
+		console.log('✅ wsBufferRequest: received expected result');
 	}
 
 	async wsStreamObjects() {
 		this.testService.initWs(8080, 1);
 		const dtoList: TestDto[] = [];
 		let portions = 0;
-		await new Promise(async (resolve: Function): Promise<void> => {
-			const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
-				{ amount: 6, msGapTime: 100 }, { token: '1234' }).execute();
-			response.onData((value: TestDto): Promise<void> => {
-				portions++;
-				console.log(value);
-				dtoList.push(value);
-				return Promise.resolve();
-			});
-			response.onEnd(() => {
-				resolve();
-			});
-			response.onError((err: Error) => {
-				Nanium.logger.error(err.message, err.stack);
-			});
-		});
+		const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
+			{ amount: 6, msGapTime: 100 }, { token: '1234' }
+		).execute();
+		for await (const dto of response) {
+			portions++;
+			console.log(dto);
+			dtoList.push(dto);
+		}
+		if (dtoList.length !== 6) {
+			throw new Error('expected length of result list: 6 but received: ' + dtoList.length);
+		}
+		if (dtoList[0].formatted() !== '1:1') {
+			throw new Error('expected dtoList[0].formatted(): "1:1" but received: ' + dtoList[0].formatted());
+		}
+		if (dtoList[2].formatted() !== '3:3') {
+			throw new Error('expected dtoList[2].formatted(): "3:3" but received: ' + dtoList[2].formatted());
+		}
+		console.log('✅ wsStreamObjects: received expected result');
 	}
 
 	async wsStreamBinary() {
@@ -168,20 +190,19 @@ export class AppComponent implements OnInit {
 
 			// todo: problem ist, dass durch das await auf die response, der Inhalt des streams bereits übertragen wird
 			// und dann ohne onData - function (in browserWs.handleResponseStreamChunk) entgegengenommen wird,
-			// 	noch bevor es hier mit der Ausführung weiter geht und die onData - function registriert werden kann.
+			// noch bevor es hier mit der Ausführung weiter geht und die onData - function registriert werden kann.
 			// wie kann ich sicher stellen, dass die Ausführung hier weiter geht, bevor der Inhalt des streams entgegengenommen wird ?
 
 			const result: NaniumBuffer = new NaniumBuffer();
-			await new Promise((resolve: Function) => {
-				stream.onData(async (chunk) => {
-					result.write(chunk);
-					console.log(new NaniumBuffer(chunk).asString()); //.toBe('1.2.3.');
-				})
-				stream.onEnd(async () => {
-					console.log(await result.asString())
-					resolve();
-				});
-			});
+			for await (const chunk of stream) {
+				result.write(chunk);
+				console.log(await new NaniumBuffer(chunk).asString());
+			}
+			if ((await result.asString()) !== '1.2.3.') {
+				throw new Error('expected result: "1.2.3." but received: ' + await result.asString());
+			} else {
+				console.log('✅ wsStreamBinary: received expected result: ' + await result.asString());
+			}
 		} catch (err) {
 			console.error(err.message, err.stack);
 		}
@@ -208,10 +229,6 @@ export class AppComponent implements OnInit {
 		});
 		const chunk = new NaniumBuffer(new TextEncoder().encode('abc'));
 		let cnt = 1;
-		await Promise.all([
-			request.body.upstream1.isReceiverReady(),
-			request.body.upstream2.isReceiverReady(),
-		]);
 		const interval = setInterval(() => {
 			if (cnt > 4) {
 				clearInterval(interval);
@@ -227,28 +244,41 @@ export class AppComponent implements OnInit {
 		}, 100);
 	}
 
-	wsStreamObjectsToServer() {
-		throw new Error('Method not implemented.');
-	}
-
-	async wsUpstreamReadyTimeout() {
-		try {
-			this.testService.initWs(8080, 1);
-			const upstream1 = new NaniumStream<NaniumBuffer>();
-			const request = new TestUpstreamBinaryRequest({
-				doNotSendReadySignal: true,
-			});
-			request.body.upstream1 = upstream1;
-			request.execute().then(result => {
-				throw new Error('wsStreamReadyTimeout: upstream1: should have been run into ready timeout');
-			});
-
-			await request.body.upstream1.isReceiverReady(); // should be rejected -> throw error
-		} catch (e) {
-			console.log('received error while waiting on isReceiverReady');
-			return;
+	async wsStreamObjectsToServer() {
+		this.testService.initWs(8080, 1);
+		const request = new TestUpstreamObjectsRequest({});
+		request.body.upstream1 = new NaniumStream<TestDto>();
+		request.body.upstream2 = new NaniumStream<TestDto>();
+		let cnt = 1;
+		const interval = setInterval(() => {
+			if (cnt > 4) {
+				clearInterval(interval);
+				request.body.upstream1.end();
+				request.body.upstream2.end();
+			} else {
+				request.body.upstream1.write(new TestDto(cnt.toString(), cnt));
+				if (cnt < 3) {
+					request.body.upstream2.write(new TestDto(cnt.toString(), cnt));
+				}
+			}
+			cnt++
+		}, 100);
+		const response = await request.execute();
+		if (response.receivedObjects1?.length !== 4) {
+			throw new Error('upstream1: expected number of received objects: 4 but received: ' + response.receivedObjects1?.length);
+		} else {
+			console.log('✅ upstream1: number of received objects:', response.receivedObjects1?.length);
 		}
-		throw new Error('wsStreamReadyTimeout: upstream1: should have been run into ready timeout');
+		if (response.receivedObjects1[0].a !== '1' || response.receivedObjects1[0].b !== 1) {
+			throw new Error('upstream1: expected first object: {a:"1", b:1} but received: ' + response.receivedObjects1[0].a);
+		} else {
+			console.log('✅ upstream1: first object correct: {a:"1", b:1}');
+		}
+		if (response.receivedObjects2?.length !== 2) {
+			throw new Error('upstream2: expected number of received objects: 2 but received: ' + response.receivedObjects2?.length);
+		} else {
+			console.log('✅ upstream2: number of received objects:', response.receivedObjects2?.length);
+		}
 	}
 
 	async wsUpstreamDataTimeout() {
@@ -260,7 +290,6 @@ export class AppComponent implements OnInit {
 		const chunk = new NaniumBuffer(new TextEncoder().encode('abc'));
 		let cnt = 1;
 		try {
-			await request.body.upstream1.isReceiverReady();
 			const interval = setInterval(() => {
 				if (cnt > 2) {
 					clearInterval(interval);
@@ -273,10 +302,30 @@ export class AppComponent implements OnInit {
 			await responsePromise;
 			throw new Error('wsStreamDataTimeout: upstream1: should have been run into data timeout');
 		} catch (e) {
-			console.log('received expected error: ', e);
-			return
+			if (e instanceof Error && e.message.includes('timeout')) {
+				console.log('✅ wsStreamDataTimeout: upstream1: timeout occurred as expected');
+			} else {
+				throw e;
+			}
 		}
-		throw new Error('wsStreamDataTimeout: upstream1: should have been canceled');
+	}
+
+	async tmp() {
+		this.testService.initWs(8080, 1);
+		const responseStream: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
+			{ amount: 6, msGapTime: 0 }, { token: '1234' }).execute();
+		const dtoList: TestDto[] = await responseStream.toPromise();
+		if (dtoList.length !== 6) {
+			throw new Error('length of result list should be correct but received: ' + dtoList.length);
+		}
+		if (dtoList[0].formatted() !== '1:1') {
+			throw new Error('dtoList[0].formatted() should be "1:1" but received: ' + dtoList[0].formatted());
+		}
+		if (dtoList[2].formatted() !== '3:3') {
+			throw new Error('dtoList[2].formatted() should be "3:3" but received: ' + dtoList[2].formatted());
+		}
+		console.log('✅ tmp: received expected result');
+
 	}
 	//#endregion ws
 }
