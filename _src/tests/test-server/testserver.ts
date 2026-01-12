@@ -1,6 +1,8 @@
 import * as cluster from 'cluster';
+import * as fs from 'fs';
 import * as http from 'http';
 import { IncomingMessage, ServerResponse } from 'http';
+import * as https from 'https';
 import * as path from 'path';
 import { ClusterCommunicator } from '../../communicators/clusterCommunicator';
 import { Nanium } from '../../core';
@@ -35,7 +37,7 @@ async function runPrimary(workerCount: number) {
 }
 
 async function runWorker() {
-	const httpServer: http.Server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
+	const defaultHandler = async (req: IncomingMessage, res: ServerResponse) => {
 		//#region CORS
 		res.setHeader('Access-Control-Allow-Origin', req.headers.origin ?? '*');
 		res.setHeader('AMP-Access-Control-Allow-Source-Origin', req.headers.origin ?? '*');
@@ -60,9 +62,29 @@ async function runWorker() {
 			return;
 		}
 		//#endregion route to check if server is running
-	});
+	};
+	let httpServer: http.Server;
+	if (cluster.worker.id % 4 > 1) {
+		const certPath = path.join(__dirname, '../../../../cert');
+		httpServer = https.createServer({
+			key: fs.readFileSync(path.join(certPath, 'dummy.key')),
+			cert: fs.readFileSync(path.join(certPath, 'dummy.crt')),
+			keepAlive: false,
+
+		},
+			(req: IncomingMessage, res: ServerResponse) => {
+				if (!/^\/(api[/#?]|events$)/gi.test(req.url)) {
+					res.write('*** https fallback ***');
+					res.statusCode = 200;
+					res.end();
+				}
+			});
+
+	} else {
+		httpServer = http.createServer(defaultHandler);
+	}
 	// each worker has its own port, just tu make sure to connect to different processes in the tests
-	const port = cluster.worker.id % 2 === 0 ? 8080 : 8081;
+	const port = 8080 + (cluster.worker.id % 4);
 	httpServer.listen(port);
 	console.log(`Worker ${process.pid} is listening on port ${port}`);
 
@@ -121,22 +143,22 @@ async function runWorker() {
 	});
 }
 
-async function run(workerCount: number = 2) {
+async function run(workerCount: number = 4) {
 	NaniumLogger.addLogger(new TestLogger(LogLevel.warn));
-	if (cluster.isMaster) {
+	if (cluster.isMaster || cluster.isPrimary) {
 		await runPrimary(workerCount);
 	} else {
 		await runWorker();
 	}
 }
 
-async function handleError(err: any, _serviceName: string, _request: any, _executionContext: ExecutionContext): Promise<any> {
+function handleError(err: any, _serviceName: string, _request: any, _executionContext: ExecutionContext): Promise<any> {
 	throw { message: err?.message ?? err };
 }
 
-async function handleException(error: any): Promise<void> {
+function handleException(error: any): Promise<void> {
 	throw error;
 }
 
 
-run().then();
+void run();

@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Nanium } from '../../../../core';
 import { AsyncHelper } from '../../../../helper';
-import { EventSubscription } from '../../../../interfaces/eventSubscription';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../../interfaces/naniumStream';
 import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
@@ -317,35 +316,7 @@ export class AppComponent implements OnInit {
 	}
 
 	async tmp() {
-		// this.testService.initWs(8080, 1);
-		session.token = '1234';
-		session.tenant = 'Company1';
-		await addHttpConsumer('http://localhost:8080', 1, 0);
-		await addHttpConsumer('http://localhost:8081', 1, 0);
-		const manager1 = await addWebsocketConsumer('ws://localhost:8080', 0, 1);
-		const manager2 = await addWebsocketConsumer('ws://localhost:8081', 0, 1);
-		const manager3 = await addWebsocketConsumer('ws://localhost:8081', 0, 1); // for two different client-IDs connected with the same server
-
-		let event1: StuffEvent;
-		let event2: StuffEvent;
-		session.token = '1234'; // reset right credentials
-		session.tenant = 'Company1';
-		const subscription1: EventSubscription = await StuffEvent.subscribe((event) => {
-			event1 = event;
-		}, undefined, manager1);
-		session.token = '5678'; // other tenant
-		session.tenant = 'Company2';
-		const subscription2: EventSubscription = await StuffEvent.subscribe((event) => {
-			event2 = event;
-		}, undefined, manager2);
-		session.token = '1234'; // reset right credentials
-		session.tenant = 'Company1';
-		await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
-		// await AsyncHelper.waitUntil(() => !!event1, 100, 2000);
-		await AsyncHelper.pause(1000);
-		await subscription1.unsubscribe();
-		await subscription2.unsubscribe();
-
+		console.log('✅ tmp: nothing to do');
 	}
 	//#endregion ws
 }

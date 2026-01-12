@@ -142,10 +142,9 @@ export class TestHelper {
 						} catch (e) {
 							console.error(e);
 						} finally {
-							resolve();
+							setTimeout(() => resolve(), 100); // to give the https core time to really close all connections and TLS-wrappers (prevent jests open-handles warning)
 						}
 					});
-					setTimeout(() => resolve(), 1000);
 				} else {
 					resolve();
 				}
