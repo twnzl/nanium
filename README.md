@@ -592,8 +592,7 @@ export class TestMeasurementStoreExecutor implements ServiceExecutor<TestMeasure
 ## Streaming
 
 If you want a service executor to provide the possibility to return partial results, you can use
-NaniumStream as a
-service result
+NaniumStream as a service result or even multiple properties of Type NaniumStream in the service response.
 
 ```ts
 @RequestType({
@@ -605,81 +604,67 @@ export class TestStreamedQueryRequest extends SimpleServiceRequestBase<TestStrea
 }
 ```
 
-The example shows an object stream. Result type NaniumStream<NaniumBuffer> would be a binary stream.
-On the callers side
-the result can be consumed in small parts using the onData() function:
+or multiple streams:
+
+```ts
+export class StreamsResponse {
+	objectStream: NaniumStream<TestDto>; // consumer gets objects of Type TestDto
+	binaryStream: NaniumStream<NaniumBuffer>; // consumer gets just binary data as NaniumBuffers
+}
+
+@RequestType({
+	responseType: StreamsResponse,
+	scope: 'public'
+})
+export class MultipleStreamsQueryRequest extends SimpleServiceRequestBase<MultipleStreamsQueryRequestBody, StreamsResponse> {
+	static serviceName: string = 'NaniumTest:test/streamedQuery';
+}
+```
+
+On the callers side the result can be consumed in small parts using a for-await loop:
 
 ```ts
 const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest().execute();
-response.onData((value: TestDto): void => dtoList.push(value));
-response.onEnd(() => resolve());
-response.onError((err: Error) => console.error(err));
+const list: TestDto[] = [];
+try {
+	for await () {
+		dtoList.push(value) // data chunk received
+	}
+	// end of stream
+} catch() {
+	// error while processing the stream
+}
+
 ```
 
-It is also possible to consume the result as whole package using the toPromise() function.
-Even in this case nanium will at least use the benefits of streaming internally - e.g. parallelism
-of
-data transmission and deserialization.
+of for multiple streams:
+
+
+```ts
+const response: NaniumStream<TestDto> = await new TestStreamedQueryRequest().execute();
+const video: NaniumBuffer = new NaniumBuffer();
+await Promise.all([
+	(async () => {
+		for await (const dto of response.objectStream) {
+			dtoList.push(value);
+		}
+	})(),
+	(async () => {
+		for await (const chunk of response.binaryStream) {
+			video.write(chunk);
+		}
+	})()
+]);
+
+```
+
+It is also possible to consume streamed data as one whole package using the toPromise() function.
+Even in this case nanium will use the benefits of streaming internally - e.g. parallelism
+of data transmission and deserialization.
 
 ```ts
 const responseStream: NaniumStream<TestDto> = await new TestStreamedQueryRequest().execute();
 const dtoList: TestDto[] = await responseStream.toPromise();
-```
-
-### Binary data
-
-Regardless of which serializer you use, binary data is always treated specially. If you define the
-result-type of a
-service as NaniumBuffer, the data is not serialized or deserialized, but transported to the client
-as it is.
-
-```ts
-// the contract
-export class TestStreamedBinaryRequestBody {
-	amount?: number;
-	msGapTime?: number;
-}
-
-@RequestType({
-	responseType: [NaniumStream, NaniumBuffer],
-	scope: 'public'
-})
-export class TestStreamedBinaryRequest extends SimpleServiceRequestBase<TestStreamedBinaryRequestBody, NaniumStream<NaniumBuffer>> {
-	static serviceName: string = 'NaniumTest:test/streamedBinary';
-}
-
-// the executor
-export class TestStreamedBinaryExecutor implements ServiceExecutor<TestStreamedBinaryRequest, NaniumStream<NaniumBuffer>> {
-	static serviceName: string = 'NaniumTest:test/streamedBinary';
-
-	async execute(request: TestStreamedBinaryRequest): Promise<NaniumStream<NaniumBuffer>> {
-		const result = new NaniumStream<NaniumBuffer>();
-		let cnt: number = 1;
-		const next = () => {
-			if (cnt > request.body.amount ?? 3) {
-				result.end();
-				clearInterval(interval);
-			} else {
-				result.write(new TextEncoder().encode(cnt.toString() + '.'));
-				cnt++;
-			}
-		};
-		// next();
-		const interval = setInterval(() => next(), request.body.msGapTime ?? 1);
-		return result;
-	}
-}
-
-// the client call
-const stream = await new TestStreamedBinaryRequest({ amount: 3, msGapTime: 500 }).execute();
-const result: NaniumBuffer = new NaniumBuffer();
-stream.onData(async (chunk) => {
-	result.write(chunk);
-	const text = await chunk.asString();
-	console.log(text);
-}).onEnd(async () => {
-	console.log(await result.asString());
-});
 ```
 
 ## Queues
