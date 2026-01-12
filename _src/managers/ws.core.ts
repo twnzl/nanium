@@ -1,4 +1,4 @@
-import { Nanium } from '../core';
+import { NaniumLogger } from '../interfaces/logger';
 import { NaniumBuffer } from '../interfaces/naniumBuffer';
 import { NaniumStream } from '../interfaces/naniumStream';
 import { NaniumSerializer } from '../interfaces/serializer';
@@ -64,7 +64,7 @@ export async function sendBufferInChunks(
 			// }
 		}
 	} catch (error) {
-		Nanium.logger.error('channel ws: sendBufferInChunks: ', error?.message, error?.stack);
+		NaniumLogger.error('channel ws: sendBufferInChunks: ', error?.message, error?.stack);
 		throw error;
 	}
 }

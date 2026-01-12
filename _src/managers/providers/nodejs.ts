@@ -1,7 +1,6 @@
 import { Stats } from 'fs';
 import * as path from 'path';
 import * as findFiles from 'recursive-readdir';
-import { Nanium } from '../../core';
 import { Channel } from '../../interfaces/channel';
 import { Message } from '../../interfaces/communicator';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
@@ -12,12 +11,13 @@ import {
 	EventSubscriptionReceiveInterceptor
 } from '../../interfaces/eventSubscriptionInterceptor';
 import { ExecutionContext } from '../../interfaces/executionContext';
+import { NaniumLogger } from '../../interfaces/logger';
 import { ServiceExecutor } from '../../interfaces/serviceExecutor';
 import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
 import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
 import { NaniumRepository } from '../../interfaces/serviceRepository';
 import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
-import { ConstructorType, genericTypesSymbol, NaniumObject } from '../../objects';
+import { ConstructorType, NaniumObject, genericTypesSymbol } from '../../objects';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -124,22 +124,22 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 				files = await findFiles(path.resolve(this.config.servicePath),
 					[(f: string, stats: Stats): boolean => !stats.isDirectory() && !f.endsWith('.contract.js')]);
 			} catch (e) {
-				Nanium.logger.error(e);
+				NaniumLogger.error(e);
 				throw new Error('nanium: service path does not exist. Please specify an absolute path (or relative to the working directory) to the property "servicePath" when initializing NaniumProviderNodejs');
 			}
 			for (const file of files) {
 				try {
 					const request: any = NaniumProviderNodejs.findClassWithServiceNameProperty(await import(path.resolve(file)));
 					if (!request) {
-						Nanium.logger.warn('invalid contract file (no request class found): ' + file);
+						NaniumLogger.warn('invalid contract file (no request class found): ' + file);
 						continue;
 					}
 					const executor: any = NaniumProviderNodejs.findClassWithServiceNameProperty(
 						await import(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
 					this.addService(request, executor);
-					Nanium.logger.info('service ready: ' + executor.serviceName);
+					NaniumLogger.info('service ready: ' + executor.serviceName);
 				} catch (e) {
-					Nanium.logger.error(e);
+					NaniumLogger.error(e);
 					throw e;
 				}
 			}
@@ -164,7 +164,7 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 
 	private static findClassWithServiceNameProperty(module: any): any {
 		for (const requestModuleKey in module) {
-			if (module[requestModuleKey].hasOwnProperty('serviceName')) {
+			if ('serviceName' in module[requestModuleKey]) {
 				return module[requestModuleKey];
 			}
 		}

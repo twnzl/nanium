@@ -5,7 +5,8 @@ import * as https from 'https';
 import { Server as HttpsServer } from 'https';
 import * as path from 'path';
 import { Nanium } from '../core';
-import { LogLevel } from '../interfaces/logger';
+import { RejectFunction, ResolveFunction } from '../helper';
+import { LogLevel, NaniumLogger } from '../interfaces/logger';
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 import { NaniumHttpChannel } from '../managers/providers/channels/http';
 import { NaniumProviderNodejs } from '../managers/providers/nodejs';
@@ -31,7 +32,7 @@ export class TestHelper {
 		if (protocol === 'http') {
 			// http server
 			this.httpServer = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-				if (!/^\/(api[\/#?]|events?$|events\/delete?$)/gi.test(req.url)) {
+				if (!/^\/(api[/#?]|events?$|events\/delete?$)/gi.test(req.url)) {
 					res.write('*** http fallback ***');
 					res.statusCode = 200;
 					res.end();
@@ -42,11 +43,13 @@ export class TestHelper {
 		// https server
 		else {
 			this.httpServer = https.createServer({
-					key: fs.readFileSync(path.join(__dirname, 'cert/dummy.key')),
-					cert: fs.readFileSync(path.join(__dirname, 'cert/dummy.crt'))
-				},
+				key: fs.readFileSync(path.join(__dirname, 'cert/dummy.key')),
+				cert: fs.readFileSync(path.join(__dirname, 'cert/dummy.crt')),
+				keepAlive: false,
+
+			},
 				(req: IncomingMessage, res: ServerResponse) => {
-					if (!/^\/(api[\/#?]|events$)/gi.test(req.url)) {
+					if (!/^\/(api[/#?]|events$)/gi.test(req.url)) {
 						res.write('*** https fallback ***');
 						res.statusCode = 200;
 						res.end();
@@ -54,7 +57,7 @@ export class TestHelper {
 				});
 		}
 
-		await new Promise<void>((resolve: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>) => {
 			this.httpServer.listen(this.port, () => {
 				resolve();
 			});
@@ -66,7 +69,7 @@ export class TestHelper {
 		this.responsibility = 'consumer';
 
 		// Logging
-		Nanium.logger = new TestLogger(LogLevel.info);
+		NaniumLogger.addLogger(new TestLogger(LogLevel.info));
 
 		// Nanium provider
 		this.provider = new NaniumProviderNodejs({
@@ -86,16 +89,16 @@ export class TestHelper {
 				// httpServer will say it is responsible. This is a workaround because server and client run in the same tread
 				if (this.responsibility === 'consumer') {
 					this.responsibility = 'provider';
-					return 0;
+					return Promise.resolve(0);
 				} else {
 					this.responsibility = 'consumer';
-					return 2;
+					return Promise.resolve(2);
 				}
 			},
 			isResponsibleForEvent: async (): Promise<number> => {
-				return providerIsSubscriber ? 1 : 0;
+				return Promise.resolve(providerIsSubscriber ? 1 : 0);
 			},
-			handleError: async (err: any): Promise<any> => {
+			handleError: (err: any): Promise<any> => {
 				throw err;
 			}
 		});
@@ -109,10 +112,10 @@ export class TestHelper {
 			options: protocol === 'https' ? { rejectUnauthorized: false } : {},
 			eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
 			isResponsible: async (): Promise<number> => Promise.resolve(1),
-			isResponsibleForEvent: async (): Promise<number> => {
-				return providerIsSubscriber ? 0 : 1;
+			isResponsibleForEvent: (): Promise<number> => {
+				return Promise.resolve(providerIsSubscriber ? 0 : 1);
 			},
-			handleError: async (err: any): Promise<any> => {
+			handleError: (err: any): Promise<any> => {
 				throw { handleError: err };
 			}
 		});
@@ -120,29 +123,35 @@ export class TestHelper {
 	}
 
 	static async shutdown(): Promise<void> {
-		await new Promise<void>((resolve: Function) => {
+		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			try {
 				if (this.httpServer) {
-					this.httpServer.close(async () => {
+
+					if (typeof this.httpServer.closeAllConnections === 'function') {
+						this.httpServer.closeAllConnections();
+					}
+					this.httpServer.unref();
+
+					this.httpServer.close(async (err) => {
+						if (err) {
+							reject(err);
+						}
 						try {
 							await Nanium.shutdown();
-							// setTimeout(() => {
 							this.httpServer = null;
-							resolve();
-							// }, 100);
 						} catch (e) {
 							console.error(e);
 						} finally {
 							resolve();
 						}
 					});
+					setTimeout(() => resolve(), 1000);
 				} else {
 					resolve();
 				}
 			} catch (e) {
 				console.error(e);
-			} finally {
-				resolve();
+				throw e;
 			}
 		});
 	}

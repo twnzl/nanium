@@ -6,6 +6,7 @@ import { AsyncHelper, criticalSection, ExtendedTimeout, Mutex, setExtendedTimeou
 import { Channel } from '../../../interfaces/channel';
 import { ChannelConfig } from '../../../interfaces/channelConfig';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
+import { NaniumLogger } from '../../../interfaces/logger';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
@@ -103,6 +104,7 @@ export class NaniumWebsocketChannel implements Channel {
 
 			// Handle errors
 			ws.on('error', (error: Error) => {
+				console.error('WebSocket error:', error);
 				throw error;
 			});
 		});
@@ -160,7 +162,7 @@ export class NaniumWebsocketChannel implements Channel {
 			case 'service_stream_error':
 				return this.handleIncomingServiceRequestStreamError(message, ws);
 			default:
-				Nanium.logger.error(message.error ?? 'unknown ws message');
+				NaniumLogger.error(message.error ?? 'unknown ws message');
 		}
 	}
 
@@ -413,7 +415,7 @@ export class NaniumWebsocketChannel implements Channel {
 
 	//#region event handling
 	private async handleIncomingEventSubscription(message: WsMessage<EventSubscription>, ws: WebSocket): Promise<void> {
-		Nanium.logger.info('channel ws: incoming event subscription: ', message.content.eventName);
+		NaniumLogger.info('channel ws: incoming event subscription: ', message.content.eventName);
 		// ask the manager to execute interceptors and to decide if the subscription is accepted or not
 		const subscription: EventSubscription = message?.content;
 		let error: any;
@@ -427,7 +429,7 @@ export class NaniumWebsocketChannel implements Channel {
 			}
 			const subscriptionsOfClient = this.clientSubscriptionInfo.get(subscription.clientId);
 			if (subscriptionsOfClient.eventNames.has(subscription.eventName)) {
-				Nanium.logger.info(`duplicate event subscription: eventName=${subscription.eventName}, clientId = ${subscription.clientId}`);
+				NaniumLogger.info(`duplicate event subscription: eventName=${subscription.eventName}, clientId = ${subscription.clientId}`);
 			} else {
 				subscriptionsOfClient.eventNames.add(subscription.eventName);
 			}
@@ -441,12 +443,17 @@ export class NaniumWebsocketChannel implements Channel {
 					eventName: subscription.eventName,
 				}
 			});
-			await sendMessage(message, this.config.serializer, async data => this.send(ws, data));
+			try {
+
+				await sendMessage(message, this.config.serializer, async data => this.send(ws, data));
+			} catch (e) {
+				console.error('channel ws: send subscription result error: ', e.message, e.stack);
+			}
 		}
 	}
 
 	private async handleIncomingEventUnsubscription(message: WsMessage<EventSubscription>, ws: WebSocket): Promise<void> {
-		Nanium.logger.info('channel ws: incoming event unsubscription: ', message.content.eventName);
+		NaniumLogger.info('channel ws: incoming event unsubscription: ', message.content.eventName);
 		let error: any;
 		let clientSubscription: ClientSubscriptionInfo;
 		try {
@@ -498,7 +505,7 @@ export class NaniumWebsocketChannel implements Channel {
 				await sendMessage(message, this.config.serializer, async data => this.send(clientSubscription.websocket, data));
 			}
 		} catch (e) {
-			Nanium.logger.error('websocket channel: emitEvent: ', e.message, e.stack);
+			NaniumLogger.error('websocket channel: emitEvent: ', e.message, e.stack);
 		}
 	}
 

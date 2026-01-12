@@ -154,3 +154,8 @@ export class ExtendedTimeout {
 export function setExtendedTimeout(callback: (...args: unknown[]) => void, milliseconds?: number): ExtendedTimeout {
 	return new ExtendedTimeout(callback, milliseconds);
 }
+
+let uuidCounter: number = 0;
+export function uuid(): string {
+	return Date.now() + '-' + Math.random().toFixed(20).substring(2) + '-' + (++uuidCounter);
+}

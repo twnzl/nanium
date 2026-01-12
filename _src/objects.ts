@@ -1,5 +1,5 @@
-import { Nanium } from './core';
 import { ExecutionScope } from './interfaces/executionScope';
+import { NaniumLogger } from './interfaces/logger';
 import { ServiceRequestInterceptor } from './interfaces/serviceRequestInterceptor';
 
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
@@ -140,7 +140,7 @@ export class NaniumObject<T> {
 						if (!strict) {
 							result[property] = deepClone ? this.cloneDeep(plain[property]) : plain[property];
 							if (constructor.name !== 'Object') {
-								Nanium.logger.warn(`NaniumObject: no type given for property ${property} of class ${constructor.name}`);
+								NaniumLogger.warn(`NaniumObject: no type given for property ${property} of class ${constructor.name}`);
 							}
 						}
 					}
@@ -218,8 +218,8 @@ export class NaniumObject<T> {
 		return info && (prop in info);
 	}
 
-	static forEachProperty(obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void) {
-		const core = (obj: any, fn: (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => void, name: string[]) => {
+	static forEachProperty(obj: any, fn: (name: string[], parent?: object, typeInfo?: NaniumPropertyInfoCore) => void) {
+		const core = (obj: any, fn: (name: string[], parent?: object, typeInfo?: NaniumPropertyInfoCore) => void, name: string[]) => {
 			if (!obj) {
 				return;
 			}
@@ -486,7 +486,7 @@ export type ConstructorType<T = any> = (new (...data: any[]) => T);
 
 export type ConstructorOrGenericTypeId = (ConstructorType | string);
 
-export type ConstructorGetter = ((...parents: Object[]) => ConstructorType);
+export type ConstructorGetter = ((...parents: object[]) => ConstructorType);
 
 export type ConstructorOrGenericTypeIdOrFkt = (ConstructorOrGenericTypeId | ConstructorGetter);
 

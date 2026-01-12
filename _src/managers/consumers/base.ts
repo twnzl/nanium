@@ -1,10 +1,10 @@
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
-import { NaniumJsonSerializer } from '../../serializers/json';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { genericTypesSymbol, NaniumObject } from '../../objects';
+import { NaniumJsonSerializer } from '../../serializers/json';
 
 export interface ConsumerEventSubscription {
 	id: number;

@@ -1,5 +1,5 @@
 import { Nanium } from '../core';
-import { LogLevel } from '../interfaces/logger';
+import { LogLevel, NaniumLogger } from '../interfaces/logger';
 import { NaniumStream } from '../interfaces/naniumStream';
 import { NaniumProviderNodejs } from '../managers/providers/nodejs';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
@@ -22,11 +22,11 @@ describe('execute TestRequest on server \n', function (): void {
 		requestInterceptors: [TestServerRequestInterceptor],
 		isResponsible: async (): Promise<number> => Promise.resolve(1),
 		handleError: async (err: any): Promise<any> => {
-			if (err.hasOwnProperty('code')) {
-				return new ServiceResponseBase({}, { errors: [err] });
+			if ('code' in err) {
+				return Promise.resolve(new ServiceResponseBase({}, { errors: [err] }));
 			}
 			if (err instanceof Error && err.message === 'no!') {
-				return new ServiceResponseBase({}, { exceptions: [{ code: 'ErrorLogId0815' }] });
+				return Promise.resolve(new ServiceResponseBase({}, { exceptions: [{ code: 'ErrorLogId0815' }] }));
 			}
 			throw err;
 		}
@@ -34,17 +34,18 @@ describe('execute TestRequest on server \n', function (): void {
 
 	let response: TestGetResponse;
 	let privateResponse: PrivateStuffResponse;
+	const testLogger = new TestLogger(LogLevel.info)
 
 	beforeEach(async function (): Promise<void> {
-		Nanium.logger = new TestLogger(LogLevel.info);
+		NaniumLogger.addLogger(testLogger);
 		request = new TestGetRequest({ input1: 'hello world' });
 		privateRequest = new PrivateStuffRequest(1);
 		await Nanium.addManager(testProvider);
 	});
 
 	it('--> Services should have been initialized and info should have been logged \n', async function (): Promise<void> {
-		expect((Nanium.logger as TestLogger).infos.length > 0).toBeTruthy();
-		expect((Nanium.logger as TestLogger).infos[0].toString().startsWith('service ready: NaniumTest:')).toBeTruthy();
+		expect(testLogger.infos.length > 0).toBeTruthy();
+		expect(testLogger.infos[0].toString().startsWith('service ready: NaniumTest:')).toBeTruthy();
 	});
 
 	describe('execute successful \n', function (): void {

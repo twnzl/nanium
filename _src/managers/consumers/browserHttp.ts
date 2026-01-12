@@ -1,3 +1,4 @@
+import { RejectFunction, ResolveFunction } from '../../helper';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
@@ -20,7 +21,7 @@ export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 export class NaniumConsumerBrowserHttp implements ServiceManager {
 	config: NaniumConsumerBrowserHttpConfig;
 	private httpCore: HttpCore;
-	private activeRequests: { abort: Function }[] = [];
+	private activeRequests: { abort: () => void }[] = [];
 
 	constructor(config?: NaniumConsumerBrowserHttpConfig) {
 		this.config = {
@@ -44,25 +45,27 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			async (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => await this.httpRequest(method, url, body, headers));
 	}
 
-	async init(): Promise<void> {
+	init(): Promise<void> {
 		if (!this.config.apiUrl.startsWith('http')) {
 			this.config.apiUrl = window.location.protocol + '//' + window.location.host +
 				(this.config.apiUrl.startsWith('/') ? '' : '/') + this.config.apiUrl;
 		}
+		return Promise.resolve();
 	}
 
-	async terminate(): Promise<void> {
+	terminate(): Promise<void> {
 		for (const ar of this.activeRequests) {
 			try {
 				ar.abort();
 			} catch {
+				;
 			}
 		}
 		this.activeRequests = [];
-		this.httpCore.id = undefined;
-		this.httpCore.terminated = true;
+		this.httpCore.shutdown();
 		this.httpCore = new HttpCore(this.config,
 			async (method: 'GET' | 'POST', url: string, body?: string, headers?: any) => await this.httpRequest(method, url, body, headers));
+		return Promise.resolve();
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<number> {
@@ -85,7 +88,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		}
 
 		// execute the request
-		let ResponseType = getPrimaryResponseType(request);
+		const ResponseType = getPrimaryResponseType(request);
 		let response: any;
 		if (NaniumStream.isNaniumStream(ResponseType)) {
 			response = await this.stream(serviceName, request);
@@ -123,7 +126,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			signal: abortController.signal // make the request abortable
 		});
 
-		fetch(req)
+		void fetch(req)
 			.then((response) => response.body)
 			.then((rb) => {
 				const reader: ReadableStreamDefaultReader<Uint8Array> = rb.getReader();
@@ -208,8 +211,8 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 		throw new Error('not implemented');
 	}
 
-	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any): Promise<ArrayBufferView> {
-		return new Promise<ArrayBufferView>((resolve: Function, reject: Function) => {
+	async httpRequest(method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any): Promise<ArrayBufferView | ArrayBuffer> {
+		return await new Promise<ArrayBufferView | ArrayBuffer>((resolve: ResolveFunction<ArrayBufferView | ArrayBuffer>, reject: RejectFunction) => {
 			// transmission
 			const abortController: AbortController = new AbortController();
 			this.activeRequests.push(abortController);

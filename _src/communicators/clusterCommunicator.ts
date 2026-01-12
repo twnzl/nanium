@@ -4,6 +4,7 @@ import { RejectFunction, ResolveFunction } from '../helper';
 import { EmitEventMessage, Message, NaniumCommunicator } from '../interfaces/communicator';
 import { EventSubscription } from '../interfaces/eventSubscription';
 import { ExecutionContext } from '../interfaces/executionContext';
+import { NaniumLogger } from '../interfaces/logger';
 import { ServiceProviderManager } from '../interfaces/serviceProviderManager';
 
 export class ClusterCommunicator<TExecutionContext extends ExecutionContext> implements NaniumCommunicator {
@@ -15,12 +16,12 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	) {
 		if (cluster.isMaster) {
 			cluster.on('exit', (worker, code, signal) => {
-				Nanium.logger.info(`worker ${worker.id} died (${signal || code}).`);
+				NaniumLogger.info(`worker ${worker.id} died (${signal || code}).`);
 				delete this.primaryMessageListenerInstalled[worker.id];
 			});
 			cluster.on('fork', (worker) => {
 				if (!this.primaryMessageListenerInstalled[worker.id]) {
-					Nanium.logger.info('primary: install message handler for new worker', worker.id);
+					NaniumLogger.info('primary: install message handler for new worker', worker.id);
 					worker.on('message', (msg: Message) => {
 						this.primaryMessageListener(worker.id.toString(), msg);
 					});
@@ -29,7 +30,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 			});
 			for (const id in cluster.workers) {
 				if (!this.primaryMessageListenerInstalled[id]) {
-					Nanium.logger.info('primary: install message handler for worker ', id);
+					NaniumLogger.info('primary: install message handler for worker ', id);
 					cluster.workers[id].on('message', (msg: Message) => {
 						this.primaryMessageListener(id, msg);
 					});
@@ -38,7 +39,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 			}
 		} else if (cluster.isWorker) {
 			process.on('message', async (msg: Message) => {
-				Nanium.logger.info('worker ', cluster.worker?.id, ': receive message ', msg.type);
+				NaniumLogger.info('worker ', cluster.worker?.id, ': receive message ', msg.type);
 				if (msg.data?.context) {
 					msg.data.context = this.fromTransferableContext(msg.data.context);
 				}
@@ -63,10 +64,10 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 			if (worker.id.toString() === workerId) {
 				continue;
 			}
-			Nanium.logger.info('primary: send message ', msg.type, ' to worker ', worker.id);
+			NaniumLogger.info('primary: send message ', msg.type, ' to worker ', worker.id);
 			worker.send(msg, undefined, e => {
 				if (e) {
-					Nanium.logger.error(e);
+					NaniumLogger.error(e);
 				}
 			});
 		}
@@ -75,7 +76,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	async broadcastEvent(event: any, eventName: string, context?: ExecutionContext): Promise<void> {
 		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
-				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_emit message to primary ');
+				NaniumLogger.info('worker ', cluster.worker?.id, ': send event_emit message to primary ');
 				process.send(
 					new Message<EmitEventMessage>('event_emit', {
 						event,
@@ -104,7 +105,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	async broadcastSubscription(subscription: EventSubscription): Promise<void> {
 		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
-				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_subscribe message to primary ');
+				NaniumLogger.info('worker ', cluster.worker?.id, ': send event_subscribe message to primary ');
 				process.send(
 					new Message<Partial<EventSubscription>>('event_subscribe', subscription, cluster.worker.id),
 					undefined, undefined,
@@ -117,7 +118,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	async broadcastUnsubscription(subscription: EventSubscription): Promise<void> {
 		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
-				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
+				NaniumLogger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
 				process.send(
 					new Message<Partial<EventSubscription>>('event_unsubscribe', subscription, cluster.worker.id),
 					undefined, undefined,
@@ -130,7 +131,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	async broadcastRemoveClient(clientId: string): Promise<void> {
 		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
-				Nanium.logger.info('worker ', cluster.worker?.id, ': send remove_client message to primary ');
+				NaniumLogger.info('worker ', cluster.worker?.id, ': send remove_client message to primary ');
 				process.send(
 					new Message<Partial<string>>('remove_client', clientId, cluster.worker.id),
 					undefined, undefined,
@@ -143,7 +144,7 @@ export class ClusterCommunicator<TExecutionContext extends ExecutionContext> imp
 	async broadcast(message: any): Promise<void> {
 		await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
 			if (cluster.worker) {
-				Nanium.logger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
+				NaniumLogger.info('worker ', cluster.worker?.id, ': send event_unsubscribe message to primary ');
 				process.send(
 					new Message('generic', message, cluster.worker.id),
 					undefined, undefined,

@@ -1,13 +1,13 @@
-import { NaniumJsonSerializer } from '../../../../serializers/json';
-import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
-import { Nanium } from '../../../../core';
-import { TestClientRequestInterceptor } from '../../../interceptors/client/test.request.interceptor';
-import { NaniumProviderBrowser } from '../../../../managers/providers/browser';
-import { TestClientResponseInterceptor } from '../../../interceptors/client/test.response.interceptor';
-import { ServiceRequestBase } from '../../../services/serviceRequestBase';
-import { StuffGetRequest } from '../services/stuff/get.contract';
-import { StuffGetExecutor } from '../services/stuff/get.executor';
-import { ClientServiceExecutionContext } from '../services/clientServiceExecutionContext';
+import { Nanium } from '../../core';
+import { NaniumConsumerBrowserHttp } from '../../managers/consumers/browserHttp';
+import { NaniumProviderBrowser } from '../../managers/providers/browser';
+import { NaniumJsonSerializer } from '../../serializers/json';
+import { ClientServiceExecutionContext } from '../browser-client/src/services/clientServiceExecutionContext';
+import { StuffGetRequest } from '../browser-client/src/services/stuff/get.contract';
+import { StuffGetExecutor } from '../browser-client/src/services/stuff/get.executor';
+import { TestClientRequestInterceptor } from '../interceptors/client/test.request.interceptor';
+import { TestClientResponseInterceptor } from '../interceptors/client/test.response.interceptor';
+import { ServiceRequestBase } from '../services/serviceRequestBase';
 
 function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 	const serializer = new NaniumJsonSerializer();
@@ -18,38 +18,38 @@ function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 		serializer: serializer,
 		requestInterceptors: [TestClientRequestInterceptor],
 		responseInterceptors: [TestClientResponseInterceptor],
-		handleError: async (err: any): Promise<any> => {
+		handleError: (err: any): Promise<any> => {
 			throw { handleError: err };
 		},
 		isResponsible: async (request, serviceName) => {
-			return serviceName.startsWith('NaniumTest:') ? 2 : 0;
+			return Promise.resolve(serviceName.startsWith('NaniumTest:') ? 2 : 0);
 		},
 		isResponsibleForEvent: async (eventName) => {
-			return eventName.startsWith('NaniumTest:') ? 2 : 0;
+			return Promise.resolve(eventName.startsWith('NaniumTest:') ? 2 : 0);
 		},
 	});
-	Nanium.addManager(naniumConsumer).then();
+	void Nanium.addManager(naniumConsumer);
 }
 
 describe('test browser client with mocked server', () => {
 	const browserProvider = new NaniumProviderBrowser({
-		isResponsible: async (request, serviceName) => {
-			return serviceName.startsWith('NaniumClientTest:') ? 2 : 0;
+		isResponsible: async (_request, serviceName) => {
+			return Promise.resolve(serviceName.startsWith('NaniumClientTest:') ? 2 : 0);
 		},
 		isResponsibleForEvent: async (eventName) => {
-			return eventName.startsWith('NaniumClientTest:') ? 2 : 0;
+			return Promise.resolve(eventName.startsWith('NaniumClientTest:') ? 2 : 0);
 		},
 		requestInterceptors: [new class {
 			async execute(request: ServiceRequestBase<any, any>, context: ClientServiceExecutionContext): Promise<ServiceRequestBase<any, any>> {
 				context.user = { id: 1, name: 'TestUser' };
-				return request;
+				return Promise.resolve(request);
 			}
 		}]
 	});
 
 	beforeEach(async () => {
 		initNanium();
-		Nanium.addManager(browserProvider).then();
+		void Nanium.addManager(browserProvider);
 	});
 
 	afterEach(async () => {

@@ -1,6 +1,6 @@
 import { AsyncHelper } from '../../helper';
 import {
-  TestEventSubscriptionReceiveInterceptor
+	TestEventSubscriptionReceiveInterceptor
 } from '../interceptors/server/test.receive-event-subscription.interceptor';
 import { TestExecutionContext } from '../services/testExecutionContext';
 import { session } from '../session';
@@ -15,8 +15,16 @@ describe('events \n', function (): void {
 		const sendEvent: StuffEvent = new StuffEvent(42, ':-)', new Date(2021, 12, 6));
 		let receivedEvent: StuffEvent;
 
-    it('--> subscribed handler should not have been executed\n', async () => {
+		beforeEach(async () => {
 			await TestHelper.initClientServerScenario('http', false);
+		});
+
+		afterEach(async () => {
+			await TestHelper.shutdown();
+		});
+
+
+		it('--> subscribed handler should not have been executed\n', async () => {
 			receivedEvent = undefined;
 			TestHelper.provider.config.eventSubscriptionReceiveInterceptors = [TestEventSubscriptionReceiveInterceptor];
 			session.tenant = 'WrongCompany';
@@ -35,7 +43,6 @@ describe('events \n', function (): void {
 				expect(e?.message).toBe('timeout');
 			}
 			expect(receivedEvent).toBeUndefined();
-			await TestHelper.shutdown();
 		});
 	});
 });

@@ -9,6 +9,7 @@ import { Channel } from '../../../interfaces/channel';
 import { ChannelConfig } from '../../../interfaces/channelConfig';
 import { Message } from '../../../interfaces/communicator';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
+import { NaniumLogger } from '../../../interfaces/logger';
 import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../interfaces/naniumStream';
 import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
@@ -239,12 +240,12 @@ export class NaniumHttpChannel implements Channel {
 	private async handleIncomingEventSubscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
 		// request a unique clientId
 		if (req.method.toLowerCase() === 'get') {
-			Nanium.logger.info('channel http: incoming client ID request');
+			NaniumLogger.info('channel http: incoming client ID request');
 			res.statusCode = 200;
 			const id: string = randomUUID();
 			res.write(this.config.serializer.serialize(id));
 			res.end();
-			Nanium.logger.info('channel http: sent client ID: ', id);
+			NaniumLogger.info('channel http: sent client ID: ', id);
 		}
 		// subscription
 		else if (req.method.toLowerCase() === 'post') {
@@ -267,7 +268,7 @@ export class NaniumHttpChannel implements Channel {
 
 						// store subscription information
 						if (subscriptionData.eventName) {
-							Nanium.logger.info('channel http: incoming event subscription: ', subscriptionData.eventName);
+							NaniumLogger.info('channel http: incoming event subscription: ', subscriptionData.eventName);
 							// ask the manager to execute interceptors and to decide if the subscription is accepted or not
 							try {
 								await Nanium.receiveSubscription(subscriptionData);
@@ -285,10 +286,10 @@ export class NaniumHttpChannel implements Channel {
 
 						// use keep request open for the long polling mechanism
 						else {
-							Nanium.logger.info('channel http: new long-polling request from clientId: ', subscriptionData.clientId);
+							NaniumLogger.info('channel http: new long-polling request from clientId: ', subscriptionData.clientId);
 							res.setTimeout(this.config.longPollingRequestTimeoutInSeconds * 1000, () => {
 								res.end();
-								Nanium.logger.info('channel http: long-polling request from clientId timed out: ', subscriptionData.clientId);
+								NaniumLogger.info('channel http: long-polling request from clientId timed out: ', subscriptionData.clientId);
 								// todo: self cleaning: delete this.longPollingResponses[subscriptionData.clientId];
 							});
 							this.longPollingResponses[subscriptionData.clientId] = res;
@@ -298,7 +299,7 @@ export class NaniumHttpChannel implements Channel {
 									com.broadcast({ type: 'long_polling_response_received', clientId: subscriptionData.clientId }).then();
 								}
 							}
-							Nanium.logger.info('channel http: open long-polling requests from clientId ', subscriptionData.clientId);
+							NaniumLogger.info('channel http: open long-polling requests from clientId ', subscriptionData.clientId);
 						}
 					} catch (e) {
 						reject(e);
@@ -340,7 +341,7 @@ export class NaniumHttpChannel implements Channel {
 	}
 
 	async emitEvent(event: any, subscription?: EventSubscription): Promise<void> {
-		Nanium.logger.info('channel http: emitEvent: ', event, subscription);
+		NaniumLogger.info('channel http: emitEvent: ', event, subscription);
 		await this.emitEventCore(event, subscription);
 		//todo: ### change response to boolean?
 	}
@@ -348,7 +349,7 @@ export class NaniumHttpChannel implements Channel {
 	async emitEventCore(event: any, subscription: EventSubscription, tryStart?: number): Promise<boolean> {
 		// try later if there is no open long-polling response (e.g. because of a recent event transmission)
 		if (!this.longPollingResponses[subscription.clientId] || this.longPollingResponses[subscription.clientId].writableFinished) {
-			Nanium.logger.info('channel http: emitEventCore: no open long-polling response');
+			NaniumLogger.info('channel http: emitEventCore: no open long-polling response');
 
 			// if we've tried/waited enough
 			if (tryStart && timeDiff(tryStart) > LPR_TIMEOUT_MS) {
@@ -382,7 +383,7 @@ export class NaniumHttpChannel implements Channel {
 
 		// else, transmit the data and end the long-polling request
 		else {
-			Nanium.logger.info('channel http: emitEventCore: transmit the data and end the long-polling request');
+			NaniumLogger.info('channel http: emitEventCore: transmit the data and end the long-polling request');
 			try {
 				let responseBody: string | ArrayBuffer;
 				// if events are waiting for an open long-polling-request send them together with the current event as array
@@ -401,7 +402,7 @@ export class NaniumHttpChannel implements Channel {
 				delete this.longPollingResponses[subscription.clientId];
 				delete this.pendingEvents[subscription.clientId];
 			} catch (e) {
-				Nanium.logger.error('emitEventCore', e);
+				NaniumLogger.error('emitEventCore', e);
 			}
 			return false;
 		}

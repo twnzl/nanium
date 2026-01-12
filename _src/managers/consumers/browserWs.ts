@@ -1,14 +1,15 @@
-import { Nanium } from '../../core';
-import { criticalSection, Mutex, RejectFunction, ResolveFunction } from '../../helper';
+import { criticalSection, Mutex, RejectFunction, ResolveFunction, uuid } from '../../helper';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
+import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
 import { ExecutionContext } from '../../interfaces/executionContext';
+import { NaniumLogger } from '../../interfaces/logger';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { ServiceManager } from '../../interfaces/serviceManager';
-import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../objects';
+import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../objects';
 import { getPrimaryResponseType } from '../core';
 import {
 	EmitEventMessageContent,
@@ -50,7 +51,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 		return Promise.resolve();
 	}
 
-	terminate(): Promise<void> {
+	async terminate(): Promise<void> {
 		this.websocket?.close();
 		return Promise.resolve();
 	}
@@ -80,7 +81,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			const msg: WsMessage<WsServiceRequestMessage> = {
 				type: 'service_request',
 				content: {
-					id: self.crypto.randomUUID(),
+					id: uuid(),
 					serviceName,
 					request,
 				}
@@ -146,6 +147,12 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 				);
 			}
 		});
+		// this.websocket.on('close', async (): Promise<void> => {
+		// 	console.log('browserWS: websocket closed', this.id, this.config.connectUrl);
+		// });
+		// this.websocket.on('error', async (err): Promise<void> => {
+		// 	console.log('browserWS: websocket error', err, this.config.connectUrl);
+		// });
 		this.websocket.on('message', async event => {
 			let rawMessage: WsMessage;
 			// parseMessage has different speeds for different messages and so messages overtake each other
@@ -203,9 +210,10 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	}
 
 	private async sendEventSubscription(eventName: string, additionalData: any): Promise<void> {
+		// try {
 		await new Promise<void>((resolve: (result: void) => void, reject: (err: Error | unknown) => void) => {
 			this.pendingEventSubscriptions.set(eventName, { resolve, reject });
-			sendMessage(
+			void sendMessage(
 				<WsMessage<EventSubscription>>{
 					type: 'subscribe_event',
 					content: {
@@ -214,36 +222,58 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 						additionalData: additionalData,
 					}
 				}, this.config.serializer, data => this.websocket.send(data)
-			).then(resolve).catch(reject);
+			);
 		});
+		// } catch (err) {
+		// 	console.log('browserWS: sendEventSubscription: reject', eventName, this.id, err);
+		// 	throw err;
+		// };
 	}
 
 	async unsubscribe(subscription?: EventSubscription, eventName?: string): Promise<void> {
+		// debugger;
+		if (!this.eventSubscriptions) {
+			return;
+		}
 		eventName = subscription?.eventName ?? eventName;
-		subscription = await super.unsubscribeLocal(subscription, eventName);
-		if (this.websocket?.connected) {
-			await this.websocket.connected;
-			// if no more handlers for this event registered, unsubscribe on server
-			if (!this.eventSubscriptions[eventName]?.eventHandlers?.size) {
+		if (subscription) {
+			this.eventSubscriptions[eventName]?.eventHandlers?.delete(subscription.id);
+		}
+		// if all subscriptions shall be unsubscribed or there are no more handlers for this event registered, then unsubscribe on server
+		if (!subscription || !this.eventSubscriptions[eventName]?.eventHandlers?.size) {
+			subscription = subscription ?? new EventSubscription(this.id, eventName);
+			for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
+				const interceptor: EventSubscriptionSendInterceptor<any, any>
+					= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
+				await interceptor.execute(this.eventSubscriptions[eventName]?.eventConstructor ?? eventName, subscription);
+			}
+			if (this.websocket?.connected) {
+				await this.websocket.connected;
 				await this.sendEventUnSubscription(eventName, subscription?.additionalData);
+				delete this.eventSubscriptions[eventName];
 			}
 		}
 	}
 
 	private async sendEventUnSubscription(eventName: string, additionalData: any): Promise<void> {
+		// try {
 		await new Promise<void>((resolve: (result: void) => void, reject: (err: Error | unknown) => void) => {
 			this.pendingEventUnSubscriptions.set(eventName, { resolve, reject });
-			sendMessage(
-				<WsMessage<EventSubscription>>{
-					type: 'unsubscribe_event',
-					content: {
-						clientId: this.id,
-						eventName: eventName,
-						additionalData: additionalData,
-					}
-				}, this.config.serializer, data => this.websocket.send(data)
-			).then(resolve).catch(reject);
-		});
+				void sendMessage(
+					<WsMessage<EventSubscription>>{
+						type: 'unsubscribe_event',
+						content: {
+							clientId: this.id,
+							eventName: eventName,
+							additionalData: additionalData,
+						}
+					}, this.config.serializer, data => this.websocket.send(data)
+				)
+			});
+		// } catch (err) {
+		// 	console.log('browserWS: sendEventUnSubscription: reject', eventName, this.id, err);
+		// 	throw err;
+		// }
 	}
 
 	async removeClient(_clientId: string): Promise<void> {
@@ -263,7 +293,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	private async handleServiceResponse(message: WsMessage<WsServiceChunkMessage>): Promise<void> {
 		const pendingRequest = this.pendingRequests[message.content.requestId];
 		if (!pendingRequest) {
-			Nanium.logger.error('browserWS: no pending request found for response with id: ' + message.content.requestId);
+			NaniumLogger.error('browserWS: no pending request found for response with id: ' + message.content.requestId);
 			return;
 		}
 
@@ -290,7 +320,8 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			pendingRequest.response = new NaniumBuffer(undefined, message.content.response.id);
 			pendingRequest.pendingResponseBuffers.push(pendingRequest.response);
 		} else {
-			pendingRequest.response = NaniumObject.create(message.content.response, ResponseType);
+			pendingRequest.response = NaniumObject.create(message.content.response, ResponseType, pendingRequest.request.constructor[genericTypesSymbol]);
+
 			NaniumObject.forEachProperty(pendingRequest.response, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
 				if (typeInfo && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
 					const prop = name[name.length - 1];

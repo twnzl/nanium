@@ -1,4 +1,3 @@
-import exp = require('constants');
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { TestExecutionContext } from '../services/testExecutionContext';
 import { TestHelper } from '../testHelper';

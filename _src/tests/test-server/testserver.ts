@@ -5,7 +5,7 @@ import * as path from 'path';
 import { ClusterCommunicator } from '../../communicators/clusterCommunicator';
 import { Nanium } from '../../core';
 import { ExecutionContext } from '../../interfaces/executionContext';
-import { LogLevel } from '../../interfaces/logger';
+import { LogLevel, NaniumLogger } from '../../interfaces/logger';
 import { NaniumHttpChannel } from '../../managers/providers/channels/http';
 import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws';
 import { NaniumProviderNodejs } from '../../managers/providers/nodejs';
@@ -122,7 +122,7 @@ async function runWorker() {
 }
 
 async function run(workerCount: number = 2) {
-	Nanium.logger = new TestLogger(LogLevel.warn);
+	NaniumLogger.addLogger(new TestLogger(LogLevel.warn));
 	if (cluster.isMaster) {
 		await runPrimary(workerCount);
 	} else {

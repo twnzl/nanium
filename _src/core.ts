@@ -1,77 +1,25 @@
 // todo: Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nanium as a commonJs module
-import { ServiceManager } from './interfaces/serviceManager';
-import { ExecutionContext } from './interfaces/executionContext';
-import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
-import { CronConfig, ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
 import { DateHelper } from './helper';
-import { EventSubscription } from './interfaces/eventSubscription';
-import { Logger, LogLevel } from './interfaces/logger';
 import { NaniumCommunicator } from './interfaces/communicator';
 import { EventNameOrConstructor } from './interfaces/eventConstructor';
-import { genericTypesSymbol, NaniumObject } from './objects';
+import { EventSubscription } from './interfaces/eventSubscription';
+import { ExecutionContext } from './interfaces/executionContext';
+import { NaniumLogger } from './interfaces/logger';
+import { ServiceManager } from './interfaces/serviceManager';
 import { ServiceProviderManager } from './interfaces/serviceProviderManager';
+import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
+import { CronConfig, ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
+import { genericTypesSymbol, NaniumObject } from './objects';
 
-declare var global: any;
+declare let global: any;
 
 export const managerSymbol: symbol = Symbol.for('__nanium__manager__');
-
-class ConsoleLogger implements Logger {
-	loglevel: LogLevel = LogLevel.none;
-	includeTimestamp: boolean = true;
-
-	constructor(level: LogLevel) {
-		this.loglevel = level;
-	}
-
-	trySerialize(arg: any): any {
-		if (typeof arg === 'object') {
-			try {
-				return JSON.stringify(arg);
-			} catch {
-			}
-		}
-		return arg;
-	}
-
-	time(): string {
-		return (this.includeTimestamp ? new Date().toISOString() + ': ' : '');
-	}
-
-	error(...args: any[]): void {
-		if (this.loglevel >= LogLevel.error) {
-			console.error(this.time() + 'nanium: ', ...args.map(a => {
-				if (a?.message) {
-					return a.message + a.stack;
-				} else {
-					return this.trySerialize(a);
-				}
-			}));
-		}
-	}
-
-	warn(...args: any[]): void {
-		if (this.loglevel >= LogLevel.warn) {
-			console.warn(this.time() + 'nanium: ', ...args.map(a => {
-				return this.trySerialize(a);
-			}));
-		}
-	}
-
-	info(...args: any[]): void {
-		if (this.loglevel >= LogLevel.info) {
-			console.log(this.time() + 'nanium: ', ...args.map(a => {
-				return this.trySerialize(a);
-			}));
-		}
-	}
-}
 
 export class CNanium {
 	private _isShutDownInitiated: boolean;
 
 	managers: ServiceManager[] = [];
 	queues: ServiceRequestQueue[] = [];
-	logger: Logger = new ConsoleLogger(LogLevel.warn);
 
 	// Supports functions to communicate with other processes or threads of the same server instance or even other hosted
 	// server instances of the same nanium scope.
@@ -161,14 +109,24 @@ export class CNanium {
 		return subscription;
 	}
 
-	async unsubscribe(subscription?: EventSubscription, eventName?: string, broadcast: boolean = true): Promise<void> {
+	async unsubscribe(subscriptionOrManager?: EventSubscription | ServiceManager, eventName?: string, broadcast: boolean = true): Promise<void> {
+		let subscription: EventSubscription;
+		let manager: ServiceManager;
+		if (subscriptionOrManager) {
+			if ('eventName' in subscriptionOrManager) {
+				subscription = subscriptionOrManager as EventSubscription;
+			} else {
+				manager = subscriptionOrManager as ServiceManager;
+			}
+		}
 		eventName = eventName ?? subscription?.eventName;
-		const manager = subscription ? subscription[managerSymbol] : undefined;
+		manager ??= subscription ? subscription[managerSymbol] : undefined;
 		if (manager) {
 			await manager.unsubscribe(subscription, eventName);
 		} else {
-			const responsibleManager: ServiceManager = await this.getResponsibleManagerForEvent(eventName, subscription);
-			await responsibleManager?.unsubscribe(subscription, eventName);
+			for (const manager of this.managers) {
+				await manager.unsubscribe(subscription, eventName);
+			}
 		}
 		if (broadcast) {
 			this.communicators.forEach(c => c.broadcastUnsubscription(subscription));
@@ -199,7 +157,7 @@ export class CNanium {
 		const priorities: number[] = await Promise.all(
 			this.managers.map((manager: ServiceManager) => manager.isResponsible(request, serviceName)));
 		const maxPriority = Math.max(...priorities);
-		let idx: number = priorities.findIndex(p => p === maxPriority);
+		const idx: number = priorities.findIndex(p => p === maxPriority);
 		if (idx >= 0 && priorities[idx] > 0) {
 			return this.managers[idx];
 		}
@@ -213,7 +171,7 @@ export class CNanium {
 		const priorities: number[] = await Promise.all(
 			this.managers.map((manager: ServiceManager) => manager.isResponsibleForEvent(eventName, data, context)));
 		const maxPriority = Math.max(...priorities);
-		let idx: number = priorities.findIndex(p => p === maxPriority);
+		const idx: number = priorities.findIndex(p => p === maxPriority);
 		if (idx >= 0 && priorities[idx] > 0) {
 			return this.managers[idx];
 		}
@@ -225,7 +183,7 @@ export class CNanium {
 		const priorities: number[] = await Promise.all(
 			this.queues.map((queue: ServiceRequestQueue) => queue.isResponsible(entry, executionContext)));
 		const maxPriority = Math.max(...priorities);
-		let idx: number = priorities.findIndex(p => p === maxPriority);
+		const idx: number = priorities.findIndex(p => p === maxPriority);
 		if (idx >= 0 && priorities[idx] > 0) {
 			return this.queues[idx];
 		}
@@ -236,7 +194,7 @@ export class CNanium {
 		try {
 			await this.executeTimeControlled(entry, requestQueue);
 		} catch (e) {
-			Nanium.logger.error(e.message, e.stack);
+			NaniumLogger.error(e.message, e.stack);
 		}
 	}
 
@@ -282,8 +240,8 @@ export class CNanium {
 				entry.endDate = new Date();
 				await requestQueue.updateEntry(entry);
 			} catch (e) {
-				await Nanium.logger.error(error);
-				await Nanium.logger.error(e);
+				await NaniumLogger.error(error);
+				await NaniumLogger.error(e);
 			}
 		}
 	}
@@ -304,7 +262,7 @@ export class CNanium {
 			lastRun = new Date();
 			await this.start(entry, requestQueue);
 		} catch (e) {
-			Nanium.logger.error(e);
+			NaniumLogger.error(e);
 		} finally {
 			entry = await requestQueue.refreshEntry(entry);
 			let nextRun: Date = this.calculateNextRun(entry, lastRun);

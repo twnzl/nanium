@@ -11,14 +11,15 @@
     "node"
   ],
   "modulePathIgnorePatterns": [
-    "_src/tests/browser-client/*"
+    "_src/tests/browser-client/*",
+    "_src/tests/browser/*"
   ],
   "forceExit": true,
   "detectOpenHandles": true,
   "setupFilesAfterEnv": [
     "@alex_neo/jest-expect-message"
   ],
-  "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(ts)$",
+  "testRegex": "(/__tests__/.*|(\\.|/)(test|spec|e2e))\\.(ts)$",
   "coverageDirectory": "_tmp/coverage",
   "collectCoverageFrom": [
     "_src/**/*.{ts,js}"

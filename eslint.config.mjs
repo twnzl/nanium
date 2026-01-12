@@ -50,6 +50,10 @@ export default defineConfig([
         },
       ],
     },
+    "ignores": [
+      "**/node_modules/**",
+      "vitest.config.*",
+    ]
   },
   // StencilJS-specific configuration
   {

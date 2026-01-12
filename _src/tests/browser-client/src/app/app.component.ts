@@ -1,11 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { Nanium } from '../../../../core';
 import { AsyncHelper } from '../../../../helper';
+import { EventSubscription } from '../../../../interfaces/eventSubscription';
 import { NaniumBuffer } from '../../../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../../../interfaces/naniumStream';
 import { NaniumConsumerBrowserHttp } from '../../../../managers/consumers/browserHttp';
+import { NaniumConsumerBrowserWebsocket } from '../../../../managers/consumers/browserWs';
+import { NaniumJsonSerializer } from '../../../../serializers/json';
 import { Stuff2Event } from '../../../events/test/stuff2Event';
 import { StuffEvent } from '../../../events/test/stuffEvent';
+import { TestClientRequestInterceptor } from '../../../interceptors/client/test.request.interceptor';
+import { TestClientResponseInterceptor } from '../../../interceptors/client/test.response.interceptor';
+import { TestEventSubscriptionSendInterceptor } from '../../../interceptors/client/test.send-event-subscription.interceptor';
 import { TestBufferRequest } from '../../../services/test/buffer.contract';
 import { TestDto } from '../../../services/test/contractparts';
 import { TestGetRequest } from '../../../services/test/get.contract';
@@ -311,21 +317,78 @@ export class AppComponent implements OnInit {
 	}
 
 	async tmp() {
-		this.testService.initWs(8080, 1);
-		const responseStream: NaniumStream<TestDto> = await new TestStreamedQueryRequest(
-			{ amount: 6, msGapTime: 0 }, { token: '1234' }).execute();
-		const dtoList: TestDto[] = await responseStream.toPromise();
-		if (dtoList.length !== 6) {
-			throw new Error('length of result list should be correct but received: ' + dtoList.length);
-		}
-		if (dtoList[0].formatted() !== '1:1') {
-			throw new Error('dtoList[0].formatted() should be "1:1" but received: ' + dtoList[0].formatted());
-		}
-		if (dtoList[2].formatted() !== '3:3') {
-			throw new Error('dtoList[2].formatted() should be "3:3" but received: ' + dtoList[2].formatted());
-		}
-		console.log('✅ tmp: received expected result');
+		// this.testService.initWs(8080, 1);
+		session.token = '1234';
+		session.tenant = 'Company1';
+		await addHttpConsumer('http://localhost:8080', 1, 0);
+		await addHttpConsumer('http://localhost:8081', 1, 0);
+		const manager1 = await addWebsocketConsumer('ws://localhost:8080', 0, 1);
+		const manager2 = await addWebsocketConsumer('ws://localhost:8081', 0, 1);
+		const manager3 = await addWebsocketConsumer('ws://localhost:8081', 0, 1); // for two different client-IDs connected with the same server
+
+		let event1: StuffEvent;
+		let event2: StuffEvent;
+		session.token = '1234'; // reset right credentials
+		session.tenant = 'Company1';
+		const subscription1: EventSubscription = await StuffEvent.subscribe((event) => {
+			event1 = event;
+		}, undefined, manager1);
+		session.token = '5678'; // other tenant
+		session.tenant = 'Company2';
+		const subscription2: EventSubscription = await StuffEvent.subscribe((event) => {
+			event2 = event;
+		}, undefined, manager2);
+		session.token = '1234'; // reset right credentials
+		session.tenant = 'Company1';
+		await new TestGetRequest({ input1: 'hello world' }).execute(); // causes an emission of StuffCreatedEvent
+		// await AsyncHelper.waitUntil(() => !!event1, 100, 2000);
+		await AsyncHelper.pause(1000);
+		await subscription1.unsubscribe();
+		await subscription2.unsubscribe();
 
 	}
 	//#endregion ws
+}
+
+async function addHttpConsumer(
+	baseUrl: string = 'http://localhost:8080',
+	serviceResponsibility: number = 1,
+	eventResponsibility: number = 1
+): Promise<NaniumConsumerBrowserHttp> {
+	const serializer = new NaniumJsonSerializer();
+	serializer.packageSeparator = '\0';
+	const naniumConsumer = new NaniumConsumerBrowserHttp({
+		apiUrl: baseUrl + '/api',
+		apiEventUrl: baseUrl + '/events',
+		serializer: serializer,
+		requestInterceptors: [TestClientRequestInterceptor],
+		responseInterceptors: [TestClientResponseInterceptor],
+		eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
+		isResponsible: () => Promise.resolve(serviceResponsibility),
+		isResponsibleForEvent: () => Promise.resolve(eventResponsibility),
+		handleError: async (err: any): Promise<any> => Promise.reject({ handleError: err })
+	});
+	await Nanium.addManager(naniumConsumer);
+	return naniumConsumer;
+}
+
+async function addWebsocketConsumer(
+	baseUrl: string = 'ws://localhost:8080',
+	serviceResponsibility: number = 1,
+	eventResponsibility: number = 1
+): Promise<NaniumConsumerBrowserWebsocket> {
+	const serializer = new NaniumJsonSerializer();
+	serializer.packageSeparator = '\0';
+	const naniumConsumer = new NaniumConsumerBrowserWebsocket({
+		connectUrl: baseUrl,
+		serializer: serializer,
+		requestInterceptors: [TestClientRequestInterceptor],
+		responseInterceptors: [TestClientResponseInterceptor],
+		eventSubscriptionSendInterceptors: [TestEventSubscriptionSendInterceptor],
+		isResponsible: () => Promise.resolve(serviceResponsibility),
+		isResponsibleForEvent: () => Promise.resolve(eventResponsibility),
+		handleError: (err: any) => Promise.reject({ handleError: err }),
+	});
+	await Nanium.addManager(naniumConsumer);
+	return naniumConsumer;
 }

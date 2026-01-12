@@ -3,11 +3,12 @@ import { ClientRequest, RequestOptions as HttpRequestOptions } from 'http';
 import * as https from 'https';
 import { RequestOptions as HttpsRequestOptions } from 'https';
 import { URL } from 'url';
-import { Nanium } from '../../core';
+import { ResolveFunction } from '../../helper';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { ExecutionContext } from '../../interfaces/executionContext';
+import { NaniumLogger } from '../../interfaces/logger';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { NaniumStream } from '../../interfaces/naniumStream';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
@@ -39,7 +40,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 				requestInterceptors: [],
 				serializer: new NaniumJsonSerializer(),
 				handleError: (response) => {
-					Nanium.logger.error(response);
+					NaniumLogger.error(response);
 					return Promise.resolve();
 				},
 				isResponsible: async (): Promise<number> => Promise.resolve(1),
@@ -55,15 +56,17 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 	async init(): Promise<void> {
 	}
 
-	async terminate(): Promise<void> {
+	terminate(): Promise<void> {
+	// cancel pending requests
 		for (const xhr of this.activeRequests) {
 			xhr.destroy();
 		}
 		this.activeRequests = [];
-		this.httpCore.id = undefined;
-		this.httpCore.terminated = true;
+
+		this.httpCore.shutdown();
 		this.httpCore = new HttpCore(this.config,
 			async (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer, headers?: any) => await this.httpRequest(method, url, body, headers));
+		return Promise.resolve();
 	}
 
 	async isResponsible(request: any, serviceName: string): Promise<number> {
@@ -101,7 +104,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					});
 					response.on('end', async () => {
 						this.activeRequests = this.activeRequests.filter(r => r !== req);
-						let buffer = Buffer.concat(chunks);
+						const buffer = Buffer.concat(chunks);
 						// let arrayBuffer: Uint8Array = new Uint8Array(buffer, 0, buffer.length);
 						if (response.statusCode === 500) {
 							reject(buffer);
@@ -117,7 +120,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 					req.write(body);
 				}
 				this.activeRequests.push(req);
-				Nanium.logger.info('active HTTP requests.d ', this.activeRequests);
+				NaniumLogger.info('active HTTP requests.d ', this.activeRequests);
 				req.end();
 			} catch (e) {
 				this.activeRequests = this.activeRequests.filter(r => r !== req);
@@ -166,7 +169,7 @@ export class NaniumConsumerNodejsHttp implements ServiceManager {
 		const resultStream: NaniumStream<T> = new NaniumStream(streamItemConstructor);
 
 		// transmission
-		return new Promise<NaniumStream<T>>((resolve: Function) => {
+		return new Promise<NaniumStream<T>>((resolve: ResolveFunction<NaniumStream<T>>) => {
 
 			// transmission
 			const uri: URL = new URL(this.config.apiUrl);

@@ -1,9 +1,10 @@
-import { Nanium } from '../../core';
+import { RejectFunction, ResolveFunction } from '../../helper';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
 import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
 import { ExecutionContext } from '../../interfaces/executionContext';
+import { NaniumLogger } from '../../interfaces/logger';
 import { NaniumBuffer } from '../../interfaces/naniumBuffer';
 import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
 import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../objects';
@@ -31,19 +32,29 @@ interface NaniumHttpConfig extends ServiceConsumerConfig {
 export class HttpCore {
 	public id: string;
 	public eventSubscriptions: { [eventName: string]: ConsumerEventSubscription };
-	public terminated: boolean = false;
+
+	private terminated: boolean = false;
+	private startLongPollingTimeout: ReturnType<typeof setTimeout>;
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => Promise<ArrayBufferView>
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => Promise<ArrayBufferView | ArrayBuffer>
 	) {
+	}
+
+	shutdown() {
+		if (this.startLongPollingTimeout) {
+			clearTimeout(this.startLongPollingTimeout);
+		}
+		this.id = undefined;
+		this.terminated = true;
 	}
 
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
 		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
 		const buffers: NaniumBuffer[] = [];
 		let body: string | ArrayBuffer | FormData = this.config.serializer.serialize({ serviceName, request });
-		NaniumObject.forEachProperty(request, (name: string[], parent?: Object, typeInfo?: NaniumPropertyInfoCore) => {
+		NaniumObject.forEachProperty(request, (name: string[], parent?: object, typeInfo?: NaniumPropertyInfoCore) => {
 			if (
 				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
 				(parent[name[name.length - 1]]?.constructor && parent[name[name.length - 1]]?.constructor['naniumBufferInternalValueSymbol'])
@@ -68,7 +79,7 @@ export class HttpCore {
 
 			// send the request
 			const ResponseType = getPrimaryResponseType(request);
-			const data: ArrayBufferView = await this.httpRequest('POST', uri, body);
+			const data = await this.httpRequest('POST', uri, body);
 			if (data === undefined || data === null) {
 				return data;
 			} else if (data.byteLength === 0) {
@@ -105,14 +116,13 @@ export class HttpCore {
 		}
 	}
 
-
 	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		const eventName: string = typeof eventNameOrConstructor === 'string' ? eventNameOrConstructor : eventNameOrConstructor.eventName;
-		return await new Promise<EventSubscription>(async (resolve: Function, reject: Function) => {
+		return await new Promise<EventSubscription>(async (resolve: ResolveFunction<EventSubscription>, reject: RejectFunction) => {
 			// if not yet done, open long-polling request to receive events, do not use await because it is a long-polling request ;-)
 			if (!this.eventSubscriptions) {
 				this.eventSubscriptions = {};
-				this.startLongPolling().then();
+				void this.startLongPolling();
 			}
 			let retries: number = 0;
 			const core: () => void = () => {
@@ -131,7 +141,7 @@ export class HttpCore {
 				subscription.context = context;
 
 				// add basics to eventSubscriptions for this eventName and inform the server
-				if (!this.eventSubscriptions.hasOwnProperty(eventName)) {
+				if (!(eventName in this.eventSubscriptions)) {
 					this.eventSubscriptions[eventName] = {
 						eventName: eventName,
 						eventConstructor: typeof eventNameOrConstructor === 'string' ? undefined : eventNameOrConstructor,
@@ -178,12 +188,13 @@ export class HttpCore {
 		if (subscription) {
 			this.eventSubscriptions[eventName]?.eventHandlers?.delete(subscription.id);
 		}
+		// if all subscriptions shall be unsubscribed or there are no more handlers for this event registered, then unsubscribe on server
 		if (!subscription || !this.eventSubscriptions[eventName]?.eventHandlers?.size) {
 			subscription = subscription ?? new EventSubscription(this.id, eventName);
 			for (const interceptorOrClass of this.config.eventSubscriptionSendInterceptors ?? []) {
 				const interceptor: EventSubscriptionSendInterceptor<any, any>
 					= typeof interceptorOrClass === 'function' ? new interceptorOrClass() : interceptorOrClass;
-				await interceptor.execute(this.eventSubscriptions[eventName].eventConstructor ?? eventName, subscription);
+				await interceptor.execute(this.eventSubscriptions[eventName]?.eventConstructor ?? eventName, subscription);
 			}
 			const requestBody: string | ArrayBuffer = this.config.serializer.serialize({
 				clientId: this.id,
@@ -194,7 +205,7 @@ export class HttpCore {
 			delete this.eventSubscriptions[eventName];
 			const error = await this.httpRequest('POST', this.config.apiEventUrl + '/delete' + '?' + eventName, requestBody);
 			if (error.byteLength) {
-				Nanium.logger.error(this.config.serializer.deserialize(error));
+				NaniumLogger.error(this.config.serializer.deserialize(error));
 				return;
 			}
 		}
@@ -222,14 +233,24 @@ export class HttpCore {
 		}
 		let eventResponse: NaniumEventResponse;
 		try {
-			if (!(await this.trySetClientId())) {
-				setTimeout(() => this.startLongPolling(true), 5000);
+			const success = await this.trySetClientId();
+			if (this.terminated) {
 				return;
 			}
+			if (success) {
+				if (this.startLongPollingTimeout) {
+					clearTimeout(this.startLongPollingTimeout);
+				}
+				this.startLongPollingTimeout = undefined;
+			} else {
+				this.startLongPollingTimeout = setTimeout(() => this.startLongPolling(true), 5000);
+				return;
+			}
+
 			if (resendSubscriptions) {
 				let subscription: EventSubscription;
 				for (const eventName in this.eventSubscriptions) {
-					if (this.eventSubscriptions.hasOwnProperty(eventName)) {
+					if (eventName in this.eventSubscriptions) {
 						subscription = new EventSubscription(this.id, eventName);
 						await this.sendEventSubscription(this.eventSubscriptions[eventName].eventConstructor ?? eventName, subscription);
 					}
@@ -246,15 +267,19 @@ export class HttpCore {
 				throw new Error(e);
 			} else if (!this.terminated) {
 				// the server is not reachable or something like this so retry at some later time and resend subscriptions (true)
-				setTimeout(() => this.startLongPolling(true), 5000);
+				this.startLongPollingTimeout = setTimeout(() => this.startLongPolling(true), 5000);
 				return;
 			}
 		}
 
+		if (this.terminated) {
+			return;
+		}
+
 		// start next long-polling request no matter if the last one run into timeout or sent an event
 		// (the timeout is necessary to prevent growing call stack with each event)
-		setTimeout(async () => {
-			this.startLongPolling().then();
+		this.startLongPollingTimeout = setTimeout(() => {
+			void this.startLongPolling();
 		});
 
 		// if an event (or multiple events at the same time) has arrived handle it

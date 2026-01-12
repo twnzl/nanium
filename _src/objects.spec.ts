@@ -1,9 +1,8 @@
+import { LogLevel, NaniumLogger } from './interfaces/logger';
 import { AnySimple, JSONSchema, NaniumObject, NaniumPropertyInfoCore, Type } from './objects';
-import { Nanium } from './core';
-import { TestLogger } from './tests/testLogger';
-import { LogLevel } from './interfaces/logger';
-import { TestGetRequest, TestGetRequestBody, TestGetResponseBody } from './tests/services/test/get.contract';
 import { ServiceResponseBase } from './tests/services/serviceResponseBase';
+import { TestGetRequest, TestGetRequestBody, TestGetResponseBody } from './tests/services/test/get.contract';
+import { TestLogger } from './tests/testLogger';
 
 class MyTestClass2 extends NaniumObject<MyTestClass2> {
 	@Type(Number) aNumber?: number;
@@ -25,7 +24,7 @@ class MyTestClass<T> extends NaniumObject<MyTestClass<T>> {
 	@Type(Array, Date) aDateArray?: Date[];
 	@Type(MyTestClass) sub1?: MyTestClass<T>;
 	@Type(MyTestClass, { 'T': Date }) sub2?: MyTestClass<Date>;
-	@Type(Object) anyObject?: Object;
+	@Type(Object) anyObject?: object;
 	@Type(Object, MyTestClass2) dict?: MyTestClass2;
 	@Type(Array, MyTestClass2) anObjectArray?: MyTestClass2;
 	@Type(Array, AnySimple) anySimpleArray?: (string | number)[];
@@ -45,14 +44,14 @@ class D {
 class MyTestClass3<TConfig> extends NaniumObject<MyTestClass3<TConfig>> {
 	@Type(Number) no?: number;
 	@Type(String) str?: string;
-	@Type(Object, (me, p: any, pp: MyTestClass3<String | Date>) => pp.str === 's' ? String : Date)
-	dict?: { [key: string]: String | Date };
+	@Type(Object, (me, p: any, pp: MyTestClass3<string | Date>) => pp.str === 's' ? String : Date)
+	dict?: { [key: string]: string | Date };
 	@Type(Array, (me: S | D) => me.type === 's' ? S : D)
 	arr?: (S | D)[];
 	@Type((me, p: MyTestClass3<any>) => p.str === 's' ? String : Date)
 	aGeneric?: TConfig;
-	@Type(MyTestClass, { 'T': (me, p: MyTestClass<String | Date>) => p.aString === 's' ? String : Date })
-	aSubGeneric?: MyTestClass<String | Date>;
+	@Type(MyTestClass, { 'T': (me, p: MyTestClass<string | Date>) => p.aString === 's' ? String : Date })
+	aSubGeneric?: MyTestClass<string | Date>;
 	test: boolean;
 }
 
@@ -208,10 +207,11 @@ describe('nanium objects', function (): void {
 
 	describe('create', function (): void {
 		let obj: MyTestClass<MyTestClass2>;
-		let testLogger = new TestLogger(LogLevel.info);
+		let testLogger: TestLogger;
 
 		beforeEach(() => {
-			Nanium.logger = testLogger;
+			testLogger = new TestLogger(LogLevel.info);
+			NaniumLogger.addLogger(testLogger);
 			obj = new MyTestClass();
 			obj.aBoolean = true;
 			obj.theGeneric = new MyTestClass2();

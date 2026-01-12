@@ -19,7 +19,6 @@ export class WebSocketClient {
 
 	async connect(): Promise<void> {
 		this.connected = new ExtendedPromise<void>();
-
 		if (typeof window !== 'undefined' && window.WebSocket) {
 			// Browser environment
 			this.socket = new WebSocket(this.url);
@@ -38,9 +37,14 @@ export class WebSocketClient {
 	}
 
 	close(): void {
-		this.closedOnPurpose = true;
-		this.socket.close();
-		this.connected?.reject();
+		try {
+		//debugger;
+			this.closedOnPurpose = true;
+			this.socket.close();
+			this.connected?.reject();
+		} catch (err) {
+			console.error('Error while closing WebSocket:', err);
+		}
 	}
 
 	async send(data: string | ArrayBuffer | ArrayBufferView): Promise<void> {

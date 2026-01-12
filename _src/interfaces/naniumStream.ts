@@ -1,4 +1,4 @@
-import { ExtendedPromise } from '../helper';
+import { ExtendedPromise, uuid } from '../helper';
 import {
 	ConstructorType,
 	genericTypesSymbol,
@@ -10,7 +10,6 @@ import {
 } from '../objects';
 import { NaniumBuffer } from './naniumBuffer';
 
-let uuidCounter: number = 0;
 
 type Chunk<T> = { value: T } | { end: true } | { error: any };
 
@@ -31,7 +30,7 @@ export class NaniumStream<T = any> implements AsyncIterable<T> {
 	constructor(itemConstructor?: new (...data: any) => T, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
 		this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
 		this[genericTypesSymbol] = genericTypeInfo;
-		this.id = id ?? Date.now() + '-' + Math.random().toFixed(20).substring(2) + '-' + (++uuidCounter);
+		this.id = id ?? uuid()
 	}
 
 	//#region sender/writer
