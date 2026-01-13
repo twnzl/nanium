@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Nanium } from '../../core';
 import { NaniumConsumerBrowserHttp } from '../../managers/consumers/browserHttp';
 import { NaniumProviderBrowser } from '../../managers/providers/browser';

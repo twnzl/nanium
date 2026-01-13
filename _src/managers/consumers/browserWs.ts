@@ -33,7 +33,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 	private pendingEventSubscriptions: Map<string, { resolve: ResolveFunction, reject: RejectFunction }> = new Map();
 	private pendingEventUnSubscriptions: Map<string, { resolve: ResolveFunction, reject: RejectFunction }> = new Map();
 	private pendingRequests: { [key: string]: PendingRequestInfo } = {};
-	private parseMessageMutex: Mutex;
+	private parseMessageMutex: Mutex = new Mutex();
 	// private responsePromises: Promise<unknown>[] = [];
 
 	constructor(config?: NaniumConsumerBrowserWebsocketConfig) {
@@ -134,9 +134,8 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 	private async initWebSocket() {
 		if (this.websocket) {
-			return;
+			return this.websocket.connected;
 		}
-		this.parseMessageMutex = new Mutex();
 		this.websocket = new WebSocketClient(this.config.connectUrl);
 		this.websocket.on('open', async (): Promise<void> => {
 			// if reconnected, resubscribe to events
@@ -200,6 +199,7 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 
 	async subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: EventHandler, context?: ExecutionContext): Promise<EventSubscription> {
 		await this.initWebSocket();
+		// try {
 		const subscription: EventSubscription = await super.subscribeLocal(eventNameOrConstructor, handler);
 		subscription.context = context;
 		// if subscription for this event name has not already been sent to server - send it
@@ -207,6 +207,9 @@ export class NaniumConsumerBrowserWebsocket extends ConsumerBase<NaniumConsumerB
 			await this.sendEventSubscription(subscription.eventName, subscription.additionalData);
 		}
 		return subscription;
+		// } catch (e) {
+		// 	console.error(e);
+		// }
 	}
 
 	private async sendEventSubscription(eventName: string, additionalData: any): Promise<void> {

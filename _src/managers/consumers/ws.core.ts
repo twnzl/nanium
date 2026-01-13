@@ -15,10 +15,17 @@ export class WebSocketClient {
 	constructor(url: string, reconnectInterval: number = 1000) {
 		this.url = url;
 		this.reconnectInterval = reconnectInterval;
+		this.connected = new ExtendedPromise<void>();
 	}
 
 	async connect(): Promise<void> {
-		this.connected = new ExtendedPromise<void>();
+		if (this.connected.isResolved) {
+			if (this.socket.readyState === (WebSocket as any).OPEN) {
+				return this.connected;
+			}
+			this.connected.cancel();
+			this.connected = new ExtendedPromise();
+		}
 		if (typeof window !== 'undefined' && window.WebSocket) {
 			// Browser environment
 			this.socket = new WebSocket(this.url);
@@ -48,13 +55,16 @@ export class WebSocketClient {
 	}
 
 	async send(data: string | ArrayBuffer | ArrayBufferView): Promise<void> {
-		if (this.socket && this.socket.readyState === (WebSocket as any).OPEN) {
-			this.socket.send(data);
-			while (this.socket.bufferedAmount > this.maxBufferSize) {
-				await AsyncHelper.pause(10); // Wait if buffer is too full
-			}
-		} else {
-			throw new Error('WebSocket is not open. Unable to send message.');
+		if (!this.socket || !this.connected) {
+			throw new Error('WebSocket not connected.');
+		}
+		await this.connected;
+		if (this.socket.readyState !== (WebSocket as any).OPEN) {
+			throw new Error('WebSocket is not open.');
+		}
+		this.socket.send(data);
+		while (this.socket.bufferedAmount > this.maxBufferSize) {
+			await AsyncHelper.pause(10); // Wait if buffer is too full
 		}
 	}
 

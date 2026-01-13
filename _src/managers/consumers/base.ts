@@ -1,3 +1,4 @@
+import { uuid } from '../../helper';
 import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
 import { EventHandler } from '../../interfaces/eventHandler';
 import { EventSubscription } from '../../interfaces/eventSubscription';
@@ -17,7 +18,7 @@ export interface ConsumerEventSubscription {
 export class ConsumerBase<TConfig extends ServiceConsumerConfig> {
 	config: TConfig;
 
-	protected id: string = crypto.randomUUID();
+	protected id: string = uuid();
 	protected eventSubscriptions: { [eventName: string]: ConsumerEventSubscription } = {};
 
 	constructor(config?: ServiceConsumerConfig) {
@@ -50,7 +51,7 @@ export class ConsumerBase<TConfig extends ServiceConsumerConfig> {
 			await interceptor.execute(eventNameOrConstructor, subscription);
 		}
 		// add subscription info
-		if (!this.eventSubscriptions.hasOwnProperty(subscription.eventName)) {
+		if (!(subscription.eventName in this.eventSubscriptions)) {
 			this.eventSubscriptions[subscription.eventName] = {
 				id: subscription.id,
 				eventName: subscription.eventName,
