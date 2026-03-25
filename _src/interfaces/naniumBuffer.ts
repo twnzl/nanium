@@ -454,97 +454,97 @@ export class NaniumBufferReadable {
 			this.data.byteOffset + startIdx,
 			length
 		);
-		this.readIndex += length;
+		this.readIndex = startIdx + length;
 		return new TextDecoder(encoding).decode(stringView);
 	};
 
 	readFloat32LE(idx: number = this.readIndex): number {
-		this.readIndex += 4;
+		this.readIndex = idx + 4;
 		return this.data.getFloat32(idx, true);
 	}
 
 	readFloat64LE(idx: number = this.readIndex): number {
-		this.readIndex += 8;
+		this.readIndex = idx + 8;
 		return this.data.getFloat64(idx, true);
 	}
 
 	readInt8(idx: number = this.readIndex) {
-		this.readIndex += 1;
+		this.readIndex = idx + 1;
 		return this.data.getInt8(idx);
 	}
 
 	readInt16LE(idx: number = this.readIndex) {
-		this.readIndex += 2;
+		this.readIndex = idx + 2;
 		return this.data.getInt16(idx, true);
 	}
 
 	readInt32LE(idx: number = this.readIndex) {
-		this.readIndex += 4;
+		this.readIndex = idx + 4;
 		return this.data.getInt32(idx, true);
 	}
 	readInt64LE(idx: number = this.readIndex): bigint {
-		this.readIndex += 8;
+		this.readIndex = idx + 8;
 		return this.data.getBigInt64(idx, true);
 	}
 
 	readUInt8(idx: number = this.readIndex) {
-		this.readIndex += 1;
+		this.readIndex = idx + 1;
 		return this.data.getUint8(idx);
 	}
 
 	readUInt16LE(idx: number = this.readIndex) {
-		this.readIndex += 2;
+		this.readIndex = idx + 2;
 		return this.data.getUint16(idx, true);
 	}
 
 	readUInt32LE(idx: number = this.readIndex): number {
-		this.readIndex += 4;
+		this.readIndex = idx + 4;
 		return this.data.getUint32(idx, true);
 	}
 
 	readUInt64LE(idx: number = this.readIndex): bigint {
-		this.readIndex += 8;
+		this.readIndex = idx + 8;
 		return this.data.getBigUint64(idx, true);
 	}
 
 	// BE
 	readFloat32BE(idx?: number): number {
-		this.readIndex += 4;
+		this.readIndex = idx + 4;
 		return this.data.getFloat32(idx, false);
 	}
 
 	readFloat64BE(idx?: number): number {
-		this.readIndex += 8;
+		this.readIndex = idx + 8;
 		return this.data.getFloat64(idx, false);
 	}
 
 	readInt16BE(idx: number = this.readIndex): number {
-		this.readIndex += 2;
+		this.readIndex = idx + 2;
 		return this.data.getInt16(idx, false);
 	}
 
 	readInt32BE(idx: number = this.readIndex): number {
-		this.readIndex += 4;
+		this.readIndex = idx + 4;
 		return this.data.getInt16(idx, false);
 	}
 
 	readInt64BE(idx?: number): bigint {
-		this.readIndex += 8;
+		this.readIndex = idx + 8;
 		return this.data.getBigInt64(idx, false);
 	}
 
 	readUInt16BE(idx: number = this.readIndex): number {
-		this.readIndex += 2;
+		this.readIndex = idx + 2;
 		return this.data.getUint16(idx, false);
 	}
 
 	readUInt32BE(idx: number = this.readIndex): number {
-		this.readIndex += 4;
+		this.readIndex = idx + 4;
 		return this.data.getUint32(idx, false);
 	}
 
 	readUInt64BE(idx?: number): bigint {
-		this.readIndex += 8;
+		this.readIndex = idx + 8;
 		return this.data.getBigUint64(idx, false);
 	}
 	//#endregion Read Methods
