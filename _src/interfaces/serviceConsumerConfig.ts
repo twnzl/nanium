@@ -1,7 +1,7 @@
-import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
-import { NaniumSerializer } from './serializer';
-import { EventSubscriptionSendInterceptor } from './eventSubscriptionInterceptor';
 import { ConstructorType } from '../objects';
+import { EventSubscriptionSendInterceptor } from './eventSubscriptionInterceptor';
+import { NaniumSerializer } from './serializer';
+import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
 import { ServiceResponseInterceptor } from './serviceResponseInterceptor';
 
 export interface ServiceConsumerConfig {

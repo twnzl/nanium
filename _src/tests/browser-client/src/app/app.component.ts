@@ -17,6 +17,7 @@ import { TestGetRequest } from '../../../services/test/get.contract';
 import { TestGetBinaryRequest } from '../../../services/test/getBinary.contract';
 import { TestStreamedBinaryRequest } from '../../../services/test/streamedBinary.contract';
 import { TestStreamedQueryRequest } from '../../../services/test/streamedQuery.contract';
+import { TestStreamsRequest } from '../../../services/test/streams.contract';
 import { TestUpstreamBinaryRequest } from '../../../services/test/upstreamBinary.contract';
 import { TestUpstreamObjectsRequest } from '../../../services/test/upstreamObjects.contract';
 import { session } from '../../../session';
@@ -287,7 +288,7 @@ export class AppComponent implements OnInit {
 	}
 
 	async wsUpstreamDataTimeout() {
-		this.testService.initWs(8080, 1);
+		this.testService.initWs(8080, 1, 1000);
 		const upstream1 = new NaniumStream<NaniumBuffer>();
 		const request = new TestUpstreamBinaryRequest({});
 		request.body.upstream1 = upstream1;
@@ -316,7 +317,54 @@ export class AppComponent implements OnInit {
 	}
 
 	async tmp() {
-		console.log('✅ tmp: nothing to do');
+		this.testService.initWs(8080, 1);
+		const request = new TestStreamsRequest({
+			id: '1',
+			stream1: new NaniumStream(),
+			stream2: new NaniumStream(),
+		});
+
+		// get response from server
+		const response = await request.execute();
+
+		// handle chunks from response streams
+		const data1: NaniumBuffer = new NaniumBuffer();
+		const data2: TestDto[] = [];
+		const responseStreamsDonePromise = Promise.all([
+			(async () => {
+				for await (const chunk of response.stream1) {
+					data1.write(chunk);
+				}
+			})(),
+			(async () => {
+				for await (const dto of response.stream2) {
+					data2.push(dto);
+				}
+			})(),
+		]);
+
+		// stream input to server
+		try {
+			const binary = new TextEncoder().encode('123');
+			request.body.stream1.write(new NaniumBuffer(binary));
+			request.body.stream2.write(new TestDto('a1', 1));
+			request.body.stream1.end();
+			request.body.stream2.end();
+		} catch (e) {
+			console.log(e);
+		}
+
+		// wait for streamed data from server
+		await responseStreamsDonePromise;
+
+		if (await data1.asString() !== '123*') {
+			throw new Error('content of data 1 wrong');
+		}
+		if (data2[0].a !== 'a1*' || data2[0].b !== 1) {
+			throw new Error('content of data 2 wrong');
+		}
+		console.log('✅ tmp');
+		// console.log('✅ tmp: nothing to do');
 	}
 	//#endregion ws
 }

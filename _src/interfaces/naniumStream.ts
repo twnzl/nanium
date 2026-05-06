@@ -1,11 +1,8 @@
 import { ExtendedPromise, uuid } from '../helper';
 import {
 	ConstructorType,
-	genericTypesSymbol,
-	NaniumGenericTypeInfo,
 	NaniumObject,
 	NaniumPropertyInfoCore,
-	responseTypeSymbol,
 	Type
 } from '../objects';
 import { NaniumBuffer } from './naniumBuffer';
@@ -21,15 +18,15 @@ export class NaniumStream<T = any> implements AsyncIterable<T> {
 	#ended = false;
 	#failed: any = null;
 
-	isBinary(): boolean {
-		return NaniumBuffer.isNaniumBuffer(this[responseTypeSymbol]);
-	}
+	// isBinary(): boolean {
+	// 	return NaniumBuffer.isNaniumBuffer(this[responseTypeSymbol]);
+	// }
 
 	static naniumIsNaniumStreamSymbol: symbol = Symbol.for('NaniumStream_IsNaniumStreamSymbol');
 
-	constructor(itemConstructor?: new (...data: any) => T, genericTypeInfo?: NaniumGenericTypeInfo, id?: string) {
-		this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
-		this[genericTypesSymbol] = genericTypeInfo;
+	constructor(/*itemConstructor?: new (...data: any) => T, genericTypeInfo?: NaniumGenericTypeInfo,*/ id?: string) {
+	// this[responseTypeSymbol] = itemConstructor ?? NaniumBuffer;
+	// this[genericTypesSymbol] = genericTypeInfo;
 		this.id = id ?? uuid()
 	}
 

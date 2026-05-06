@@ -54,7 +54,7 @@ export async function sendBufferInChunks(
 					totalBytes: totalBytes,
 					isLastChunk: i === (totalChunks - 1),
 				})
-			});
+			}, { 'TContent': WsServiceChunkMessage });
 			await sendMessage(msg, serializer, send, chunk);
 
 			// todo: progress info - maybe as Nanium event
@@ -133,7 +133,7 @@ export function initStream(
 					requestId: requestId,
 					bufferOrStreamId: stream.id,
 				})
-			});
+			}, { 'TContent': WsServiceChunkMessage });
 			await sendMessage(msg, serializer, send);
 		} catch (err) {
 			const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
@@ -143,7 +143,7 @@ export function initStream(
 					bufferOrStreamId: stream.id,
 				}),
 				error: err,
-			});
+			}, { 'TContent': WsServiceChunkMessage });
 			await sendMessage(msg, serializer, send);
 		}
 	})();

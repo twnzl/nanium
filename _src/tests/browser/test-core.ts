@@ -231,27 +231,36 @@ export class TestCore {
 			stream1: new NaniumStream(),
 			stream2: new NaniumStream(),
 		});
-		request.body.stream1.write(new TextEncoder().encode('123'));
-		request.body.stream2.write(new TextEncoder().encode('456'));
-		request.body.stream1.end();
-		request.body.stream2.end();
+
+		// get response from server
 		const response = await request.execute();
+
+		// handle chunks from response streams
 		const data1: NaniumBuffer = new NaniumBuffer();
-		const data2: NaniumBuffer = new NaniumBuffer();
-		await Promise.all([
+		const data2: TestDto[] = [];
+		const responseStreamsDonePromise = Promise.all([
 			(async () => {
 				for await (const chunk of response.stream1) {
 					data1.write(chunk);
 				}
 			})(),
 			(async () => {
-				for await (const chunk of response.stream2) {
-					data2.write(chunk);
+				for await (const dto of response.stream2) {
+					data2.push(dto);
 				}
-			})()
+			})(),
 		]);
+
+		// stream input to server
+		request.body.stream1.write(new NaniumBuffer(new TextEncoder().encode('123')));
+		request.body.stream2.write(new TestDto('a1', 1));
+		request.body.stream1.end();
+		request.body.stream2.end();
+
+		// wait for streamed data from server
+		await responseStreamsDonePromise;
 		expect(await data1.asString()).toBe('123*');
-		expect(await data2.asString()).toBe('456*');
+		expect(data2).toEqual([{ a: 'a1*', b: 1 }]);
 	}
 
 	static async responsibilityForRequestsTest() {

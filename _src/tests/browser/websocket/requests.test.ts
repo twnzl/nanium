@@ -61,6 +61,10 @@ describe('basic browser client tests (Websocket)', () => {
 			await TestCore.responseAsBinaryStream();
 		});
 
+		it('response with one binary and one dto stream', async () => {
+			await TestCore.naniumStreamsInResponse();
+		});
+
 		it('NaniumBuffers in request \n', async function (): Promise<void> {
 			await TestCore.naniumBuffersRequest();
 		});
@@ -76,7 +80,7 @@ describe('basic browser client tests (Websocket)', () => {
 
 		it('body = Date\n', async function (): Promise<void> {
 			const result: ServiceResponseBase<Date> = await new TimeRequest(new Date(2000, 1, 1), { token: '1234' }).execute();
-			expect(result.body.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
+			expect(result.body!.toISOString()).toBe(new Date(2000, 1, 1).toISOString());
 		});
 
 		it('responsibility / mock provider', async function (): Promise<void> {

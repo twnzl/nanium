@@ -7,7 +7,7 @@ export class TestStreamedQueryExecutor implements ServiceExecutor<TestStreamedQu
 	static serviceName: string = 'NaniumTest:test/streamedQuery';
 
 	async execute(request: TestStreamedQueryRequest): Promise<NaniumStream<TestDto>> {
-		const result = new NaniumStream<TestDto>(TestDto);
+		const result = new NaniumStream<TestDto>();
 		let cnt: number = 1;
 		const next = () => {
 			if (cnt > (request.body.amount ?? 3)) {

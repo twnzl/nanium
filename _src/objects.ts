@@ -5,6 +5,7 @@ import { ServiceRequestInterceptor } from './interfaces/serviceRequestIntercepto
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
 export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');
 export const propertyInfoSymbol: symbol = Symbol.for('__Nanium__PropertyInfo__');
+export const streamTypeSymbol: symbol = Symbol.for('__Nanium__StreamType__');
 export const scopeProperty: string = 'scope';
 export const skipInterceptorsProperty: string = 'skipInterceptors';
 
@@ -173,7 +174,7 @@ export class NaniumObject<T> {
 
 	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeIdOrFkt): T;
 	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeIdOrFkt, strict: boolean): T;
-	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeIdOrFkt, parentCtor: ConstructorType, strict?: boolean, deepClone?: boolean): T;
+	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeIdOrFkt, parentCtor: ConstructorType | undefined, strict?: boolean, deepClone?: boolean): T;
 	static create<T>(src: Partial<T>, ctor: ConstructorOrGenericTypeIdOrFkt, genericTypes: NaniumGenericTypeInfo, strict?: boolean, deepClone?: boolean): T;
 	static create<T>(
 		src: Partial<T>,

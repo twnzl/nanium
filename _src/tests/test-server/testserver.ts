@@ -108,7 +108,7 @@ async function runWorker() {
 			new NaniumWebsocketChannel('2', {
 				server: httpServer,
 				serializer: serializer,
-				streamAndBufferTimeout: 1000,
+				streamAndBufferTimeout: 20000,
 			}),
 		],
 		isResponsible: () => Promise.resolve(2),

@@ -388,7 +388,7 @@ export class NaniumBuffer {
 	}
 	//#endregion write Methods
 
-	static isNaniumBuffer(objectOrConstructor: ConstructorType | object): boolean {
+	static isNaniumBuffer(objectOrConstructor?: ConstructorType | object): boolean {
 		return objectOrConstructor?.['naniumBufferInternalValueSymbol'] != undefined ||
 			objectOrConstructor?.constructor?.['naniumBufferInternalValueSymbol'] != undefined;
 	}

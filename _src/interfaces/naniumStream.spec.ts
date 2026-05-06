@@ -10,14 +10,14 @@ describe('NaniumStream', function (): void {
 	});
 
 	test('Promise: then & finally', async function (): Promise<void> {
-		const s = new NaniumStream(TestDto);
+		const s = new NaniumStream<TestDto>();
 		setTimeout(() => {
 			s.write(new TestDto('1', 1));
 			s.write(new TestDto('2', 2));
 			s.write(new TestDto('3', 3));
 			s.end();
 		});
-		let result: TestDto[];
+		let result: TestDto[] | undefined;
 		try {
 			result = await s.toPromise();
 			expect(result.length).toBe(3);
@@ -30,13 +30,13 @@ describe('NaniumStream', function (): void {
 	});
 
 	test('toPromise: catch & finally', async function (): Promise<void> {
-		const s = new NaniumStream(TestDto);
+		const s = new NaniumStream<TestDto>();
 		setTimeout(() => {
 			s.write(new TestDto('1', 1))
 			s.write(new TestDto('2', 2))
 			s.error(':-(');
 		});
-		let result: TestDto[];
+		let result: TestDto[] | null;
 		try {
 			await s.toPromise();
 			expect(1).toBe(2);
@@ -48,8 +48,8 @@ describe('NaniumStream', function (): void {
 		expect(result).toBeNull();
 	});
 
-	test('on data: objects', async function (): Promise<void> {
-		const s = new NaniumStream(TestDto);
+	test('for await: objects', async function (): Promise<void> {
+		const s = new NaniumStream<TestDto>();
 		let result = [];
 		setTimeout(() => {
 			s.write(new TestDto('1', 1));
@@ -71,8 +71,8 @@ describe('NaniumStream', function (): void {
 	});
 
 	test('pipeTo: success', async function (): Promise<void> {
-		const s1 = new NaniumStream(TestDto);
-		const s2 = new NaniumStream(TestDto);
+		const s1 = new NaniumStream<TestDto>();
+		const s2 = new NaniumStream<TestDto>();
 		s1.pipeTo(s2);
 
 		setTimeout(() => {
@@ -97,8 +97,8 @@ describe('NaniumStream', function (): void {
 	});
 
 	test('pipeTo: error', async function (): Promise<void> {
-		const s1 = new NaniumStream(TestDto);
-		const s2 = new NaniumStream(TestDto);
+		const s1 = new NaniumStream<TestDto>();
+		const s2 = new NaniumStream<TestDto>();
 		s1.pipeTo(s2);
 
 		setTimeout(() => {
@@ -116,8 +116,8 @@ describe('NaniumStream', function (): void {
 		}
 	});
 
-	test('on data: binary', async function (): Promise<void> {
-		const s = new NaniumStream(NaniumBuffer);
+	test('for await: binary', async function (): Promise<void> {
+		const s = new NaniumStream();
 		const result: NaniumBuffer = new NaniumBuffer();
 
 		s.write(new NaniumBuffer(new TextEncoder().encode('12')));

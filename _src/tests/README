@@ -1,0 +1,25 @@
+# Tests
+
+There are jest tests that test logic that does not need a browser. Every test that need a browser are run by vitest.
+
+# run server tests
+
+Use test explorer of vscode (View -> Testing) to run and debug the tests. Actually there is a Problem with debugging vs-code if the vitest plugin ist installed. Somehow it changes the NODE_OPTIONS or similar stuff so that debugging of node server does no longer work. Breakpoints will not hit.
+
+# run browser tests
+
+start test server via launch config:
+```json
+{
+  "name": "testserver.js",
+  "type": "node",
+  "request": "launch",
+  "program": "${workspaceFolder}/_src/tests/test-server/dst/tests/test-server/testserver.js",
+  "cwd": "${workspaceFolder}/_src/tests/test-server/dst/tests/test-server",
+  "runtimeExecutable": "${env:HOME}/.nvm/versions/node/v22.16.0/bin/node",
+  "console": "integratedTerminal"
+},
+```
+So you can set breakpoints for the server side in vscode.
+
+Install "vitest.explorer" extension in vscode. than use the vscode test explorer (View -> Testing) to run  and debug the tests.

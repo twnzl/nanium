@@ -48,10 +48,10 @@ export class TestService {
 		Nanium.addManager(this.browserProvider).then();
 	}
 
-	initWs(eventPort: 8080 | 8081, isResponsible: number = 0) {
+	initWs(eventPort: 8080 | 8081, isResponsible: number = 0, streamAndBufferTimeout = 20000) {
 		this.naniumConsumerWs = new NaniumConsumerBrowserWebsocket({
 			connectUrl: `ws://localhost:${eventPort}`,
-			streamAndBufferTimeout: 1000,
+			streamAndBufferTimeout,
 			serializer: this.jsonSerializer,
 			requestInterceptors: [TestClientRequestInterceptor],
 			responseInterceptors: [TestClientResponseInterceptor],

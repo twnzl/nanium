@@ -2,7 +2,7 @@ import { Server as HttpServer, IncomingMessage } from 'http';
 import { Server as HttpsServer } from 'https';
 import * as WebSocket from 'ws';
 import { Nanium } from '../../../core';
-import { AsyncHelper, criticalSection, ExtendedTimeout, Mutex, setExtendedTimeout } from '../../../helper';
+import { AsyncHelper, criticalSection, ExtendedTimeout, Mutex, RejectFunction, ResolveFunction, setExtendedTimeout } from '../../../helper';
 import { Channel } from '../../../interfaces/channel';
 import { ChannelConfig } from '../../../interfaces/channelConfig';
 import { EventSubscription } from '../../../interfaces/eventSubscription';
@@ -38,13 +38,7 @@ export class NaniumWebsocketChannel implements Channel {
 	private clientSubscriptionInfo: Map<string, ClientSubscriptionInfo> = new Map(); // first client ID
 	private serviceRepository: NaniumRepository;
 	private parseMessageMutex: Mutex = new Mutex();
-	private arrivingRequests: Map<string, {
-		request?: any,
-		buffers?: NaniumBuffer[],
-		resolve?: (result?: unknown) => void,
-		reject?: (err?: unknown) => void,
-		timeout?: ExtendedTimeout,
-	}> = new Map();
+	private arrivingRequests: Map<string, ArrivingRequestType> = new Map();
 	private openRequestStreams: Map<string, {
 		type: NaniumPropertyInfoCore,
 		stream?: NaniumStream,
@@ -70,9 +64,9 @@ export class NaniumWebsocketChannel implements Channel {
 		};
 	}
 
-	async send(ws: WebSocket, data) {
+	async send(ws: WebSocket, data: string | ArrayBuffer | Uint8Array) {
 		ws.send(data);
-		while (ws.bufferedAmount > this.config.maxBufferSize) {
+		while (ws.bufferedAmount > this.config.maxBufferSize!) {
 			await AsyncHelper.pause(10); // Wait if buffer is too full
 		}
 	}
@@ -155,8 +149,6 @@ export class NaniumWebsocketChannel implements Channel {
 				return this.handleIncomingServiceRequestBufferChunk(message, ws);
 			case 'service_stream_chunk':
 				return this.handleIncomingServiceRequestStreamChunk(message, ws);
-			// case 'service_request_stream_objects':
-			// 	return this.handleIncomingServiceRequestStreamObjects(message, ws);
 			case 'service_stream_end':
 				return this.handleIncomingServiceRequestStreamEnd(message, ws);
 			case 'service_stream_error':
@@ -176,31 +168,38 @@ export class NaniumWebsocketChannel implements Channel {
 
 			// buffers in request
 			const buffers: NaniumBuffer[] = [];
-			NaniumObject.forEachProperty(request, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
+			NaniumObject.forEachProperty(request, (name: string[], parent?: object, typeInfo?: NaniumPropertyInfoCore) => {
 				if (typeInfo && NaniumBuffer.isNaniumBuffer(typeInfo.ctor)) {
 					const prop = name[name.length - 1];
-					buffers.push(parent[prop] as NaniumBuffer);
+					buffers.push((parent as any)[prop] as NaniumBuffer);
 				}
 			});
 			if (buffers?.length) {
 				this.arrivingRequests.set(message.content.id, { request, buffers });
-				await new Promise<void>((resolve: (result: void) => void, reject: (err: Error | unknown) => void) => {
-					this.arrivingRequests.get(message.content.id).resolve = resolve;
-					this.arrivingRequests.get(message.content.id).reject = reject;
-					this.arrivingRequests.get(message.content.id).timeout = setExtendedTimeout(() => {
+				await new Promise<void>((resolve: ResolveFunction<void>, reject: RejectFunction) => {
+					const ar = this.arrivingRequests.get(message.content.id);
+					if (ar === undefined) {
+						throw new Error('arrivingRequests not found');
+					}
+					ar.resolve = resolve;
+					ar.reject = reject;
+					ar.timeout = setExtendedTimeout(() => {
 						// close/cleanup buffers if not used for a while
-						this.arrivingRequests.get(message.content.id).reject(new Error('buffer timeout'));
+						ar.reject!(new Error('buffer timeout'));
 						this.arrivingRequests.delete(message.content.id);
 					}, this.config.streamAndBufferTimeout);
 					// handleIncomingServiceRequestBufferChunk will resolve this when all request data arrived
 				});
 			}
 			// streams in request
-			NaniumObject.forEachProperty(request, (name: string[], parent: object, typeInfo: NaniumPropertyInfoCore) => {
+			NaniumObject.forEachProperty(request, (name: string[], parent?: object, typeInfo?: NaniumPropertyInfoCore) => {
 				if (typeInfo && NaniumStream.isNaniumStream(typeInfo.ctor)) {
+					if (!typeInfo.localGenerics) {
+						throw new Error('no type of NaniumStream given: ' + (request as object).constructor.name + name.join('.'));
+					}
 					const prop = name[name.length - 1];
-					if (parent[prop]) {
-						const stream: NaniumStream = parent[prop];
+					const stream: NaniumStream = (parent as any)[prop];
+					if (stream) {
 						this.openRequestStreams.set(stream.id, {
 							stream: stream, type: typeInfo, timeout: setExtendedTimeout(() => {
 								// close/cleanup streams if not used for a while
@@ -244,7 +243,7 @@ export class NaniumWebsocketChannel implements Channel {
 					}
 				};
 				responseMessage.content.response.id = (result as NaniumStream).id;
-				await sendMessage(responseMessage, this.config.serializer, async data => ws.send(data));
+				await sendMessage(responseMessage, this.config.serializer!, async data => ws.send(data));
 				if (result) {
 					// this.openResponseStreams.set(result.id, { stream: result, type: typeInfo });
 					initStream(
@@ -252,7 +251,7 @@ export class NaniumWebsocketChannel implements Channel {
 						SubType ?? NaniumBuffer,
 						message.content.id,
 						async data => this.send(ws, data),
-						this.config.serializer,
+						this.config.serializer!,
 						this.config.binaryChunkSize,
 					);
 				}
@@ -345,14 +344,14 @@ export class NaniumWebsocketChannel implements Channel {
 
 	async handleIncomingServiceRequestBufferChunk(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
 		try {
-			const arrivingRequest = this.arrivingRequests.get(message.content.requestId);
+			const arrivingRequest: ArrivingRequestType = this.arrivingRequests.get(message.content.requestId)!;
 			if (!arrivingRequest) {
 				return; // bad message or request already timed out and removed
 			}
-			arrivingRequest.timeout.restart();
+			arrivingRequest.timeout?.restart();
 			const buffer = arrivingRequest.buffers?.find(b => b.id === message.content.bufferOrStreamId);
 			if (!buffer) {
-				arrivingRequest.reject(
+				arrivingRequest!.reject(
 					new Error('buffer not found: ' + message.content.bufferOrStreamId + ' in request ' + message.content.requestId)
 				);
 			}
@@ -382,7 +381,7 @@ export class NaniumWebsocketChannel implements Channel {
 		if (!streamInfo) {
 			return; // bad message or already timed out and removed
 		}
-		streamInfo.timeout.restart();
+		streamInfo.timeout?.restart();
 		if (NaniumBuffer.isNaniumBuffer(streamInfo.type.localGenerics)) { // binary
 			streamInfo.stream.write(message.payload instanceof NaniumBuffer ? message.payload : new NaniumBuffer(message.payload));
 		} else { // objects
@@ -442,7 +441,7 @@ export class NaniumWebsocketChannel implements Channel {
 				content: {
 					eventName: subscription.eventName,
 				}
-			});
+			}, { 'TContent': SubscribeEventMessageContent });
 			try {
 
 				await sendMessage(message, this.config.serializer, async data => this.send(ws, data));
@@ -481,7 +480,7 @@ export class NaniumWebsocketChannel implements Channel {
 				content: {
 					eventName: message.content.eventName,
 				}
-			});
+			}, { 'TContent': SubscribeEventMessageContent });
 			await sendMessage(response, this.config.serializer, async data => this.send(ws, data));
 			// close websocket if no other subscriptions exist.
 			if (!clientSubscription?.eventNames?.size) {
@@ -502,10 +501,10 @@ export class NaniumWebsocketChannel implements Channel {
 		const clientSubscription = this.clientSubscriptionInfo.get(subscription.clientId);
 		try {
 			if (clientSubscription?.eventNames?.has(message.content.eventName)) {
-				await sendMessage(message, this.config.serializer, async data => this.send(clientSubscription.websocket, data));
+				await sendMessage(message, this.config.serializer!, async data => this.send(clientSubscription.websocket, data));
 			}
 		} catch (e) {
-			NaniumLogger.error('websocket channel: emitEvent: ', e.message, e.stack);
+			NaniumLogger.error('websocket channel: emitEvent: ', (e as Error).message, (e as Error).stack);
 		}
 	}
 
@@ -520,3 +519,10 @@ class ClientSubscriptionInfo {
 	}
 }
 
+interface ArrivingRequestType {
+	request?: any,
+	buffers?: NaniumBuffer[],
+	resolve?: ResolveFunction<void>,
+	reject?: RejectFunction,
+	timeout?: ExtendedTimeout,
+}

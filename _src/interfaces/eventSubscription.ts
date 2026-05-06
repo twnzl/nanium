@@ -8,7 +8,7 @@ export class EventSubscription<TData = any, TContext = any> {
 	@Type(Number) id: number;
 	@Type(String) clientId: string;
 	@Type(Object) context: TContext;
-	@Type(String) eventName?: string;
+	@Type(String) eventName: string;
 	@Type('TData') additionalData?: TData;
 	@Type(String) channelId?: string;
 	@Type(String) source?: string;

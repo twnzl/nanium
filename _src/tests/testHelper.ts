@@ -10,6 +10,7 @@ import { LogLevel, NaniumLogger } from '../interfaces/logger';
 import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
 import { NaniumHttpChannel } from '../managers/providers/channels/http';
 import { NaniumProviderNodejs } from '../managers/providers/nodejs';
+import { NaniumJsonSerializer } from '../serializers/json';
 import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
 import { TestEventSubscriptionSendInterceptor } from './interceptors/client/test.send-event-subscription.interceptor';
 import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
@@ -79,7 +80,8 @@ export class TestHelper {
 					apiPath: '/api',
 					eventPath: '/events',
 					server: TestHelper.httpServer,
-					executionContextConstructor: TestExecutionContext
+					executionContextConstructor: TestExecutionContext,
+					serializer: new NaniumJsonSerializer()
 				})
 			],
 			requestInterceptors: [TestServerRequestInterceptor],

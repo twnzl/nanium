@@ -76,7 +76,7 @@ export function criticalSection<T>(mutex: Mutex, action: () => Promise<T> | T): 
 	return mutex.dispatch(action);
 }
 
-export type ResolveFunction<T = unknown> = (result?: T) => void;
+export type ResolveFunction<T = unknown> = (result: T) => void;
 export type RejectFunction = (error?: unknown) => void;
 
 

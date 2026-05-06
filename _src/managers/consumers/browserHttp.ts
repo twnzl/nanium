@@ -113,7 +113,7 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 	async stream<T = any>(serviceName: string, request: any): Promise<NaniumStream<T>> {
 		const streamItemConstructor = request.constructor[responseTypeSymbol]?.[1];
-		const resultStream: NaniumStream<T> = new NaniumStream(streamItemConstructor);
+		const resultStream: NaniumStream<T> = new NaniumStream<T>();
 
 		// transmission
 		const abortController: AbortController = new AbortController();
@@ -122,14 +122,17 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 			method: 'post',
 			mode: 'cors',
 			redirect: 'follow',
-			body: this.config.serializer.serialize({ serviceName, request }),
+			body: this.config.serializer!.serialize({ serviceName, request }),
 			signal: abortController.signal // make the request abortable
 		});
 
 		void fetch(req)
 			.then((response) => response.body)
 			.then((rb) => {
-				const reader: ReadableStreamDefaultReader<Uint8Array> = rb.getReader();
+				if (rb === undefined) {
+					throw new Error('browserHttp.stream: fetch: ReadableStream is undefined');
+				}
+				const reader: ReadableStreamDefaultReader<Uint8Array> = rb!.getReader();
 
 				let restFromLastTime: any;
 				let deserialized: {
@@ -156,12 +159,12 @@ export class NaniumConsumerBrowserHttp implements ServiceManager {
 
 								try {
 									if (NaniumBuffer.isNaniumBuffer(request.constructor[responseTypeSymbol]?.[1])) {
-										await resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : new NaniumBuffer(value) as any);
+										resultStream.write(NaniumBuffer.isNaniumBuffer(value) ? value : new NaniumBuffer(value) as any);
 									} else {
-										deserialized = this.config.serializer.deserializePartial(value, restFromLastTime);
+										deserialized = this.config.serializer!.deserializePartial(value, restFromLastTime);
 										if (deserialized.data?.length) {
 											for (const data of deserialized.data) {
-												await resultStream.write(NaniumObject.create(
+												resultStream.write(NaniumObject.create(
 													data,
 													streamItemConstructor,
 													request.constructor[genericTypesSymbol]
