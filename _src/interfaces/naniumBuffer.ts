@@ -9,6 +9,13 @@ export class NaniumBuffer {
 
 	private static naniumBufferInternalValueSymbol: symbol = Symbol.for('__Nanium__BufferInternalValueSymbol__');
 
+	// small primitive writes (e.g. writeUInt16LE) are collected into this growing chunk
+	// instead of pushing a separate tiny ArrayBuffer per call, to avoid huge part arrays
+	// that would make concatenation (asUint8Array/asArrayBuffer) slow.
+	private static readonly pendingChunkSize: number = 65536; // 64KB
+	private pendingChunk: ArrayBuffer | null = null;
+	private pendingView: DataView | null = null;
+	private pendingOffset: number = 0;
 
 	constructor(data?: DataSource | DataSource[], id?: string) {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
@@ -36,15 +43,24 @@ export class NaniumBuffer {
 
 	get length(): number {
 		const lengths = this[NaniumBuffer.naniumBufferInternalValueSymbol].map(part => this.getLength(part));
-		if (lengths?.length) {
-			return lengths.reduce((whole, next) => whole + next);
-		} else {
-			return 0;
+		const partsLength = lengths?.length ? lengths.reduce((whole, next) => whole + next) : 0;
+		return partsLength + this.pendingOffset;
+	}
+
+	// moves the bytes collected in the pending chunk (from small primitive writes) into the parts array as a single part
+	private flushPendingChunk(): void {
+		if (this.pendingOffset > 0) {
+			this[NaniumBuffer.naniumBufferInternalValueSymbol].push(this.pendingChunk!.slice(0, this.pendingOffset));
+			this.pendingChunk = null;
+			this.pendingView = null;
+			this.pendingOffset = 0;
 		}
 	}
 
 	write(data: DataSource) {
 		if (data?.constructor && data?.constructor['naniumBufferInternalValueSymbol']) {
+			(data as NaniumBuffer).flushPendingChunk();
+			this.flushPendingChunk();
 			let part: any;
 			const length = data[NaniumBuffer.naniumBufferInternalValueSymbol].length;
 			for (let i = 0; i < length; i++) {
@@ -52,6 +68,7 @@ export class NaniumBuffer {
 				this[NaniumBuffer.naniumBufferInternalValueSymbol].push(part);
 			}
 		} else {
+			this.flushPendingChunk();
 			if (data instanceof DataView) {
 				data = new Uint8Array(
 					data.buffer,
@@ -86,6 +103,7 @@ export class NaniumBuffer {
 	}
 
 	async asUint8Array(): Promise<Uint8Array> {
+		this.flushPendingChunk();
 		const internalValues = this[NaniumBuffer.naniumBufferInternalValueSymbol];
 		if (internalValues.length === 0) {
 			return new Uint8Array(0);
@@ -194,9 +212,13 @@ export class NaniumBuffer {
 
 	clear() {
 		this[NaniumBuffer.naniumBufferInternalValueSymbol] = [];
+		this.pendingChunk = null;
+		this.pendingView = null;
+		this.pendingOffset = 0;
 	}
 
 	async asString(encoding: string = 'utf-8'): Promise<string> {
+		this.flushPendingChunk();
 		const result: string[] = [];
 
 		for await (const part of this[NaniumBuffer.naniumBufferInternalValueSymbol]) {
@@ -229,6 +251,7 @@ export class NaniumBuffer {
 	}
 
 	slice(start: number, end?: number): NaniumBuffer {
+		this.flushPendingChunk();
 		const result = new NaniumBuffer();
 		const data = this[NaniumBuffer.naniumBufferInternalValueSymbol];
 		if (end === undefined) {
@@ -291,9 +314,14 @@ export class NaniumBuffer {
 	};
 
 	writeCore(n: number, type: 'BigUint' | 'BigInt' | 'Uint' | 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness: 'LE' | 'BE' = 'LE'): void {
-		const buffer = new ArrayBuffer(bits / 8);
-		new DataView(buffer)['set' + type + bits](0, n, endianness === 'LE');
-		this[NaniumBuffer.naniumBufferInternalValueSymbol].push(buffer);
+		const byteCount = bits / 8;
+		if (!this.pendingChunk || this.pendingOffset + byteCount > NaniumBuffer.pendingChunkSize) {
+			this.flushPendingChunk();
+			this.pendingChunk = new ArrayBuffer(Math.max(NaniumBuffer.pendingChunkSize, byteCount));
+			this.pendingView = new DataView(this.pendingChunk);
+		}
+		this.pendingView!['set' + type + bits](this.pendingOffset, n, endianness === 'LE');
+		this.pendingOffset += byteCount;
 	}
 
 	writeInt8(n: number): NaniumBuffer {

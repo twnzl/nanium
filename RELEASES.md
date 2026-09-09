@@ -22,6 +22,7 @@
 - request queues: transform request to instance with correct types before execution
 - NaniumBuffer: added methods for sequential writing and reading, added Big-Endian-read methods, added readString & writeString, fix of asUInt8Array, added DataView support, making all read and convert functions synchron (adding a static async create function)
 - NaniumStream: backpressure-handling making write() async and http provider-channel and consumers check backlog state and wait if buffer is full
+- NaniumBuffer: increased performance for Szenarios with many small writes
 
 # 1.25.2
 
