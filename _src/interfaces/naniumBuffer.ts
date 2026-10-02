@@ -201,12 +201,12 @@ export class NaniumBuffer {
 		throw new Error(`Unsupported data type: ${Object.prototype.toString.call(part)}`);
 	}
 
-	async asArrayBuffer(): Promise<ArrayBufferLike> {
+	async asArrayBuffer(): Promise<ArrayBuffer> {
 		const data = await this.asUint8Array();
 		if (data.byteLength === data.buffer.byteLength) {
-			return (await this.asUint8Array()).buffer;
+			return (await this.asUint8Array()).buffer as ArrayBuffer;
 		} else {
-			return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+			return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 		}
 	}
 
