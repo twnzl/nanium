@@ -1,21 +1,21 @@
 import { Server as HttpServer, IncomingMessage } from 'http';
 import { Server as HttpsServer } from 'https';
-import * as WebSocket from 'ws';
-import { Nanium } from '../../../core';
-import { AsyncHelper, criticalSection, ExtendedTimeout, Mutex, RejectFunction, ResolveFunction, setExtendedTimeout } from '../../../helper';
-import { Channel } from '../../../interfaces/channel';
-import { ChannelConfig } from '../../../interfaces/channelConfig';
-import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { NaniumLogger } from '../../../interfaces/logger';
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
-import { NaniumRepository } from '../../../interfaces/serviceRepository';
-import { ConstructorType, genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../../objects';
-import { NaniumJsonSerializer } from '../../../serializers/json';
-import { getPrimaryResponseType, getSecondaryResponseType } from '../../core';
-import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../../ws.core';
-import { SubscribeEventMessageContent, WsMessage, WsServiceChunkMessage, WsServiceRequestMessage } from './ws.types';
+import WebSocket, { WebSocketServer } from 'ws';
+import { Nanium } from '../../../core.js';
+import { AsyncHelper, criticalSection, ExtendedTimeout, Mutex, RejectFunction, ResolveFunction, setExtendedTimeout } from '../../../helper.js';
+import { Channel } from '../../../interfaces/channel.js';
+import { ChannelConfig } from '../../../interfaces/channelConfig.js';
+import { EventSubscription } from '../../../interfaces/eventSubscription.js';
+import { NaniumLogger } from '../../../interfaces/logger.js';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager.js';
+import { NaniumRepository } from '../../../interfaces/serviceRepository.js';
+import { ConstructorType, genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../../objects.js';
+import { NaniumJsonSerializer } from '../../../serializers/json.js';
+import { getPrimaryResponseType, getSecondaryResponseType } from '../../core.js';
+import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../../ws.core.js';
+import { SubscribeEventMessageContent, WsMessage, WsServiceChunkMessage, WsServiceRequestMessage } from './ws.types.js';
 
 const clientIdSymbol: symbol = Symbol.for('__client_id__');
 const sourceSymbol: symbol = Symbol.for('__source__');
@@ -34,7 +34,7 @@ export class NaniumWebsocketChannel implements Channel {
 	onClientRemoved: ((clientId: string) => void)[] = [];
 
 	private readonly config: NaniumWebsocketChannelConfig;
-	private wss: WebSocket.Server;
+	private wss: WebSocketServer;
 	private clientSubscriptionInfo: Map<string, ClientSubscriptionInfo> = new Map(); // first client ID
 	private serviceRepository: NaniumRepository;
 	private parseMessageMutex: Mutex = new Mutex();
@@ -73,7 +73,7 @@ export class NaniumWebsocketChannel implements Channel {
 
 	init(serviceRepository: NaniumRepository, _manager: ServiceProviderManager): Promise<void> {
 		this.serviceRepository = serviceRepository;
-		this.wss = new WebSocket.Server({ server: this.config.server });
+		this.wss = new WebSocketServer({ server: this.config.server });
 		this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 			ws[sourceSymbol] = this.getClientIp(req);
 

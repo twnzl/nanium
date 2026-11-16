@@ -1,5 +1,5 @@
-import { EventBase } from '../eventBase';
-import { EventType } from '../../../objects';
+import { EventBase } from '../eventBase.js';
+import { EventType } from '../../../objects.js';
 
 @EventType({
 	scope: 'public'

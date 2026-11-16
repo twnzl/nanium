@@ -1,6 +1,6 @@
-import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
-import { RequestType, Type } from '../../../objects';
+import { ServiceRequestBase } from '../serviceRequestBase.js';
+import { ServiceResponseBase } from '../serviceResponseBase.js';
+import { RequestType, Type } from '../../../objects.js';
 
 export class TestGetResponse extends ServiceResponseBase<TestGetResponseBody> {
 }

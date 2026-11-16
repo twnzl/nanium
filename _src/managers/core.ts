@@ -1,5 +1,5 @@
-import { NaniumRepository } from '../interfaces/serviceRepository';
-import { ConstructorType, genericTypesSymbol, responseTypeSymbol } from '../objects';
+import { NaniumRepository } from '../interfaces/serviceRepository.js';
+import { ConstructorType, genericTypesSymbol, responseTypeSymbol } from '../objects.js';
 
 
 export function getPrimaryResponseType(requestOrConstructor: ConstructorType | any): ConstructorType | undefined;

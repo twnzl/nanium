@@ -1,14 +1,14 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Nanium } from "../../../core";
-import { LogLevel, NaniumLogger } from "../../../interfaces/logger";
-import { NaniumBuffer } from "../../../interfaces/naniumBuffer";
-import { ServiceResponseBase } from "../../services/serviceResponseBase";
-import { TestBufferRequest } from "../../services/test/buffer.contract";
-import { TestGetRequest } from "../../services/test/get.contract";
-import { TimeRequest } from "../../services/test/time.contract";
-import { session } from "../../session";
-import { TestLogger } from "../../testLogger";
-import { TestCore } from "../test-core";
+import { Nanium } from "../../../core.js";
+import { LogLevel, NaniumLogger } from "../../../interfaces/logger.js";
+import { NaniumBuffer } from "../../../interfaces/naniumBuffer.js";
+import { ServiceResponseBase } from "../../services/serviceResponseBase.js";
+import { TestBufferRequest } from "../../services/test/buffer.contract.js";
+import { TestGetRequest } from "../../services/test/get.contract.js";
+import { TimeRequest } from "../../services/test/time.contract.js";
+import { session } from "../../session.js";
+import { TestLogger } from "../../testLogger.js";
+import { TestCore } from "../test-core.js";
 
 describe('basic browser client tests (HTTP)', () => {
 	beforeEach(async () => {

@@ -1,10 +1,10 @@
-import { ServiceRequestHead } from './serviceRequestHead';
-import { ServiceResponseBase } from './serviceResponseBase';
-import { Nanium } from '../../core';
-import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry';
-import { TestExecutionContext } from './testExecutionContext';
-import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry';
-import { ConstructorType, NaniumObject, Type } from '../../objects';
+import { ServiceRequestHead } from './serviceRequestHead.js';
+import { ServiceResponseBase } from './serviceResponseBase.js';
+import { Nanium } from '../../core.js';
+import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry.js';
+import { TestExecutionContext } from './testExecutionContext.js';
+import { MyServiceRequestQueueEntry } from './serviceRequestQueueEntry.js';
+import { ConstructorType, NaniumObject, Type } from '../../objects.js';
 
 export class ServiceRequestBase<TRequestBody, TResponseBody, TPartialResponse = any> {
 

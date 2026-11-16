@@ -1,6 +1,6 @@
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { TestUpstreamBinaryRequest, TestUpstreamBinaryResponse } from './upstreamBinary.contract';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { TestUpstreamBinaryRequest, TestUpstreamBinaryResponse } from './upstreamBinary.contract.js';
 
 export class TestUpstreamBinaryExecutor implements ServiceExecutor<TestUpstreamBinaryRequest, TestUpstreamBinaryResponse> {
 	static serviceName: string = 'NaniumTest:test/upstreamBinary';

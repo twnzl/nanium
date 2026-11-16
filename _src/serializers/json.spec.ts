@@ -1,5 +1,5 @@
-import { NaniumObject } from '../objects';
-import { ServiceResponseBase } from '../tests/services/serviceResponseBase';
+import { NaniumObject } from '../objects.js';
+import { ServiceResponseBase } from '../tests/services/serviceResponseBase.js';
 import {
 	GenericStuff,
 	Stuff,
@@ -7,9 +7,9 @@ import {
 	StuffNumberEnum,
 	StuffRequest,
 	StuffStringEnum
-} from '../tests/services/test/stuff.contract';
-import { TestExecutionContext } from '../tests/services/testExecutionContext';
-import { TestHelper } from '../tests/testHelper';
+} from '../tests/services/test/stuff.contract.js';
+import { TestExecutionContext } from '../tests/services/testExecutionContext.js';
+import { TestHelper } from '../tests/testHelper.js';
 
 let request: StuffRequest = null;
 let response: ServiceResponseBase<Stuff<Date>[]>;

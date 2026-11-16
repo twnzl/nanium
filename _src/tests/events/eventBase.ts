@@ -1,9 +1,9 @@
-import { Nanium } from '../../core';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscription';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { ServiceManager } from '../../interfaces/serviceManager';
-import { ConstructorType, NaniumObject } from '../../objects';
+import { Nanium } from '../../core.js';
+import { EventHandler } from '../../interfaces/eventHandler.js';
+import { EventSubscription } from '../../interfaces/eventSubscription.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { ServiceManager } from '../../interfaces/serviceManager.js';
+import { ConstructorType, NaniumObject } from '../../objects.js';
 
 export class EventBase<T = any> extends NaniumObject<T> {
 

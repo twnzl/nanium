@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
-import { Nanium } from "../../../core";
-import { LogLevel, NaniumLogger } from "../../../interfaces/logger";
-import { NaniumConsumerBrowserWebsocket } from "../../../managers/consumers/browserWs";
-import { session } from "../../session";
-import { TestLogger } from "../../testLogger";
-import { TestCore } from "../test-core";
+import { Nanium } from "../../../core.js";
+import { LogLevel, NaniumLogger } from "../../../interfaces/logger.js";
+import { NaniumConsumerBrowserWebsocket } from "../../../managers/consumers/browserWs.js";
+import { session } from "../../session.js";
+import { TestLogger } from "../../testLogger.js";
+import { TestCore } from "../test-core.js";
 
 describe('Websockets: events & cluster communicator', function (): void {
 	let manager1: NaniumConsumerBrowserWebsocket;

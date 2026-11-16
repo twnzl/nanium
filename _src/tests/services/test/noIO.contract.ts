@@ -1,5 +1,5 @@
-import { RequestType } from '../../../objects';
-import { ServiceRequestBase } from '../serviceRequestBase';
+import { RequestType } from '../../../objects.js';
+import { ServiceRequestBase } from '../serviceRequestBase.js';
 
 @RequestType({
 	scope: 'public'

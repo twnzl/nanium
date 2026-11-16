@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
-import { Nanium } from "../../../core";
-import { LogLevel, NaniumLogger } from "../../../interfaces/logger";
-import { NaniumConsumerBrowserHttp } from "../../../managers/consumers/browserHttp";
-import { session } from "../../session";
-import { TestLogger } from "../../testLogger";
-import { TestCore } from "../test-core";
+import { Nanium } from "../../../core.js";
+import { LogLevel, NaniumLogger } from "../../../interfaces/logger.js";
+import { NaniumConsumerBrowserHttp } from "../../../managers/consumers/browserHttp.js";
+import { session } from "../../session.js";
+import { TestLogger } from "../../testLogger.js";
+import { TestCore } from "../test-core.js";
 
 describe('HTTP: events & cluster communicator', function (): void {
 	let manager1: NaniumConsumerBrowserHttp;

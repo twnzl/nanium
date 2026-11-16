@@ -1,4 +1,4 @@
-import { ConstructorType, NaniumObject, Type } from '../../objects';
+import { ConstructorType, NaniumObject, Type } from '../../objects.js';
 
 export class ServiceResponseMessage {
 	constructor(

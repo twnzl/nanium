@@ -1,16 +1,16 @@
-import { RejectFunction, ResolveFunction } from '../../helper';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscription';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { NaniumBuffer } from '../../interfaces/naniumBuffer';
-import { NaniumStream } from '../../interfaces/naniumStream';
-import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { ServiceManager } from '../../interfaces/serviceManager';
-import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects';
-import { NaniumJsonSerializer } from '../../serializers/json';
-import { getPrimaryResponseType } from '../core';
-import { HttpCore } from './http.core';
+import { RejectFunction, ResolveFunction } from '../../helper.js';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor.js';
+import { EventHandler } from '../../interfaces/eventHandler.js';
+import { EventSubscription } from '../../interfaces/eventSubscription.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../../interfaces/naniumStream.js';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig.js';
+import { ServiceManager } from '../../interfaces/serviceManager.js';
+import { genericTypesSymbol, NaniumObject, responseTypeSymbol } from '../../objects.js';
+import { NaniumJsonSerializer } from '../../serializers/json.js';
+import { getPrimaryResponseType } from '../core.js';
+import { HttpCore } from './http.core.js';
 
 export interface NaniumConsumerBrowserHttpConfig extends ServiceConsumerConfig {
 	apiUrl?: string;

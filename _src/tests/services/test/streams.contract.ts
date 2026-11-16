@@ -1,8 +1,8 @@
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { NaniumObject, RequestType, Type } from '../../../objects';
-import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
-import { TestDto } from './contractparts';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { NaniumObject, RequestType, Type } from '../../../objects.js';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase.js';
+import { TestDto } from './contractparts.js';
 
 export class TestStreamsRequestBody extends NaniumObject<TestStreamsRequestBody> {
 	@Type(String) id: string;

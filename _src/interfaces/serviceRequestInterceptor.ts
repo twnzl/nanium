@@ -1,4 +1,4 @@
-import { ExecutionContext } from './executionContext';
+import { ExecutionContext } from './executionContext.js';
 
 export interface ServiceRequestInterceptor<TRequest> {
 	execute(

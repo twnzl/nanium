@@ -105,8 +105,7 @@ or another server using tcp).
 ```ts
 import * as http from 'http';
 import { Nanium } from 'nanium/core';
-import { NaniumHttpChannel } from 'nanium/managers/providers/channels/http';
-import { NaniumProviderNodejs } from 'nanium/managers/providers/nodejs';
+import { NaniumHttpChannel, NaniumProviderNodejs } from 'nanium/node';
 
 const httpServer: http.Server = http.createServer(() => {
 });
@@ -129,8 +128,26 @@ run();
 ### Init the client (browser)
 
 ```ts
+import { Nanium } from 'nanium/core';
+import { NaniumConsumerBrowserHttp } from 'nanium/browser';
+
 await Nanium.addManager(new NaniumConsumerBrowserHttp({ apiUrl: '/api' }));
 ```
+
+### Module structure
+
+nanium publishes three separate entry points, so that nodejs-only code never ends up in a browser
+bundle (and vice versa) and no tree-shaking is required:
+
+- `nanium/core`: code shared between nodejs and the browser (e.g. `Nanium`, request/response base
+  classes, interfaces, decorators like `@Type`/`@RequestType`).
+- `nanium/node`: nodejs-only code (e.g. `NaniumProviderNodejs`, `NaniumHttpChannel`,
+  `NaniumConsumerNodejsHttp`).
+- `nanium/browser`: browser-only code (e.g. `NaniumProviderBrowser`, `NaniumConsumerBrowserHttp`).
+
+`nanium/node` and `nanium/browser` already re-export everything from `nanium/core`, so a typical
+server app only needs `nanium/core` + `nanium/node`, and a typical client app only needs
+`nanium/core` + `nanium/browser`.
 
 ## Services
 
@@ -150,8 +167,7 @@ This will generate two files:
 
 ```ts
 import { ServiceRequestBase } from '../serviceRequestBase';
-import { RequestType } from 'nanium/objects';
-import { NaniumObject } from './objects';
+import { NaniumObject, RequestType } from 'nanium/core';
 
 export class StuffGetRequestBody extends NaniumObject<StuffGetRequestBody> {
 }
@@ -181,7 +197,7 @@ file or in a separate file but with the extension __.contractpart.ts__.
   calculates the response.
 
 ```ts
-import { ServiceExecutor } from 'nanium/interfaces/serviceExecutor';
+import { ServiceExecutor } from 'nanium/core';
 import { StuffGetRequest, StuffGetResponse } from './get.contract';
 import { ServiceRequestContext } from '../serviceRequestContext';
 
@@ -429,7 +445,7 @@ later interceptors
 will have access to all user information. If the credentials are not right, throw an error.
 
 ```ts
-import { ServiceRequestInterceptor } from 'nanium/interfaces/serviceRequestInterceptor';
+import { ServiceRequestInterceptor } from 'nanium/core';
 import { ServiceRequestBase } from './serviceRequestBase';
 import { ServiceRequestContext } from './serviceRequestContext';
 

@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
-    "target": "ES2019",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
     "sourceMap": true,
     "inlineSourceMap": false,
     "declaration": true,
@@ -9,7 +10,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,
-    "moduleResolution": "Node",
+    "esModuleInterop": true,
     "typeRoots": [
       "node_modules/@types"
     ]

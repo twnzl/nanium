@@ -1,4 +1,4 @@
-import { Logger, LogLevel } from '../interfaces/logger';
+import { Logger, LogLevel } from '../interfaces/logger.js';
 
 export class TestLogger implements Logger {
 	loglevel: LogLevel;

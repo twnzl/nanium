@@ -1,6 +1,7 @@
-import { AsyncHelper, ExtendedPromise } from '../../helper';
+import { AsyncHelper, ExtendedPromise } from '../../helper.js';
+import type WsWebSocket from 'ws';
 
-type WebSocketType = WebSocket | import('ws');
+type WebSocketType = WebSocket | WsWebSocket;
 
 export class WebSocketClient {
 	connected: ExtendedPromise<void>;
@@ -31,8 +32,8 @@ export class WebSocketClient {
 			this.socket = new WebSocket(this.url);
 		} else {
 			// Node.js environment
-			const WebSocket = await import('ws');
-			this.socket = new WebSocket(this.url);
+			const { default: NodeWebSocket } = await import('ws');
+			this.socket = new NodeWebSocket(this.url);
 		}
 
 		this.socket.onopen = this.onOpen.bind(this);

@@ -1,5 +1,5 @@
-import { ExecutionContext } from './executionContext';
-import { EventSubscription } from './eventSubscription';
+import { ExecutionContext } from './executionContext.js';
+import { EventSubscription } from './eventSubscription.js';
 
 export interface NaniumCommunicator {
 	broadcast(message: any): Promise<void>;

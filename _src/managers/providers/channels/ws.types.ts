@@ -1,4 +1,4 @@
-import { NaniumObject, Type } from '../../../objects';
+import { NaniumObject, Type } from '../../../objects.js';
 
 export type WsMessageType = 'subscribe_event' | 'unsubscribe_event' | 'emit_event'
 	| 'subscription_result' | 'unsubscription_result' | 'service_request' | 'service_response'

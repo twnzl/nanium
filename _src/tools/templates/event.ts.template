@@ -1,5 +1,5 @@
 import { EventBase } from '${relativeToRoot}eventBase';
-import { EventType, Type } from 'nanium/objects';
+import { EventType, Type } from 'nanium/core';
 
 @EventType({
 	scope: '${scope}'

@@ -1,5 +1,5 @@
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { ExecutionScope } from '../../interfaces/executionScope';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { ExecutionScope } from '../../interfaces/executionScope.js';
 
 export class TestExecutionContext implements ExecutionContext {
 	scope?: ExecutionScope;

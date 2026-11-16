@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { LogLevel, NaniumLogger } from "../../interfaces/logger";
-import { NaniumBuffer } from "../../interfaces/naniumBuffer";
-import { TestLogger } from "../testLogger";
+import { LogLevel, NaniumLogger } from "../../interfaces/logger.js";
+import { NaniumBuffer } from "../../interfaces/naniumBuffer.js";
+import { TestLogger } from "../testLogger.js";
 
 
 describe('NaniumBuffer \n', function (): void {

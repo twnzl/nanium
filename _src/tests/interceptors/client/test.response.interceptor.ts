@@ -1,6 +1,6 @@
-import { ServiceResponseInterceptor } from '../../../interfaces/serviceResponseInterceptor';
-import { ServiceRequestBase } from '../../services/serviceRequestBase';
-import { TestGetRequest, TestGetResponse } from '../../services/test/get.contract';
+import { ServiceResponseInterceptor } from '../../../interfaces/serviceResponseInterceptor.js';
+import { ServiceRequestBase } from '../../services/serviceRequestBase.js';
+import { TestGetRequest, TestGetResponse } from '../../services/test/get.contract.js';
 
 export class TestClientResponseInterceptor implements ServiceResponseInterceptor<ServiceRequestBase<any, any>, any> {
 	static responseCnt: number = 0;

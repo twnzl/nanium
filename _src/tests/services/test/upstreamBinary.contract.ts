@@ -1,7 +1,7 @@
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { NaniumObject, RequestType, Type } from '../../../objects';
-import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { NaniumObject, RequestType, Type } from '../../../objects.js';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase.js';
 
 export class TestUpstreamBinaryRequestBody extends NaniumObject<TestUpstreamBinaryRequestBody> {
 	@Type(NaniumStream, NaniumBuffer) upstream1?: NaniumStream<NaniumBuffer>;

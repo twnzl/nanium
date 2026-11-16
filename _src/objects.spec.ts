@@ -1,8 +1,8 @@
-import { LogLevel, NaniumLogger } from './interfaces/logger';
-import { AnySimple, JSONSchema, NaniumObject, NaniumPropertyInfoCore, Type } from './objects';
-import { ServiceResponseBase } from './tests/services/serviceResponseBase';
-import { TestGetRequest, TestGetRequestBody, TestGetResponseBody } from './tests/services/test/get.contract';
-import { TestLogger } from './tests/testLogger';
+import { LogLevel, NaniumLogger } from './interfaces/logger.js';
+import { AnySimple, JSONSchema, NaniumObject, NaniumPropertyInfoCore, Type } from './objects.js';
+import { ServiceResponseBase } from './tests/services/serviceResponseBase.js';
+import { TestGetRequest, TestGetRequestBody, TestGetResponseBody } from './tests/services/test/get.contract.js';
+import { TestLogger } from './tests/testLogger.js';
 
 class MyTestClass2 extends NaniumObject<MyTestClass2> {
 	@Type(Number) aNumber?: number;

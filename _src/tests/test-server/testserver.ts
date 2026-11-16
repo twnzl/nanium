@@ -1,23 +1,26 @@
-import * as cluster from 'cluster';
+import cluster from 'cluster';
 import * as fs from 'fs';
 import * as http from 'http';
 import { IncomingMessage, ServerResponse } from 'http';
 import * as https from 'https';
 import * as path from 'path';
-import { ClusterCommunicator } from '../../communicators/clusterCommunicator';
-import { Nanium } from '../../core';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { LogLevel, NaniumLogger } from '../../interfaces/logger';
-import { NaniumHttpChannel } from '../../managers/providers/channels/http';
-import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws';
-import { NaniumProviderNodejs } from '../../managers/providers/nodejs';
-import { NaniumJsonSerializer } from '../../serializers/json';
+import { fileURLToPath } from 'url';
+import { ClusterCommunicator } from '../../communicators/clusterCommunicator.js';
+import { Nanium } from '../../core.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { LogLevel, NaniumLogger } from '../../interfaces/logger.js';
+import { NaniumHttpChannel } from '../../managers/providers/channels/http.js';
+import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws.js';
+import { NaniumProviderNodejs } from '../../managers/providers/nodejs.js';
+import { NaniumJsonSerializer } from '../../serializers/json.js';
 import {
 	TestEventSubscriptionReceiveInterceptor
-} from '../interceptors/server/test.receive-event-subscription.interceptor';
-import { TestServerRequestInterceptor } from '../interceptors/server/test.request.interceptor';
-import { TestEventEmissionSendInterceptor } from '../interceptors/server/test.send-event-emission.interceptor';
-import { TestLogger } from '../testLogger';
+} from '../interceptors/server/test.receive-event-subscription.interceptor.js';
+import { TestServerRequestInterceptor } from '../interceptors/server/test.request.interceptor.js';
+import { TestEventEmissionSendInterceptor } from '../interceptors/server/test.send-event-emission.interceptor.js';
+import { TestLogger } from '../testLogger.js';
+
+const __dirname: string = path.dirname(fileURLToPath(import.meta.url));
 
 async function runPrimary(workerCount: number) {
 	console.log(`Primary ${process.pid} is running`);
@@ -97,7 +100,7 @@ async function runWorker() {
 	];
 
 	await Nanium.addManager(new NaniumProviderNodejs({
-		servicePath: path.resolve(path.join(__dirname, '..', '..', '..', '..', '..', '..', 'tests', 'services')),
+		servicePath: path.resolve(path.join(__dirname, '..', 'services')),
 		channels: [
 			new NaniumHttpChannel('1', {
 				apiPath: '/api',

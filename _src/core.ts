@@ -1,15 +1,15 @@
 // todo: Automatically removing of unnecessary code (Minimizing/TreeShaking) will not work for nanium as a commonJs module
-import { DateHelper } from './helper';
-import { NaniumCommunicator } from './interfaces/communicator';
-import { EventNameOrConstructor } from './interfaces/eventConstructor';
-import { EventSubscription } from './interfaces/eventSubscription';
-import { ExecutionContext } from './interfaces/executionContext';
-import { NaniumLogger } from './interfaces/logger';
-import { ServiceManager } from './interfaces/serviceManager';
-import { ServiceProviderManager } from './interfaces/serviceProviderManager';
-import { ServiceRequestQueue } from './interfaces/serviceRequestQueue';
-import { CronConfig, ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
-import { genericTypesSymbol, NaniumObject } from './objects';
+import { DateHelper } from './helper.js';
+import { NaniumCommunicator } from './interfaces/communicator.js';
+import { EventNameOrConstructor } from './interfaces/eventConstructor.js';
+import { EventSubscription } from './interfaces/eventSubscription.js';
+import { ExecutionContext } from './interfaces/executionContext.js';
+import { NaniumLogger } from './interfaces/logger.js';
+import { ServiceManager } from './interfaces/serviceManager.js';
+import { ServiceProviderManager } from './interfaces/serviceProviderManager.js';
+import { ServiceRequestQueue } from './interfaces/serviceRequestQueue.js';
+import { CronConfig, ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry.js';
+import { genericTypesSymbol, NaniumObject } from './objects.js';
 
 declare let global: any;
 

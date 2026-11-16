@@ -1,8 +1,8 @@
-import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { TestSubscriptionData } from '../../events/eventBase';
-import { session } from '../../session';
-import { EventSubscriptionSendInterceptor } from '../../../interfaces/eventSubscriptionInterceptor';
-import { EventNameOrConstructor } from '../../../interfaces/eventConstructor';
+import { EventSubscription } from '../../../interfaces/eventSubscription.js';
+import { TestSubscriptionData } from '../../events/eventBase.js';
+import { session } from '../../session.js';
+import { EventSubscriptionSendInterceptor } from '../../../interfaces/eventSubscriptionInterceptor.js';
+import { EventNameOrConstructor } from '../../../interfaces/eventConstructor.js';
 
 export class TestEventSubscriptionSendInterceptor implements EventSubscriptionSendInterceptor<any, TestSubscriptionData> {
 

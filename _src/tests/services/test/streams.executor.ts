@@ -1,9 +1,9 @@
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { TestExecutionContext } from '../testExecutionContext';
-import { TestDto } from './contractparts';
-import { TestStreamsRequest, TestStreamsResponse } from './streams.contract';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { TestExecutionContext } from '../testExecutionContext.js';
+import { TestDto } from './contractparts.js';
+import { TestStreamsRequest, TestStreamsResponse } from './streams.contract.js';
 
 export class TestStreamExecutor implements ServiceExecutor<TestStreamsRequest, TestStreamsResponse> {
 	static serviceName: string = 'NaniumTest:test/streams';

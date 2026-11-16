@@ -1,8 +1,8 @@
-import { ServiceManager } from './serviceManager';
-import { ServiceExecutor } from './serviceExecutor';
-import { Channel } from './channel';
-import { Message } from './communicator';
-import { ConstructorType } from '../objects';
+import { ServiceManager } from './serviceManager.js';
+import { ServiceExecutor } from './serviceExecutor.js';
+import { Channel } from './channel.js';
+import { Message } from './communicator.js';
+import { ConstructorType } from '../objects.js';
 
 export interface ServiceProviderManager extends ServiceManager {
 	addService<T>(

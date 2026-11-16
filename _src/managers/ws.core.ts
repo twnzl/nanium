@@ -1,8 +1,8 @@
-import { NaniumLogger } from '../interfaces/logger';
-import { NaniumBuffer } from '../interfaces/naniumBuffer';
-import { NaniumStream } from '../interfaces/naniumStream';
-import { NaniumSerializer } from '../interfaces/serializer';
-import { WsMessage, WsMessageType, WsServiceChunkMessage } from './providers/channels/ws.types';
+import { NaniumLogger } from '../interfaces/logger.js';
+import { NaniumBuffer } from '../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../interfaces/naniumStream.js';
+import { NaniumSerializer } from '../interfaces/serializer.js';
+import { WsMessage, WsMessageType, WsServiceChunkMessage } from './providers/channels/ws.types.js';
 
 export async function sendMessage(
 	msg: WsMessage,

@@ -1,7 +1,7 @@
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { TestExecutionContext } from '../testExecutionContext';
-import { TestGetBinaryRequest } from './getBinary.contract';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { TestExecutionContext } from '../testExecutionContext.js';
+import { TestGetBinaryRequest } from './getBinary.contract.js';
 
 export class TestGetBinaryExecutor implements ServiceExecutor<TestGetBinaryRequest, NaniumBuffer> {
 	static serviceName: string = 'NaniumTest:test/getBinary';

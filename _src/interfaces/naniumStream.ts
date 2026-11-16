@@ -1,11 +1,11 @@
-import { ExtendedPromise, uuid } from '../helper';
+import { ExtendedPromise, uuid } from '../helper.js';
 import {
 	ConstructorType,
 	NaniumObject,
 	NaniumPropertyInfoCore,
 	Type
-} from '../objects';
-import { NaniumBuffer } from './naniumBuffer';
+} from '../objects.js';
+import { NaniumBuffer } from './naniumBuffer.js';
 
 
 type Chunk<T> = { value: T } | { end: true } | { error: any };

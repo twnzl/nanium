@@ -1,7 +1,7 @@
-import { TestExecutionContext } from '../../services/testExecutionContext';
-import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { EventBase, TestSubscriptionData } from '../../events/eventBase';
-import { EventSubscriptionReceiveInterceptor } from '../../../interfaces/eventSubscriptionInterceptor';
+import { TestExecutionContext } from '../../services/testExecutionContext.js';
+import { EventSubscription } from '../../../interfaces/eventSubscription.js';
+import { EventBase, TestSubscriptionData } from '../../events/eventBase.js';
+import { EventSubscriptionReceiveInterceptor } from '../../../interfaces/eventSubscriptionInterceptor.js';
 
 export class TestEventSubscriptionReceiveInterceptor implements EventSubscriptionReceiveInterceptor<EventBase> {
 	async execute(subscription: EventSubscription<TestSubscriptionData>): Promise<void> {

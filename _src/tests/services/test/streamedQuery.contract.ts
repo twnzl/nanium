@@ -1,7 +1,7 @@
-import { RequestType } from '../../../objects';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { TestDto } from './contractparts';
-import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
+import { RequestType } from '../../../objects.js';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { TestDto } from './contractparts.js';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase.js';
 
 export class TestStreamedQueryRequestBody {
 	amount?: number;

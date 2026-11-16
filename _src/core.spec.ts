@@ -1,6 +1,6 @@
-import { Nanium } from './core';
-import { CronConfig, ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry';
-import { ServiceRequestQueueEntryState } from './interfaces/serviceRequestQueueEntryState';
+import { Nanium } from './core.js';
+import { CronConfig, ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry.js';
+import { ServiceRequestQueueEntryState } from './interfaces/serviceRequestQueueEntryState.js';
 
 describe('queue entry: calculate next run', () => {
 	const realDate = Date;

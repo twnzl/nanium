@@ -1,5 +1,5 @@
-import { ExecutionContext } from './executionContext';
-import { NaniumSerializer } from './serializer';
+import { ExecutionContext } from './executionContext.js';
+import { NaniumSerializer } from './serializer.js';
 
 export interface ChannelConfig {
 	executionContextConstructor?: new(data: ExecutionContext) => ExecutionContext;

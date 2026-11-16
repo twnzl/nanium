@@ -1,7 +1,7 @@
-import { Stuff, StuffRequest } from './stuff.contract';
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { ExecutionContext } from '../../../interfaces/executionContext';
-import { ServiceRequestHead } from '../serviceRequestHead';
+import { Stuff, StuffRequest } from './stuff.contract.js';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { ExecutionContext } from '../../../interfaces/executionContext.js';
+import { ServiceRequestHead } from '../serviceRequestHead.js';
 
 export class StuffExecutor implements ServiceExecutor<StuffRequest, Stuff<Date>[]> {
 	static serviceName: string = 'NaniumTest:test/stuff';

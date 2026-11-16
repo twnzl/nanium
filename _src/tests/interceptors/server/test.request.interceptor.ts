@@ -1,6 +1,6 @@
-import { ServiceRequestBase } from '../../services/serviceRequestBase';
-import { TestExecutionContext } from '../../services/testExecutionContext';
-import { ServiceRequestInterceptor } from '../../../interfaces/serviceRequestInterceptor';
+import { ServiceRequestBase } from '../../services/serviceRequestBase.js';
+import { TestExecutionContext } from '../../services/testExecutionContext.js';
+import { ServiceRequestInterceptor } from '../../../interfaces/serviceRequestInterceptor.js';
 
 export class TestServerRequestInterceptor implements ServiceRequestInterceptor<ServiceRequestBase<any, any>> {
 	async execute(request: ServiceRequestBase<any, any>, context: TestExecutionContext): Promise<ServiceRequestBase<any, any>> {

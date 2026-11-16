@@ -1,6 +1,6 @@
-import { ExecutionContext } from './executionContext';
-import { EventSubscription } from './eventSubscription';
-import { EventNameOrConstructor } from './eventConstructor';
+import { ExecutionContext } from './executionContext.js';
+import { EventSubscription } from './eventSubscription.js';
+import { EventNameOrConstructor } from './eventConstructor.js';
 
 export interface EventSubscriptionSendInterceptor<TEvent, TSubscriptionData> {
 	execute(

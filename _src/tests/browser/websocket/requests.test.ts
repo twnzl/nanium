@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Nanium } from "../../../core";
-import { LogLevel, NaniumLogger } from "../../../interfaces/logger";
-import { ServiceResponseBase } from "../../services/serviceResponseBase";
-import { TimeRequest } from "../../services/test/time.contract";
-import { session } from "../../session";
-import { TestLogger } from "../../testLogger";
-import { TestCore } from "../test-core";
+import { Nanium } from "../../../core.js";
+import { LogLevel, NaniumLogger } from "../../../interfaces/logger.js";
+import { ServiceResponseBase } from "../../services/serviceResponseBase.js";
+import { TimeRequest } from "../../services/test/time.contract.js";
+import { session } from "../../session.js";
+import { TestLogger } from "../../testLogger.js";
+import { TestCore } from "../test-core.js";
 
 describe('basic browser client tests (Websocket)', () => {
 

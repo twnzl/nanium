@@ -1,4 +1,4 @@
-import { ConsumerWebsocketBase, NaniumConsumerWebsocketConfigBase } from './wsBase';
+import { ConsumerWebsocketBase, NaniumConsumerWebsocketConfigBase } from './wsBase.js';
 
 export interface NaniumConsumerNodeWebsocketConfig extends NaniumConsumerWebsocketConfigBase {
 }

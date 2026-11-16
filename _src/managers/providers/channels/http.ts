@@ -3,20 +3,20 @@ import { Server as HttpsServer } from 'https';
 
 import { randomUUID } from 'crypto';
 import * as multipart from 'parse-multipart-data';
-import { Nanium } from '../../../core';
-import { RejectFunction, ResolveFunction } from '../../../helper';
-import { Channel } from '../../../interfaces/channel';
-import { ChannelConfig } from '../../../interfaces/channelConfig';
-import { Message } from '../../../interfaces/communicator';
-import { EventSubscription } from '../../../interfaces/eventSubscription';
-import { NaniumLogger } from '../../../interfaces/logger';
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager';
-import { NaniumRepository } from '../../../interfaces/serviceRepository';
-import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects';
-import { NaniumJsonSerializer } from '../../../serializers/json';
-import { getPrimaryResponseType, getSecondaryResponseType } from '../../core';
+import { Nanium } from '../../../core.js';
+import { RejectFunction, ResolveFunction } from '../../../helper.js';
+import { Channel } from '../../../interfaces/channel.js';
+import { ChannelConfig } from '../../../interfaces/channelConfig.js';
+import { Message } from '../../../interfaces/communicator.js';
+import { EventSubscription } from '../../../interfaces/eventSubscription.js';
+import { NaniumLogger } from '../../../interfaces/logger.js';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { ServiceProviderManager } from '../../../interfaces/serviceProviderManager.js';
+import { NaniumRepository } from '../../../interfaces/serviceRepository.js';
+import { NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol } from '../../../objects.js';
+import { NaniumJsonSerializer } from '../../../serializers/json.js';
+import { getPrimaryResponseType, getSecondaryResponseType } from '../../core.js';
 
 export interface NaniumHttpChannelConfig extends ChannelConfig {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type

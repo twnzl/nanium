@@ -22,8 +22,14 @@
 - request queues: transform request to instance with correct types before execution
 - NaniumBuffer: added methods for sequential writing and reading, added Big-Endian-read methods, added readString & writeString, fix of asUInt8Array, added DataView support, making all read and convert functions synchron (adding a static async create function)
 - NaniumStream: backpressure-handling making write() async and http provider-channel and consumers check backlog state and wait if buffer is full
-- NaniumBuffer: increased performance for Szenarios with many small writes
+- NaniumBuffer: increased performance for scenarios with many small writes
 - generation of services: executers use now the serviceName property of belonging request classes
+- added nodejs websocket consumer
+- package is now a pure ESM package (`"type": "module"`), built to `dist/` instead of the project root
+- package exports are now organized as three subpath entry points instead of per-file deep imports:
+  `nanium/core` (shared code), `nanium/node` (nodejs-only) and `nanium/browser` (browser-only); the old
+  deep imports (e.g. `nanium/interfaces/executionContext`, `nanium/managers/providers/nodejs`) no longer
+  work and must be replaced by one of these three imports
 
 # 1.25.2
 

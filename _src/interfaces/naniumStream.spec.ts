@@ -1,6 +1,6 @@
-import { TestDto } from '../tests/services/test/contractparts';
-import { NaniumBuffer } from './naniumBuffer';
-import { NaniumStream } from './naniumStream';
+import { TestDto } from '../tests/services/test/contractparts.js';
+import { NaniumBuffer } from './naniumBuffer.js';
+import { NaniumStream } from './naniumStream.js';
 
 describe('NaniumStream', function (): void {
 	test('isNaniumStream', function (): void {

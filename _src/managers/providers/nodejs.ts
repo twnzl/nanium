@@ -1,23 +1,24 @@
 import { Stats } from 'fs';
 import * as path from 'path';
-import * as findFiles from 'recursive-readdir';
-import { Channel } from '../../interfaces/channel';
-import { Message } from '../../interfaces/communicator';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscription';
+import { pathToFileURL } from 'url';
+import findFiles from 'recursive-readdir';
+import { Channel } from '../../interfaces/channel.js';
+import { Message } from '../../interfaces/communicator.js';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor.js';
+import { EventHandler } from '../../interfaces/eventHandler.js';
+import { EventSubscription } from '../../interfaces/eventSubscription.js';
 import {
 	EventEmissionSendInterceptor,
 	EventSubscriptionReceiveInterceptor
-} from '../../interfaces/eventSubscriptionInterceptor';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { NaniumLogger } from '../../interfaces/logger';
-import { ServiceExecutor } from '../../interfaces/serviceExecutor';
-import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig';
-import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
-import { NaniumRepository } from '../../interfaces/serviceRepository';
-import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
-import { ConstructorType, NaniumObject, genericTypesSymbol } from '../../objects';
+} from '../../interfaces/eventSubscriptionInterceptor.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { NaniumLogger } from '../../interfaces/logger.js';
+import { ServiceExecutor } from '../../interfaces/serviceExecutor.js';
+import { ServiceProviderConfig } from '../../interfaces/serviceProviderConfig.js';
+import { ServiceProviderManager } from '../../interfaces/serviceProviderManager.js';
+import { NaniumRepository } from '../../interfaces/serviceRepository.js';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor.js';
+import { ConstructorType, NaniumObject, genericTypesSymbol } from '../../objects.js';
 
 export class NaniumNodejsProviderConfig implements ServiceProviderConfig {
 	/**
@@ -129,13 +130,14 @@ export class NaniumProviderNodejs implements ServiceProviderManager {
 			}
 			for (const file of files) {
 				try {
-					const request: any = NaniumProviderNodejs.findClassWithServiceNameProperty(await import(path.resolve(file)));
+					const request: any = NaniumProviderNodejs.findClassWithServiceNameProperty(
+						await import(pathToFileURL(path.resolve(file)).href));
 					if (!request) {
 						NaniumLogger.warn('invalid contract file (no request class found): ' + file);
 						continue;
 					}
 					const executor: any = NaniumProviderNodejs.findClassWithServiceNameProperty(
-						await import(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))));
+						await import(pathToFileURL(path.resolve(file.replace(/\.contract\.js$/, '.executor.js'))).href));
 					this.addService(request, executor);
 					NaniumLogger.info('service ready: ' + executor.serviceName);
 				} catch (e) {

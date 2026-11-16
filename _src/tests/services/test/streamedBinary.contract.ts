@@ -1,7 +1,7 @@
-import { RequestType } from '../../../objects';
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import { RequestType } from '../../../objects.js';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase.js';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
 
 export class TestStreamedBinaryRequestBody {
 	amount?: number;

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Nanium } from '../../core';
-import { NaniumConsumerBrowserHttp } from '../../managers/consumers/browserHttp';
-import { NaniumProviderBrowser } from '../../managers/providers/browser';
-import { NaniumJsonSerializer } from '../../serializers/json';
-import { ClientServiceExecutionContext } from '../browser-client/src/services/clientServiceExecutionContext';
-import { StuffGetRequest } from '../browser-client/src/services/stuff/get.contract';
-import { StuffGetExecutor } from '../browser-client/src/services/stuff/get.executor';
-import { TestClientRequestInterceptor } from '../interceptors/client/test.request.interceptor';
-import { TestClientResponseInterceptor } from '../interceptors/client/test.response.interceptor';
-import { ServiceRequestBase } from '../services/serviceRequestBase';
+import { Nanium } from '../../core.js';
+import { NaniumConsumerBrowserHttp } from '../../managers/consumers/browserHttp.js';
+import { NaniumProviderBrowser } from '../../managers/providers/browser.js';
+import { NaniumJsonSerializer } from '../../serializers/json.js';
+import { ClientServiceExecutionContext } from '../browser-client/src/services/clientServiceExecutionContext.js';
+import { StuffGetRequest } from '../browser-client/src/services/stuff/get.contract.js';
+import { StuffGetExecutor } from '../browser-client/src/services/stuff/get.executor.js';
+import { TestClientRequestInterceptor } from '../interceptors/client/test.request.interceptor.js';
+import { TestClientResponseInterceptor } from '../interceptors/client/test.response.interceptor.js';
+import { ServiceRequestBase } from '../services/serviceRequestBase.js';
 
 function initNanium(baseUrl: string = 'http://localhost:8080'): void {
 	const serializer = new NaniumJsonSerializer();

@@ -1,6 +1,6 @@
-import { Nanium } from '../core';
-import { Type } from '../objects';
-import { EventHandler } from './eventHandler';
+import { Nanium } from '../core.js';
+import { Type } from '../objects.js';
+import { EventHandler } from './eventHandler.js';
 
 export class EventSubscription<TData = any, TContext = any> {
 	private static nextId: number = 0;

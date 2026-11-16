@@ -1,11 +1,11 @@
-import { AsyncHelper } from '../../helper';
+import { AsyncHelper } from '../../helper.js';
 import {
 	TestEventSubscriptionReceiveInterceptor
-} from '../interceptors/server/test.receive-event-subscription.interceptor';
-import { TestExecutionContext } from '../services/testExecutionContext';
-import { session } from '../session';
-import { TestHelper } from '../testHelper';
-import { StuffEvent } from './test/stuffEvent';
+} from '../interceptors/server/test.receive-event-subscription.interceptor.js';
+import { TestExecutionContext } from '../services/testExecutionContext.js';
+import { session } from '../session.js';
+import { TestHelper } from '../testHelper.js';
+import { StuffEvent } from './test/stuffEvent.js';
 
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 

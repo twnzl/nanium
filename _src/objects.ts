@@ -1,6 +1,6 @@
-import { ExecutionScope } from './interfaces/executionScope';
-import { NaniumLogger } from './interfaces/logger';
-import { ServiceRequestInterceptor } from './interfaces/serviceRequestInterceptor';
+import { ExecutionScope } from './interfaces/executionScope.js';
+import { NaniumLogger } from './interfaces/logger.js';
+import { ServiceRequestInterceptor } from './interfaces/serviceRequestInterceptor.js';
 
 export const responseTypeSymbol: symbol = Symbol.for('__Nanium__ResponseType__');
 export const genericTypesSymbol: symbol = Symbol.for('__Nanium__GenericTypes__');

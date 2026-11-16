@@ -1,7 +1,7 @@
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { TestDto } from './contractparts';
-import { TestStreamedQueryRequest } from './streamedQuery.contract';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { TestDto } from './contractparts.js';
+import { TestStreamedQueryRequest } from './streamedQuery.contract.js';
 
 export class TestStreamedQueryExecutor implements ServiceExecutor<TestStreamedQueryRequest, NaniumStream<TestDto>> {
 	static serviceName: string = 'NaniumTest:test/streamedQuery';

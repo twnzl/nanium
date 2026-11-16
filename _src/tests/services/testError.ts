@@ -1,4 +1,4 @@
-import { NaniumObject, Type } from '../../objects';
+import { NaniumObject, Type } from '../../objects.js';
 
 export class TestError extends NaniumObject<TestError> {
 	@Type(String) type: 'exception' | 'validation';

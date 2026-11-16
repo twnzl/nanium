@@ -1,13 +1,13 @@
-import { ServiceExecutor } from '../../interfaces/serviceExecutor';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { NaniumRepository } from '../../interfaces/serviceRepository';
-import { ServiceProviderManager } from '../../interfaces/serviceProviderManager';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscription';
-import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor';
-import { Channel } from '../../interfaces/channel';
-import { ConstructorType, NaniumObject } from '../../objects';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
+import { ServiceExecutor } from '../../interfaces/serviceExecutor.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { NaniumRepository } from '../../interfaces/serviceRepository.js';
+import { ServiceProviderManager } from '../../interfaces/serviceProviderManager.js';
+import { EventHandler } from '../../interfaces/eventHandler.js';
+import { EventSubscription } from '../../interfaces/eventSubscription.js';
+import { ServiceRequestInterceptor } from '../../interfaces/serviceRequestInterceptor.js';
+import { Channel } from '../../interfaces/channel.js';
+import { ConstructorType, NaniumObject } from '../../objects.js';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor.js';
 
 export class NaniumBrowserProviderConfig {
 	/**

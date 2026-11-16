@@ -1,5 +1,5 @@
-import { ServiceRequestBase } from '../serviceRequestBase';
-import { NaniumObject, RequestType, Type } from '../../../objects';
+import { ServiceRequestBase } from '../serviceRequestBase.js';
+import { NaniumObject, RequestType, Type } from '../../../objects.js';
 
 export class GenericStuff<TStuffSubType> extends NaniumObject<GenericStuff<TStuffSubType>> {
 	aString?: string;

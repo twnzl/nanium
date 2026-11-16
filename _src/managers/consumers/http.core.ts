@@ -1,14 +1,14 @@
-import { RejectFunction, ResolveFunction } from '../../helper';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscription';
-import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { NaniumLogger } from '../../interfaces/logger';
-import { NaniumBuffer } from '../../interfaces/naniumBuffer';
-import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../objects';
-import { getPrimaryResponseType } from '../core';
+import { RejectFunction, ResolveFunction } from '../../helper.js';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor.js';
+import { EventHandler } from '../../interfaces/eventHandler.js';
+import { EventSubscription } from '../../interfaces/eventSubscription.js';
+import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { NaniumLogger } from '../../interfaces/logger.js';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer.js';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig.js';
+import { genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore } from '../../objects.js';
+import { getPrimaryResponseType } from '../core.js';
 
 interface NaniumEventResponse {
 	eventName: string;

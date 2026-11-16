@@ -1,6 +1,6 @@
 import { Blob } from 'node:buffer';
-import { NaniumBuffer, NaniumBufferReadable } from './naniumBuffer';
-import { NaniumStream } from './naniumStream';
+import { NaniumBuffer, NaniumBufferReadable } from './naniumBuffer.js';
+import { NaniumStream } from './naniumStream.js';
 
 describe('NaniumBuffer', function (): void {
 	const arrayBuffer: ArrayBuffer = new TextEncoder().encode('abc').buffer;

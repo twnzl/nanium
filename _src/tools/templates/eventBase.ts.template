@@ -1,9 +1,12 @@
-import { Nanium } from 'nanium/core';
-import { ConstructorType, NaniumObject } from 'nanium/objects';
-import { EventHandler } from 'nanium/interfaces/eventHandler';
-import { ExecutionContext } from 'nanium/interfaces/executionContext';
-import { EventSubscription } from 'nanium/interfaces/eventSubscription';
-import { ServiceManager } from 'nanium/interfaces/serviceManager';
+import {
+	ConstructorType,
+	EventHandler,
+	EventSubscription,
+	ExecutionContext,
+	Nanium,
+	NaniumObject,
+	ServiceManager
+} from 'nanium/core';
 
 export abstract class EventBase<T = any> extends NaniumObject<T> {
 	static readonly eventName: string;

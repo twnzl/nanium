@@ -1,7 +1,7 @@
-import { ExecutionContext } from './executionContext';
-import { EventHandler } from './eventHandler';
-import { EventSubscription } from './eventSubscription';
-import { EventNameOrConstructor } from './eventConstructor';
+import { ExecutionContext } from './executionContext.js';
+import { EventHandler } from './eventHandler.js';
+import { EventSubscription } from './eventSubscription.js';
+import { EventNameOrConstructor } from './eventConstructor.js';
 
 export interface ServiceManager {
 

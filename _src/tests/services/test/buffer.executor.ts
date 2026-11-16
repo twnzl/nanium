@@ -1,6 +1,6 @@
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { TestExecutionContext } from '../testExecutionContext';
-import { TestBufferRequest, TestBufferResponse } from './buffer.contract';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { TestExecutionContext } from '../testExecutionContext.js';
+import { TestBufferRequest, TestBufferResponse } from './buffer.contract.js';
 
 export class TestBufferExecutor implements ServiceExecutor<TestBufferRequest, TestBufferResponse> {
 	static serviceName: string = 'NaniumTest:test/buffer';

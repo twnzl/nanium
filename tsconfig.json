@@ -1,21 +1,22 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "target": "ES2019",
+    "useDefineForClassFields": false,
     "sourceMap": true,
     "inlineSourceMap": false,
     "declaration": true,
-    "outDir": ".",
+    "outDir": "dist",
+    "rootDir": "_src",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
+    "esModuleInterop": true,
     "types": [
-      "node",
-      "jest",
-      "jest-expect-message"
+      "node"
     ],
-    "moduleResolution": "Node",
     "typeRoots": [
       "node_modules/@types"
     ]
@@ -27,13 +28,6 @@
     "node_modules",
     "dist",
     "_tmp/sdk",
-    "communicators",
-    "interfaces",
-    "managers",
-    "serializers",
-    "tests",
-    "tools",
-    "_src/tests/browser-client",
-    "v_itest.config.ts"
+    "_src/tests/browser-client"
   ]
 }

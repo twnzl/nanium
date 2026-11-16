@@ -1,15 +1,15 @@
-import { Nanium } from '../core';
-import { NaniumBuffer } from '../interfaces/naniumBuffer';
-import { NaniumStream } from '../interfaces/naniumStream';
-import { NaniumConsumerNodeWebsocket } from '../managers/consumers/nodeWs';
-import { NaniumJsonSerializer } from '../serializers/json';
-import { EventSubscription } from '../interfaces/eventSubscription';
-import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
-import { TestClientResponseInterceptor } from './interceptors/client/test.response.interceptor';
-import { TestEventSubscriptionSendInterceptor } from './interceptors/client/test.send-event-subscription.interceptor';
-import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
-import { TestBufferRequest } from './services/test/buffer.contract';
-import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
+import { Nanium } from '../core.js';
+import { NaniumBuffer } from '../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../interfaces/naniumStream.js';
+import { NaniumConsumerNodeWebsocket } from '../managers/consumers/nodeWs.js';
+import { NaniumJsonSerializer } from '../serializers/json.js';
+import { EventSubscription } from '../interfaces/eventSubscription.js';
+import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor.js';
+import { TestClientResponseInterceptor } from './interceptors/client/test.response.interceptor.js';
+import { TestEventSubscriptionSendInterceptor } from './interceptors/client/test.send-event-subscription.interceptor.js';
+import { TestGetRequest, TestGetResponse } from './services/test/get.contract.js';
+import { TestBufferRequest } from './services/test/buffer.contract.js';
+import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract.js';
 
 process.on('unhandledRejection', (reason) => {
 	console.error('UNHANDLED REJECTION:', reason);
@@ -17,9 +17,9 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (err) => {
 	console.error('UNCAUGHT EXCEPTION:', err);
 });
-import { TestDto } from './services/test/contractparts';
-import { StuffEvent } from './events/test/stuffEvent';
-import { session } from './session';
+import { TestDto } from './services/test/contractparts.js';
+import { StuffEvent } from './events/test/stuffEvent.js';
+import { session } from './session.js';
 
 async function main(): Promise<void> {
 	session.token = '1234';

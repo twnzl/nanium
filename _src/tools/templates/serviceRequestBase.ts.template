@@ -1,8 +1,5 @@
-import { Nanium } from 'nanium/core';
-import { ServiceRequestQueueEntry } from 'nanium/interfaces/serviceRequestQueueEntry';
+import { ConstructorType, ExecutionContext, Nanium, NaniumObject, ServiceRequestQueueEntry, Type } from 'nanium/core';
 import { ServiceRequestHead } from './serviceRequestHead';
-import { NaniumObject, Type, ConstructorType } from 'nanium/objects';
-import { ExecutionContext } from 'nanium/interfaces/executionContext';
 
 export abstract class ServiceRequestBase<TRequestBody, TResponse> {
 	static readonly serviceName: string;

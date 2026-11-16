@@ -1,5 +1,5 @@
-import { ServiceRequestQueueEntry, ServiceRequestQueueEntryQueryConditions } from './serviceRequestQueueEntry';
-import { ExecutionContext } from './executionContext';
+import { ServiceRequestQueueEntry, ServiceRequestQueueEntryQueryConditions } from './serviceRequestQueueEntry.js';
+import { ExecutionContext } from './executionContext.js';
 
 /**
  * a request queue that can be used by bocl has to implement these members

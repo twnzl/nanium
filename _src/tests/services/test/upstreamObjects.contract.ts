@@ -1,7 +1,7 @@
-import { NaniumStream } from '../../../interfaces/naniumStream';
-import { NaniumObject, RequestType, Type } from '../../../objects';
-import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
-import { TestDto } from './contractparts';
+import { NaniumStream } from '../../../interfaces/naniumStream.js';
+import { NaniumObject, RequestType, Type } from '../../../objects.js';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase.js';
+import { TestDto } from './contractparts.js';
 
 export class TestUpstreamObjectsRequestBody extends NaniumObject<TestUpstreamObjectsRequestBody> {
 	@Type(NaniumStream, TestDto) upstream1?: NaniumStream<TestDto>;

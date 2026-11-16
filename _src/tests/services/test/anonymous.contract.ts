@@ -1,7 +1,7 @@
-import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
-import { TestServerRequestInterceptor } from '../../interceptors/server/test.request.interceptor';
-import { RequestType } from '../../../objects';
+import { ServiceRequestBase } from '../serviceRequestBase.js';
+import { ServiceResponseBase } from '../serviceResponseBase.js';
+import { TestServerRequestInterceptor } from '../../interceptors/server/test.request.interceptor.js';
+import { RequestType } from '../../../objects.js';
 
 // disabled to test services without this decorator
 @RequestType({

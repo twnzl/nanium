@@ -4,18 +4,21 @@ import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http';
 import * as https from 'https';
 import { Server as HttpsServer } from 'https';
 import * as path from 'path';
-import { Nanium } from '../core';
-import { RejectFunction, ResolveFunction } from '../helper';
-import { LogLevel, NaniumLogger } from '../interfaces/logger';
-import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp';
-import { NaniumHttpChannel } from '../managers/providers/channels/http';
-import { NaniumProviderNodejs } from '../managers/providers/nodejs';
-import { NaniumJsonSerializer } from '../serializers/json';
-import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor';
-import { TestEventSubscriptionSendInterceptor } from './interceptors/client/test.send-event-subscription.interceptor';
-import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { TestExecutionContext } from './services/testExecutionContext';
-import { TestLogger } from './testLogger';
+import { fileURLToPath } from 'url';
+import { Nanium } from '../core.js';
+import { RejectFunction, ResolveFunction } from '../helper.js';
+import { LogLevel, NaniumLogger } from '../interfaces/logger.js';
+import { NaniumConsumerNodejsHttp } from '../managers/consumers/nodejsHttp.js';
+import { NaniumHttpChannel } from '../managers/providers/channels/http.js';
+import { NaniumProviderNodejs } from '../managers/providers/nodejs.js';
+import { NaniumJsonSerializer } from '../serializers/json.js';
+import { TestClientRequestInterceptor } from './interceptors/client/test.request.interceptor.js';
+import { TestEventSubscriptionSendInterceptor } from './interceptors/client/test.send-event-subscription.interceptor.js';
+import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor.js';
+import { TestExecutionContext } from './services/testExecutionContext.js';
+import { TestLogger } from './testLogger.js';
+
+const __dirname: string = path.dirname(fileURLToPath(import.meta.url));
 
 export class TestHelper {
 	static httpServer: HttpServer | HttpsServer;
@@ -74,7 +77,7 @@ export class TestHelper {
 
 		// Nanium provider
 		this.provider = new NaniumProviderNodejs({
-			servicePath: 'tests/services',
+			servicePath: 'dist/tests/services',
 			channels: [
 				new NaniumHttpChannel('hc1', {
 					apiPath: '/api',

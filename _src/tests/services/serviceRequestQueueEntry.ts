@@ -1,4 +1,4 @@
-import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry';
+import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry.js';
 
 export interface MyServiceRequestQueueEntry extends ServiceRequestQueueEntry {
 	/**

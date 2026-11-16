@@ -1,6 +1,6 @@
-import { RequestType } from '../../../objects';
-import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
+import { RequestType } from '../../../objects.js';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase.js';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
 
 @RequestType({
 	responseType: NaniumBuffer,

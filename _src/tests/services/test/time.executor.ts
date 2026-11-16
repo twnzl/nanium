@@ -1,6 +1,6 @@
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { TimeRequest } from './time.contract';
-import { ServiceResponseBase } from '../serviceResponseBase';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { TimeRequest } from './time.contract.js';
+import { ServiceResponseBase } from '../serviceResponseBase.js';
 
 export class TestTimeExecutor implements ServiceExecutor<TimeRequest, ServiceResponseBase<Date>> {
 	static serviceName: string = 'NaniumTest:test/time';

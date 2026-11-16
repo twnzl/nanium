@@ -1,11 +1,11 @@
-import * as cluster from 'cluster';
-import { Nanium } from '../core';
-import { RejectFunction, ResolveFunction } from '../helper';
-import { EmitEventMessage, Message, NaniumCommunicator } from '../interfaces/communicator';
-import { EventSubscription } from '../interfaces/eventSubscription';
-import { ExecutionContext } from '../interfaces/executionContext';
-import { NaniumLogger } from '../interfaces/logger';
-import { ServiceProviderManager } from '../interfaces/serviceProviderManager';
+import cluster from 'cluster';
+import { Nanium } from '../core.js';
+import { RejectFunction, ResolveFunction } from '../helper.js';
+import { EmitEventMessage, Message, NaniumCommunicator } from '../interfaces/communicator.js';
+import { EventSubscription } from '../interfaces/eventSubscription.js';
+import { ExecutionContext } from '../interfaces/executionContext.js';
+import { NaniumLogger } from '../interfaces/logger.js';
+import { ServiceProviderManager } from '../interfaces/serviceProviderManager.js';
 
 export class ClusterCommunicator<TExecutionContext extends ExecutionContext> implements NaniumCommunicator {
 	private primaryMessageListenerInstalled: { [key: string]: boolean } = {};

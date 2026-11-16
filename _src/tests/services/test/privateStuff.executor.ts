@@ -1,5 +1,5 @@
-import { PrivateStuffRequest, PrivateStuffResponse } from './privateStuff.contract';
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
+import { PrivateStuffRequest, PrivateStuffResponse } from './privateStuff.contract.js';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
 
 export class PrivateStuffExecutor implements ServiceExecutor<PrivateStuffRequest, PrivateStuffResponse> {
 	static serviceName: string = 'NaniumTest:test/privateStuff';

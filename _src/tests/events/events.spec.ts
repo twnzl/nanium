@@ -1,8 +1,8 @@
-import { EventSubscription } from '../../interfaces/eventSubscription';
-import { TestExecutionContext } from '../services/testExecutionContext';
-import { TestHelper } from '../testHelper';
-import { Stuff2Event } from './test/stuff2Event';
-import { StuffEvent } from './test/stuffEvent';
+import { EventSubscription } from '../../interfaces/eventSubscription.js';
+import { TestExecutionContext } from '../services/testExecutionContext.js';
+import { TestHelper } from '../testHelper.js';
+import { Stuff2Event } from './test/stuff2Event.js';
+import { StuffEvent } from './test/stuffEvent.js';
 
 const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 

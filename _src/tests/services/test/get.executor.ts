@@ -1,9 +1,9 @@
-import { ServiceResponseMessage } from '../serviceResponseBase';
-import { TestGetRequest, TestGetResponse } from './get.contract';
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { StuffEvent } from '../../events/test/stuffEvent';
-import { TestExecutionContext } from '../testExecutionContext';
-import { Stuff2Event } from '../../events/test/stuff2Event';
+import { ServiceResponseMessage } from '../serviceResponseBase.js';
+import { TestGetRequest, TestGetResponse } from './get.contract.js';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { StuffEvent } from '../../events/test/stuffEvent.js';
+import { TestExecutionContext } from '../testExecutionContext.js';
+import { Stuff2Event } from '../../events/test/stuff2Event.js';
 
 export class TestGetExecutor implements ServiceExecutor<TestGetRequest, TestGetResponse> {
 	static serviceName: string = 'NaniumTest:test/get';

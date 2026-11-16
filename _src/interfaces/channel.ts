@@ -1,7 +1,7 @@
-import { NaniumRepository } from './serviceRepository';
-import { EventSubscription } from './eventSubscription';
-import { ServiceProviderManager } from './serviceProviderManager';
-import { Message } from './communicator';
+import { NaniumRepository } from './serviceRepository.js';
+import { EventSubscription } from './eventSubscription.js';
+import { ServiceProviderManager } from './serviceProviderManager.js';
+import { Message } from './communicator.js';
 
 export interface Channel {
 	id: string | number;

@@ -1,6 +1,6 @@
-import { ServiceRequestBase } from '../serviceRequestBase';
-import { ServiceResponseBase } from '../serviceResponseBase';
-import { RequestType } from '../../../objects';
+import { ServiceRequestBase } from '../serviceRequestBase.js';
+import { ServiceResponseBase } from '../serviceResponseBase.js';
+import { RequestType } from '../../../objects.js';
 
 @RequestType({
 	responseType: ServiceResponseBase,

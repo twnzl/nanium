@@ -1,6 +1,6 @@
-import { NaniumObject, RequestType, Type } from '../../../objects';
-import { NaniumBuffer } from '../../../interfaces/naniumBuffer';
-import { SimpleServiceRequestBase } from '../simpleServiceRequestBase';
+import { NaniumObject, RequestType, Type } from '../../../objects.js';
+import { NaniumBuffer } from '../../../interfaces/naniumBuffer.js';
+import { SimpleServiceRequestBase } from '../simpleServiceRequestBase.js';
 
 export class TestBufferRequestBody extends NaniumObject<TestBufferRequestBody> {
 	@Type(String) id: string;

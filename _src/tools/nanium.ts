@@ -4,10 +4,13 @@ import { Stats } from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
 import { Interface } from 'readline';
-import * as findFiles from 'recursive-readdir';
-import * as shell from 'shelljs';
+import findFiles from 'recursive-readdir';
+import shell from 'shelljs';
 import * as zip from 'unzipper';
 import * as util from 'util';
+import { fileURLToPath } from 'url';
+
+const __dirname: string = path.dirname(fileURLToPath(import.meta.url));
 
 let root: string;
 let config: NaniumToolConfig;
@@ -390,7 +393,7 @@ function fromTemplate(name: string, data?: object): string {
 }
 
 async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
-	const packageJson = await import(path.join(root, 'package.json'));
+	const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), { encoding: 'utf8' }));
 	// output directory
 	const outDir: string = path.join(root, config.outDir ?? '');
 	if (!fs.existsSync(outDir)) {

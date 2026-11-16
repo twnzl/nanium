@@ -1,4 +1,4 @@
-import { NaniumSerializer } from '../interfaces/serializer';
+import { NaniumSerializer } from '../interfaces/serializer.js';
 
 export class NaniumJsonSerializer implements NaniumSerializer {
 

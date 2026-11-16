@@ -12,11 +12,32 @@
     "url": "https://github.com/twnzl/nanium/issues"
   },
   "homepage": "https://github.com/twnzl/nanium.git#readme",
-  "main": "core.js",
-  "bin": {
-    "nanium": "tools/nanium.js"
+  "type": "module",
+  "main": "./dist/entries/core.js",
+  "types": "./dist/entries/core.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/entries/core.d.ts",
+      "import": "./dist/entries/core.js"
+    },
+    "./core": {
+      "types": "./dist/entries/core.d.ts",
+      "import": "./dist/entries/core.js"
+    },
+    "./browser": {
+      "types": "./dist/entries/browser.d.ts",
+      "import": "./dist/entries/browser.js"
+    },
+    "./node": {
+      "types": "./dist/entries/node.d.ts",
+      "import": "./dist/entries/node.js"
+    },
+    "./package.json": "./package.json"
   },
-  "types": "**/*.ts",
+  "sideEffects": false,
+  "bin": {
+    "nanium": "./dist/tools/nanium.js"
+  },
   "keywords": [
     "nanium",
     "framework",
@@ -29,41 +50,23 @@
   "scripts": {
     "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
     "build:testserver": "cd _src/tests/test-server && tsc && cd ../../..",
-    "build": "tsc && node tools/nanium.js ccp _src/tools/templates tools/templates && npm run build:testserver",
+    "build": "tsc && node dist/tools/nanium.js ccp _src/tools/templates dist/tools/templates && npm run build:testserver",
     "run:testserver": "cd _src/tests/test-server && node dst/tests/test-server/testserver.js && cd ../../..",
-    "test:server": "export NODE_TLS_REJECT_UNAUTHORIZED=0; jest --runInBand",
+    "test:server": "export NODE_TLS_REJECT_UNAUTHORIZED=0; vitest run --config vitest.node.config.ts",
     "test:client": "cd _src/tests/browser-client; npm test; cd ../../..",
     "test": "npm run test:server && npm run test:client",
     "prepare": "",
     "publishlist": "npm publish --dry-run",
     "bundle": "npm run build && npm test && npm publish",
-    "cleanup": "rm -rf interfaces && rm -rf managers && rm -rf serializers && rm -rf tests && rm -rf tools && rm -rf communicators && rm -f *.d.ts && rm -f *.js && rm -f *.js.map && rm -rf _src/tests/test-server/dst",
+    "cleanup": "rm -rf dist && rm -rf _src/tests/test-server/dst",
     "cleanbuild": "npm run cleanup && npm run build"
   },
   "files": [
     "README.md",
-    "core.js",
-    "core.d.ts",
-    "objects.js",
-    "objects.d.ts",
-    "helper.js",
-    "helper.d.ts",
-    "communicators/**/*.js",
-    "communicators/**/*.ts",
-    "interfaces/**/*.js",
-    "interfaces/**/*.ts",
-    "serializers/**/*.js",
-    "serializers/**/*.ts",
-    "managers/**/*.js",
-    "managers/**/*.ts",
-    "queues/**/*.js",
-    "queues/**/*.ts",
-    "tools/**/*.js",
-    "tools/**/*.ts",
-    "tools/**/*.template",
-    "tools/**/*.zip",
-    "!**/*.spec.js",
-    "!**/*.spec.d.ts"
+    "dist",
+    "!dist/**/*.spec.js",
+    "!dist/**/*.spec.js.map",
+    "!dist/**/*.spec.d.ts"
   ],
   "dependencies": {
     "parse-multipart-data": "^1.5.0",
@@ -74,11 +77,8 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@alex_neo/jest-expect-message": "^1.0.5",
     "@eslint/js": "^9.39.1",
     "@eslint/json": "^0.14.0",
-    "@types/jest": "^28.0.0",
-    "@types/jest-expect-message": "^1.0.3",
     "@types/node": "^25.0.3",
     "@types/recursive-readdir": "^2.2.0",
     "@types/shelljs": "^0.8.5",
@@ -90,9 +90,7 @@
     "@vitest/browser": "^4.0.16",
     "@vitest/browser-playwright": "^4.0.16",
     "eslint": "^9.39.1",
-    "jest": "^28.0.0",
     "playwright": "^1.57.0",
-    "ts-jest": "^28.0.0",
     "ts-node": "^8.3.0",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.49.0",

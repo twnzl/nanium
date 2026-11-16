@@ -1,4 +1,4 @@
-import { Type } from '../../../objects';
+import { Type } from '../../../objects.js';
 
 export class TestQueryRequestBody {
 	@Type(Number) input: number;

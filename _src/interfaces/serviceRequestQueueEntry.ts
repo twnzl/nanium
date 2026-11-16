@@ -1,5 +1,5 @@
-import { ServiceRequestQueueEntryState } from './serviceRequestQueueEntryState';
-import { NaniumObject, Type } from '../objects';
+import { ServiceRequestQueueEntryState } from './serviceRequestQueueEntryState.js';
+import { NaniumObject, Type } from '../objects.js';
 
 /**
  * this is how a service request queue entry must look like

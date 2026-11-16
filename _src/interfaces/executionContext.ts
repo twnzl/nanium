@@ -1,4 +1,4 @@
-import { ExecutionScope } from './executionScope';
+import { ExecutionScope } from './executionScope.js';
 
 export interface ExecutionContext {
 	scope?: ExecutionScope;

@@ -1,24 +1,24 @@
-import { Nanium } from '../core';
-import { LogLevel, NaniumLogger } from '../interfaces/logger';
-import { NaniumStream } from '../interfaces/naniumStream';
-import { NaniumProviderNodejs } from '../managers/providers/nodejs';
-import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor';
-import { ServiceResponseBase } from './services/serviceResponseBase';
-import { TestDto } from './services/test/contractparts';
-import { TestGetRequest, TestGetResponse } from './services/test/get.contract';
-import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract';
-import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract';
-import { TestStreamedQueryExecutor } from './services/test/streamedQuery.executor';
-import { TimeRequest } from './services/test/time.contract';
-import { TestExecutionContext } from './services/testExecutionContext';
-import { TestLogger } from './testLogger';
+import { Nanium } from '../core.js';
+import { LogLevel, NaniumLogger } from '../interfaces/logger.js';
+import { NaniumStream } from '../interfaces/naniumStream.js';
+import { NaniumProviderNodejs } from '../managers/providers/nodejs.js';
+import { TestServerRequestInterceptor } from './interceptors/server/test.request.interceptor.js';
+import { ServiceResponseBase } from './services/serviceResponseBase.js';
+import { TestDto } from './services/test/contractparts.js';
+import { TestGetRequest, TestGetResponse } from './services/test/get.contract.js';
+import { PrivateStuffRequest, PrivateStuffResponse } from './services/test/privateStuff.contract.js';
+import { TestStreamedQueryRequest } from './services/test/streamedQuery.contract.js';
+import { TestStreamedQueryExecutor } from './services/test/streamedQuery.executor.js';
+import { TimeRequest } from './services/test/time.contract.js';
+import { TestExecutionContext } from './services/testExecutionContext.js';
+import { TestLogger } from './testLogger.js';
 
 describe('execute TestRequest on server \n', function (): void {
 	let request: TestGetRequest;
 	let privateRequest: PrivateStuffRequest;
 	const executionContext: TestExecutionContext = new TestExecutionContext({ scope: 'private' });
 	const testProvider: NaniumProviderNodejs = new NaniumProviderNodejs({
-		servicePath: 'tests/services',
+		servicePath: 'dist/tests/services',
 		requestInterceptors: [TestServerRequestInterceptor],
 		isResponsible: async (): Promise<number> => Promise.resolve(1),
 		handleError: async (err: any): Promise<any> => {

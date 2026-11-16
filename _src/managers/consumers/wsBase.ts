@@ -1,26 +1,26 @@
-import { criticalSection, Mutex, RejectFunction, ResolveFunction, uuid } from '../../helper';
-import { EventNameOrConstructor } from '../../interfaces/eventConstructor';
-import { EventHandler } from '../../interfaces/eventHandler';
-import { EventSubscription } from '../../interfaces/eventSubscription';
-import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { NaniumLogger } from '../../interfaces/logger';
-import { NaniumBuffer } from '../../interfaces/naniumBuffer';
-import { NaniumStream } from '../../interfaces/naniumStream';
-import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig';
-import { ServiceManager } from '../../interfaces/serviceManager';
-import { ConstructorType, genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol, streamTypeSymbol } from '../../objects';
-import { getPrimaryResponseType, getSecondaryResponseType } from '../core';
+import { criticalSection, Mutex, RejectFunction, ResolveFunction, uuid } from '../../helper.js';
+import { EventNameOrConstructor } from '../../interfaces/eventConstructor.js';
+import { EventHandler } from '../../interfaces/eventHandler.js';
+import { EventSubscription } from '../../interfaces/eventSubscription.js';
+import { EventSubscriptionSendInterceptor } from '../../interfaces/eventSubscriptionInterceptor.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { NaniumLogger } from '../../interfaces/logger.js';
+import { NaniumBuffer } from '../../interfaces/naniumBuffer.js';
+import { NaniumStream } from '../../interfaces/naniumStream.js';
+import { ServiceConsumerConfig } from '../../interfaces/serviceConsumerConfig.js';
+import { ServiceManager } from '../../interfaces/serviceManager.js';
+import { ConstructorType, genericTypesSymbol, NaniumObject, NaniumPropertyInfoCore, responseTypeSymbol, streamTypeSymbol } from '../../objects.js';
+import { getPrimaryResponseType, getSecondaryResponseType } from '../core.js';
 import {
 	EmitEventMessageContent,
 	SubscribeEventMessageContent,
 	WsMessage,
 	WsServiceChunkMessage,
 	WsServiceRequestMessage
-} from '../providers/channels/ws.types';
-import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../ws.core';
-import { ConsumerBase } from './base';
-import { WebSocketClient } from './ws.core';
+} from '../providers/channels/ws.types.js';
+import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../ws.core.js';
+import { ConsumerBase } from './base.js';
+import { WebSocketClient } from './ws.core.js';
 
 export interface NaniumConsumerWebsocketConfigBase extends ServiceConsumerConfig {
 	connectUrl?: string;

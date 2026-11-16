@@ -1,5 +1,4 @@
-import { ExecutionContext } from 'nanium/interfaces/executionContext';
-import { ExecutionScope } from 'nanium/interfaces/executionScope';
+import { ExecutionContext, ExecutionScope } from 'nanium/core';
 
 export class ServiceRequestContext implements ExecutionContext {
 	scope?: ExecutionScope;

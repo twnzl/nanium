@@ -1,8 +1,8 @@
-import { ServiceRequestHead } from './serviceRequestHead';
-import { ConstructorType, NaniumObject, Type } from '../../objects';
-import { ExecutionContext } from '../../interfaces/executionContext';
-import { Nanium } from '../../core';
-import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry';
+import { ServiceRequestHead } from './serviceRequestHead.js';
+import { ConstructorType, NaniumObject, Type } from '../../objects.js';
+import { ExecutionContext } from '../../interfaces/executionContext.js';
+import { Nanium } from '../../core.js';
+import { ServiceRequestQueueEntry } from '../../interfaces/serviceRequestQueueEntry.js';
 
 
 export class SimpleServiceRequestBase<TRequestBody, TResponse> {

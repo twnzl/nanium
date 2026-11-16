@@ -1,5 +1,5 @@
-import { ServiceExecutor } from '../../../interfaces/serviceExecutor';
-import { TestUpstreamObjectsRequest, TestUpstreamObjectsResponse } from './upstreamObjects.contract';
+import { ServiceExecutor } from '../../../interfaces/serviceExecutor.js';
+import { TestUpstreamObjectsRequest, TestUpstreamObjectsResponse } from './upstreamObjects.contract.js';
 
 export class TestUpstreamObjectsExecutor implements ServiceExecutor<TestUpstreamObjectsRequest, TestUpstreamObjectsResponse> {
 	static serviceName: string = 'NaniumTest:test/upstreamObjects';

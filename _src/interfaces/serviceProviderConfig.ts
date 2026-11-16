@@ -1,8 +1,8 @@
-import { ServiceRequestInterceptor } from './serviceRequestInterceptor';
-import { Channel } from './channel';
-import { ExecutionContext } from './executionContext';
-import { EventEmissionSendInterceptor, EventSubscriptionReceiveInterceptor } from './eventSubscriptionInterceptor';
-import { ConstructorType } from '../objects';
+import { ServiceRequestInterceptor } from './serviceRequestInterceptor.js';
+import { Channel } from './channel.js';
+import { ExecutionContext } from './executionContext.js';
+import { EventEmissionSendInterceptor, EventSubscriptionReceiveInterceptor } from './eventSubscriptionInterceptor.js';
+import { ConstructorType } from '../objects.js';
 
 export interface ServiceProviderConfig {
 	/**
