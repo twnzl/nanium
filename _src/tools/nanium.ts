@@ -479,12 +479,10 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 		// copy event ts files to src dir
 		const eventFiles: string[] = await findFiles(eventsSrcDir, [(f: string, stats: Stats): boolean =>
 			!stats.isDirectory() &&
-			!f.endsWith('.event.ts') && !isContractPart(f)
+			!f.endsWith('.event.ts')
 		]);
 		for (const file of eventFiles) {
-			if (!isContractPart(file)) {
-				srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
-			}
+			srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
 			// check if a event is public
 			// todo: maybe using the typescript-compiler-api is a bit safer
 			if (
