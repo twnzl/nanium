@@ -407,10 +407,13 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 
 	try {
 		const serviceSrcDir: string = path.join(root, config.serviceDirectory);
+		const eventsSrcDir: string = path.join(root, config.eventsDirectory);
 		const tmpSrcDir: string = path.join(tmpDir, 'src');
 		const tmpDstDir: string = path.join(tmpDir, 'dst');
 		shell.mkdir('-p', tmpSrcDir);
 		shell.mkdir('-p', tmpDstDir);
+		shell.mkdir('-p', path.join(tmpDir, 'src', 'services'));
+		shell.mkdir('-p', path.join(tmpDir, 'src', 'events'));
 
 		// package.json
 		config.sdkPackage.version = packageJson.version;
@@ -429,23 +432,26 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 				'**/*.contract.ts',
 				'**/*.contractpart.ts',
 				'**/*.contractparts.ts',
+				'**/*.event.ts',
 				'**/*.dto.ts'
 			];
 		} else {
 			config.sdkTsConfig.include.push('**/*.contract.ts');
 			config.sdkTsConfig.include.push('**/*.contractpart.ts');
 			config.sdkTsConfig.include.push('**/*.contractparts.ts');
+			config.sdkTsConfig.include.push('**/*.event.ts');
 			config.sdkTsConfig.include.push('**/*.dto.ts');
 		}
 		fs.writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify(config.sdkTsConfig, null, 2));
 
-		const isContractPart = f => f.endsWith('contractpart.ts') || f.endsWith('contractparts.ts') || f.endsWith('dto.ts');
+		const isContractPart = (f: string) => f.endsWith('contractpart.ts') || f.endsWith('contractparts.ts') || f.endsWith('dto.ts');
 
 		// nanium basics
-		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src'));
+		shell.cp(path.join(serviceSrcDir, 'serviceRequestBase.ts'), path.join(tmpDir, 'src', 'services'));
 		if (fs.existsSync(path.join(serviceSrcDir, 'serviceRequestHead.ts'))) {
-			shell.cp(path.join(serviceSrcDir, 'serviceRequestHead.ts'), path.join(tmpDir, 'src'));
+			shell.cp(path.join(serviceSrcDir, 'serviceRequestHead.ts'), path.join(tmpDir, 'src', 'services'));
 		}
+		shell.cp(path.join(eventsSrcDir, 'eventBase.ts'), path.join(tmpDir, 'src', 'events'));
 
 		// copy contract ts files to src dir
 		const files: string[] = await findFiles(serviceSrcDir, [(f: string, stats: Stats): boolean =>
@@ -453,7 +459,7 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 			!f.endsWith('.contract.ts') && !isContractPart(f)
 		]);
 		let dstFile: string;
-		let srcFileContent: string;
+		let srcFileContent: string = '';
 		for (const file of files) {
 			if (!isContractPart(file)) {
 				srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
@@ -465,13 +471,33 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 				srcFileContent.match(/static\s+scope\s*(.*?)=\s*['"`]public['"`]/g) ||
 				srcFileContent.match(/@RequestType\s*\(\s*{[\s\S]*?scope\s*:\s*['"`](public)['"`][\s\S]*?}\s*\)/g)
 			) {
-				dstFile = path.join(tmpDir, 'src', path.relative(serviceSrcDir, file));
+				dstFile = path.join(tmpDir, 'src', 'services', path.relative(serviceSrcDir, file));
+				shell.mkdir('-p', path.dirname(dstFile));
+				fs.copyFileSync(file, dstFile);
+			}
+		}
+		// copy event ts files to src dir
+		const eventFiles: string[] = await findFiles(eventsSrcDir, [(f: string, stats: Stats): boolean =>
+			!stats.isDirectory() &&
+			!f.endsWith('.event.ts') && !isContractPart(f)
+		]);
+		for (const file of eventFiles) {
+			if (!isContractPart(file)) {
+				srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
+			}
+			// check if a event is public
+			// todo: maybe using the typescript-compiler-api is a bit safer
+			if (
+				srcFileContent.match(/static\s+scope\s*(.*?)=\s*['"`]public['"`]/g) ||
+				srcFileContent.match(/@EventType\s*\(\s*{[\s\S]*?scope\s*:\s*['"`](public)['"`][\s\S]*?}\s*\)/g)
+			) {
+				dstFile = path.join(tmpDir, 'src', 'events', path.relative(eventsSrcDir, file));
 				shell.mkdir('-p', path.dirname(dstFile));
 				fs.copyFileSync(file, dstFile);
 			}
 		}
 
-		// compile contracts
+		// compile contracts & events
 		shell.cd(path.join(tmpDir, 'src'));
 		shell.exec('tsc');
 
