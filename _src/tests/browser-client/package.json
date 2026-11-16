@@ -1,45 +1,45 @@
 {
-	"name": "browser-client",
-	"version": "0.0.0",
-	"scripts": {
-		"ng": "npx ng",
-		"dev": "npx ng serve",
-		"build": "ng build",
-		"watch": "ng build --watch --configuration development",
-		"start:testserver": "cd ../test-server && tsc && cd ../browser-client && node ../test-server/dst/tests/test-server/testserver.js",
-		"test": "start-server-and-test start:testserver http://localhost:8080/ready 'ng test --watch=false --browsers=ChromeHeadless'",
-		"debug:test": "npx ng test --browsers=Chrome --source-map=true --no-single-run",
-		"test:noserver": "ng test --watch=false --browsers=ChromeHeadless"
-	},
-	"private": true,
-	"dependencies": {
-		"@angular/animations": "^14.0.0",
-		"@angular/common": "^14.0.0",
-		"@angular/compiler": "^14.0.0",
-		"@angular/core": "^14.0.0",
-		"@angular/forms": "^14.0.0",
-		"@angular/platform-browser": "^14.0.0",
-		"@angular/platform-browser-dynamic": "^14.0.0",
-		"@angular/router": "^14.0.0",
-		"rxjs": "~7.5.0",
-		"tslib": "^2.3.0",
-		"zone.js": "~0.11.4"
-	},
-	"devDependencies": {
-		"@angular-devkit/build-angular": "^14.0.5",
-		"@angular/cli": "~14.0.5",
-		"@angular/compiler-cli": "^14.0.0",
-		"@types/jasmine": "~4.0.0",
-		"@types/jest": "^30.0.0",
-		"jasmine-core": "~4.1.0",
-		"karma": "~6.3.0",
-		"karma-chrome-launcher": "~3.1.0",
-		"karma-coverage": "~2.2.0",
-		"karma-jasmine": "~5.0.0",
-		"karma-jasmine-html-reporter": "~1.7.0",
-		"karma-spec-reporter": "^0.0.36",
-		"start-server-and-test": "^1.14.0",
-		"ts-node": "^10.9.1",
-		"typescript": "~4.8.2"
-	}
+  "name": "browser-client",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "npx ng",
+    "dev": "npx ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "start:testserver": "cd ../test-server && tsc && cd ../browser-client && node ../test-server/dst/tests/test-server/testserver.js",
+    "test": "start-server-and-test start:testserver http://localhost:8080/ready 'ng test --watch=false --browsers=ChromeHeadless'",
+    "debug:test": "npx ng test --browsers=Chrome --source-map=true --no-single-run",
+    "test:noserver": "ng test --watch=false --browsers=ChromeHeadless"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^15.2.10",
+    "@angular/common": "^15.2.10",
+    "@angular/compiler": "^15.2.10",
+    "@angular/core": "^15.2.10",
+    "@angular/forms": "^15.2.10",
+    "@angular/platform-browser": "^15.2.10",
+    "@angular/platform-browser-dynamic": "^15.2.10",
+    "@angular/router": "^15.2.10",
+    "rxjs": "~7.5.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.11.4"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^15.2.11",
+    "@angular/cli": "~15.2.11",
+    "@angular/compiler-cli": "^15.2.10",
+    "@types/jasmine": "~4.0.0",
+    "@types/jest": "^30.0.0",
+    "jasmine-core": "~4.1.0",
+    "karma": "~6.3.0",
+    "karma-chrome-launcher": "~3.1.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.0.0",
+    "karma-jasmine-html-reporter": "~1.7.0",
+    "karma-spec-reporter": "^0.0.36",
+    "start-server-and-test": "^1.14.0",
+    "ts-node": "^10.9.1",
+    "typescript": "~4.8.2"
+  }
 }
