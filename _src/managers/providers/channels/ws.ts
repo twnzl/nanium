@@ -132,7 +132,7 @@ export class NaniumWebsocketChannel implements Channel {
 	}
 
 	private async handleIncomingMessage(rawMessage: ArrayBuffer | string, ws: WebSocket): Promise<void> {
-		let message: WsMessage;
+		let message: WsMessage = new WsMessage();
 		// parseMessage has different speeds for different messages and so messages overtake each other
 		// what is critical e.g. for thinks like stream_chunk and stream_end -> criticalSection ensures order
 		await criticalSection(this.parseMessageMutex, async () => {
@@ -215,7 +215,9 @@ export class NaniumWebsocketChannel implements Channel {
 				scope: 'public',
 				source: ws[sourceSymbol]
 			});
+			console.error('SERVER DEBUG before Nanium.execute', serviceName);
 			const result: any = await Nanium.execute(request, serviceName, executionContext);
+			console.error('SERVER DEBUG after Nanium.execute', serviceName, JSON.stringify(result));
 
 			// buffer response
 			if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
@@ -321,13 +323,17 @@ export class NaniumWebsocketChannel implements Channel {
 						response: result
 					}
 				};
+				console.error('SERVER DEBUG resBuffers.length=', resBuffers.length, 'sending service_response');
 				await sendMessage(responseMessage, this.config.serializer, async data => this.send(ws, data));
+				console.error('SERVER DEBUG service_response sent');
 
 				// send buffer chunks
 				for (const buffer of resBuffers) {
+					console.error('SERVER DEBUG sending resBuffer', buffer.id, buffer.length);
 					await sendBufferInChunks(buffer, responseMessage.content.requestId,
 						async data => this.send(ws, data), 'service_buffer_chunk',
 						this.config.serializer, this.config.binaryChunkSize);
+					console.error('SERVER DEBUG resBuffer sent', buffer.id);
 				}
 			}
 		} catch (e) {
@@ -343,6 +349,7 @@ export class NaniumWebsocketChannel implements Channel {
 	}
 
 	async handleIncomingServiceRequestBufferChunk(message: WsMessage<WsServiceChunkMessage>, ws: WebSocket): Promise<any> {
+		console.error('SERVER DEBUG handleIncomingServiceRequestBufferChunk', message.content.requestId, message.content.bufferOrStreamId, message.content.isLastChunk, message.payload?.length);
 		try {
 			const arrivingRequest: ArrivingRequestType = this.arrivingRequests.get(message.content.requestId)!;
 			if (!arrivingRequest) {
