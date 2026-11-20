@@ -223,7 +223,7 @@ export class HttpCore {
 		} catch (e) {
 			return false;
 		}
-		this.id = this.config.serializer.deserialize(response);
+		this.id = this.config.serializer!.deserialize(response);
 		return true;
 	}
 

@@ -1,25 +1,33 @@
 import { AsyncHelper, ExtendedPromise } from '../../helper.js';
-import type WsWebSocket from 'ws';
 
-type WebSocketType = WebSocket | WsWebSocket;
+export interface WebSocketType {
+	readonly readyState: number;
+	readonly bufferedAmount: number;
+	onopen: ((event: Event) => void) | null;
+	onmessage: ((event: MessageEvent) => void) | null;
+	onclose: ((event: CloseEvent) => void) | null;
+	onerror: ((event: Event) => void) | null;
+	close(): void;
+	send(data: string | ArrayBuffer | ArrayBufferView): void;
+}
 
 export class WebSocketClient {
 	connected: ExtendedPromise<void>;
 	reconnectInterval: number;
 	maxBufferSize: number = 1024 * 1024; // 1Mb
 
-	private socket: WebSocketType | null = null;
-	private eventHandler: { [eventName: string]: Function[] } = {};
+	private socket?: WebSocketType;
+	private eventHandler: { [eventName: string]: ((event: any) => void)[] } = {};
 	private readonly url: string;
 	private closedOnPurpose: boolean;
 
-	constructor(url: string, reconnectInterval: number = 1000) {
-		this.url = url;
+	constructor(private socketFactory: () => Promise<WebSocketType>, reconnectInterval: number = 1000) {
 		this.reconnectInterval = reconnectInterval;
 		this.connected = new ExtendedPromise<void>();
 	}
 
 	async connect(): Promise<void> {
+		this.socket ??= await this.socketFactory();
 		if (this.connected.isResolved) {
 			if (this.socket.readyState === (WebSocket as any).OPEN) {
 				return this.connected;
@@ -27,14 +35,14 @@ export class WebSocketClient {
 			this.connected.cancel();
 			this.connected = new ExtendedPromise();
 		}
-		if (typeof window !== 'undefined' && window.WebSocket) {
-			// Browser environment
-			this.socket = new WebSocket(this.url);
-		} else {
-			// Node.js environment
-			const { default: NodeWebSocket } = await import('ws');
-			this.socket = new NodeWebSocket(this.url);
-		}
+		// if (typeof window !== 'undefined' && window.WebSocket) {
+		// 	// Browser environment
+		// 	this.socket = new WebSocket(this.url);
+		// } else {
+		// 	// Node.js environment
+		// 	const { default: NodeWebSocket } = await import('ws');
+		// 	this.socket = new NodeWebSocket(this.url);
+		// }
 
 		this.socket.onopen = this.onOpen.bind(this);
 		this.socket.onmessage = this.onMessage.bind(this);
@@ -48,7 +56,7 @@ export class WebSocketClient {
 		try {
 		//debugger;
 			this.closedOnPurpose = true;
-			this.socket.close();
+			this.socket?.close();
 			this.connected?.reject();
 		} catch (err) {
 			console.error('Error while closing WebSocket:', err);

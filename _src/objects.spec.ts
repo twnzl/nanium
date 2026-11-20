@@ -1,4 +1,5 @@
 import { LogLevel, NaniumLogger } from './interfaces/logger.js';
+import { WsMessage, WsServiceChunkMessage } from './managers/providers/channels/ws.types.js';
 import { AnySimple, JSONSchema, NaniumObject, NaniumPropertyInfoCore, Type } from './objects.js';
 import { ServiceResponseBase } from './tests/services/serviceResponseBase.js';
 import { TestGetRequest, TestGetRequestBody, TestGetResponseBody } from './tests/services/test/get.contract.js';
@@ -103,6 +104,19 @@ describe('nanium objects', function (): void {
 			expect(obj.sub2.theGeneric.toISOString()).toBe(new Date(2000, 1, 2).toISOString());
 			expect(obj.anySimpleArray[0]).toBe(1);
 			expect(obj.anySimpleArray[1]).toBe('2');
+		});
+
+		it('--> generic types should work \n', async function (): Promise<void> {
+			const msg: WsMessage<WsServiceChunkMessage> = new WsMessage<WsServiceChunkMessage>({
+				type: 'service_buffer_chunk',
+				content: new WsServiceChunkMessage({
+					requestId: '1234',
+					totalBytes: 20,
+					isLastChunk: true,
+				})
+			}, { 'TContent': WsServiceChunkMessage });
+			expect(msg.type).toBe('service_buffer_chunk');
+			expect(msg.content).toBeDefined();
 		});
 
 		it('--> array property is undefined or null \n', async function (): Promise<void> {

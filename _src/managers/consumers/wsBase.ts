@@ -20,7 +20,7 @@ import {
 } from '../providers/channels/ws.types.js';
 import { initStream, parseMessage, sendBufferInChunks, sendMessage } from '../ws.core.js';
 import { ConsumerBase } from './base.js';
-import { WebSocketClient } from './ws.core.js';
+import { WebSocketClient, WebSocketType } from './ws.core.js';
 
 export interface NaniumConsumerWebsocketConfigBase extends ServiceConsumerConfig {
 	connectUrl?: string;
@@ -43,7 +43,7 @@ export abstract class ConsumerWebsocketBase<TConfig extends NaniumConsumerWebsoc
 	private parseMessageMutex: Mutex = new Mutex();
 	// private responsePromises: Promise<unknown>[] = [];
 
-	constructor(config?: TConfig) {
+	constructor(private socketFactory: () => Promise<WebSocketType>, config?: TConfig) {
 		super(config);
 		this.config.connectUrl = config?.connectUrl ?? '';
 	}
@@ -146,7 +146,7 @@ export abstract class ConsumerWebsocketBase<TConfig extends NaniumConsumerWebsoc
 		if (!this.config.connectUrl) {
 			throw new Error('ws consumer: initWebSocket: connectUrl unknown');
 		}
-		this.websocket = new WebSocketClient(this.config.connectUrl);
+		this.websocket = new WebSocketClient(this.socketFactory);
 		this.websocket.on('open', async (): Promise<void> => {
 			// if reconnected, resubscribe to events
 			if (this.eventSubscriptions) {
