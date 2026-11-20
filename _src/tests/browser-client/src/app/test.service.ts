@@ -25,8 +25,8 @@ export class TestService {
 	}
 
 	async init(apiPort: 8080 | 8081 = 8080, eventPort: 8080 | 8081 = 8080): Promise<void> {
-		this.initHttp(apiPort, eventPort);
-		this.initWs(eventPort);
+		// this.initHttp(apiPort, eventPort);
+		this.initWs(eventPort, 2);
 		this.initBrowserProvider();
 	}
 

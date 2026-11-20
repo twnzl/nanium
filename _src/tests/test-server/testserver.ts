@@ -100,7 +100,8 @@ async function runWorker() {
 	];
 
 	await Nanium.addManager(new NaniumProviderNodejs({
-		servicePath: path.resolve(path.join(__dirname, '..', 'services')),
+		servicePath: path.resolve(path.join(__dirname, '..', '..', '..', '..', '..', '..', 'dist', 'tests', 'services')),
+		//servicePath: path.resolve(path.join(__dirname, '..', 'services')),
 		channels: [
 			new NaniumHttpChannel('1', {
 				apiPath: '/api',
