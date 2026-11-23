@@ -49,6 +49,7 @@ export default defineConfig({
 	esbuild: false,
 	plugins: [tscDecoratorsPlugin()],
 	test: {
+		name: 'node',
 		environment: 'node',
 		globals: true,
 		testTimeout: 5000,

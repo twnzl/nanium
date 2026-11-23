@@ -119,6 +119,27 @@ describe('nanium objects', function (): void {
 			expect(msg.content).toBeDefined();
 		});
 
+		it('--> should warn if property declarations reset the values (useDefineForClassFields) \n', async function (): Promise<void> {
+			class Wiped extends NaniumObject<Wiped> {
+				@Type(String) a: string;
+
+				constructor(data?: Partial<Wiped>) {
+					super(data);
+					// what a compiler does with useDefineForClassFields=true for the declaration "a: string;"
+					Object.defineProperty(this, 'a', { value: undefined, writable: true, enumerable: true, configurable: true });
+				}
+			}
+
+			const testLogger = new TestLogger(LogLevel.warn);
+			NaniumLogger.addLogger(testLogger);
+			new Wiped({ a: 'x' });
+			await Promise.resolve();
+			expect(testLogger.warnings.filter(w => String(w[0]).includes('useDefineForClassFields')).length).toBe(1);
+			new MyTestClass2({ aString: 'x' });
+			await Promise.resolve();
+			expect(testLogger.warnings.filter(w => String(w[0]).includes('useDefineForClassFields')).length).toBe(1);
+		});
+
 		it('--> array property is undefined or null \n', async function (): Promise<void> {
 			let obj: MyTestClass<number> = new MyTestClass({ aDateArray: undefined }, { 'T': Number });
 			expect(obj.aDateArray).toBeUndefined();

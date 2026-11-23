@@ -3,6 +3,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
+    "useDefineForClassFields": false,
     "sourceMap": true,
     "inlineSourceMap": false,
     "declaration": true,

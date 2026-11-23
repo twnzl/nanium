@@ -241,6 +241,11 @@ Currently, there are two essential decorators.
   defined generic
   type identifier specify the concrete class using the property 'genericTypes'
 
+__Required compiler options:__ `"experimentalDecorators": true` and `"useDefineForClassFields": false`
+in your tsconfig.json. `useDefineForClassFields` defaults to true for target ES2022 or higher. In that case the
+property declarations of your subclasses are initialized with `undefined` after the constructor of `NaniumObject`
+has set the values, so all properties would be lost. nanium logs a warning if it detects this.
+
 complex example:
 
 ```ts

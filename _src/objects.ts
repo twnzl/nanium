@@ -12,8 +12,36 @@ export const skipInterceptorsProperty: string = 'skipInterceptors';
 export class NaniumObject<T> {
 	static strictDefault: boolean = false;
 
+	private static readonly checkedForFieldDefinition = new WeakSet<Function>();
+
 	constructor(data?: Partial<T>, genericTypes?: NaniumGenericTypeInfo, strict?: boolean, cloneDeep?: boolean) {
 		NaniumObject.init(this, data, genericTypes, strict, cloneDeep ?? true);
+		if (data && !NaniumObject.checkedForFieldDefinition.has(new.target)) {
+			NaniumObject.checkFieldDefinition(this, new.target);
+		}
+	}
+
+	/**
+	 * With useDefineForClassFields=true (default for target ES2022 or higher) the property declarations of subclasses
+	 * are initialized with undefined AFTER this base constructor has run, which wipes out all values that were just set.
+	 * Because the field initializers run synchronously after super() returns, the check has to be deferred.
+	 */
+	private static checkFieldDefinition(instance: any, ctor: Function): void {
+		const propertyInfo = ctor[propertyInfoSymbol];
+		const setProperties = Object.keys(propertyInfo ?? {}).filter(p => instance[p] !== undefined);
+		if (!setProperties.length) {
+			return;
+		}
+		NaniumObject.checkedForFieldDefinition.add(ctor);
+		queueMicrotask(() => {
+			if (setProperties.every(p => instance[p] === undefined)) {
+				NaniumLogger.warn(
+					`NaniumObject: all properties of class ${ctor.name} were reset to undefined after the NaniumObject constructor ran. ` +
+					'This happens if the compiler option "useDefineForClassFields" is true (default for target ES2022 or higher). ' +
+					'Please set "useDefineForClassFields": false in your tsconfig.json.'
+				);
+			}
+		});
 	}
 
 	private static initObjectCore<T = any>(
