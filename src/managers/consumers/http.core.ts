@@ -29,6 +29,16 @@ interface NaniumHttpConfig extends ServiceConsumerConfig {
 	executionContextConstructor?: new (data: ExecutionContext) => ExecutionContext;
 }
 
+/**
+ * Minimal abstraction of the browser FormData and the node.js FormData (undici), so that this file
+ * does not depend on the DOM lib.
+ */
+export interface HttpFormData {
+	append(name: string, value: any): void;
+}
+
+const getGlobal = <T>(name: 'FormData' | 'Blob'): T => (globalThis as any)[name];
+
 export class HttpCore {
 	public id: string;
 	public eventSubscriptions: { [eventName: string]: ConsumerEventSubscription };
@@ -38,7 +48,7 @@ export class HttpCore {
 
 	constructor(
 		public config: NaniumHttpConfig,
-		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | FormData, headers?: any) => Promise<ArrayBufferView | ArrayBuffer>
+		private httpRequest: (method: 'GET' | 'POST', url: string, body?: string | ArrayBuffer | HttpFormData, headers?: any) => Promise<ArrayBufferView | ArrayBuffer>
 	) {
 	}
 
@@ -53,7 +63,7 @@ export class HttpCore {
 	public async sendRequest(serviceName: string, request: any): Promise<any> {
 		const uri: string = new URL(this.config.apiUrl).toString() + '?' + serviceName;
 		const buffers: NaniumBuffer[] = [];
-		let body: string | ArrayBuffer | FormData = this.config.serializer.serialize({ serviceName, request });
+		let body: string | ArrayBuffer | HttpFormData = this.config.serializer.serialize({ serviceName, request });
 		NaniumObject.forEachProperty(request, (name: string[], parent?: object, typeInfo?: NaniumPropertyInfoCore) => {
 			if (
 				(typeInfo?.ctor && typeInfo?.ctor['naniumBufferInternalValueSymbol']) ||
@@ -69,11 +79,12 @@ export class HttpCore {
 			// handle binary data included in the request
 			if (buffers.length) {
 				const tmp = body as string;
-				body = new FormData();
-				body.append('request', tmp);
+				const formData = new (getGlobal<new () => HttpFormData>('FormData'))();
+				formData.append('request', tmp);
+				body = formData;
 
 				for (const buffer of buffers) {
-					body.append(buffer.id, await buffer.as(Blob));
+					formData.append(buffer.id, await buffer.as(getGlobal<new (...args: any[]) => any>('Blob')));
 				}
 			}
 

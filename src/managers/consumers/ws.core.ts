@@ -1,12 +1,34 @@
 import { AsyncHelper, ExtendedPromise } from '../../helper.js';
 
+/**
+ * Minimal event shapes shared by the browser WebSocket and the node.js 'ws' package,
+ * so that this file does not depend on the DOM lib.
+ */
+export interface WebSocketEvent {
+	readonly type: string;
+}
+
+export interface WebSocketMessageEvent extends WebSocketEvent {
+	readonly data: any;
+}
+
+export interface WebSocketCloseEvent extends WebSocketEvent {
+	readonly code: number;
+	readonly reason: string;
+	readonly wasClean: boolean;
+}
+
+/** value of readyState when the connection is open (same in browser and node 'ws') */
+const WEBSOCKET_OPEN = 1;
+
+/** abstraction of the browser WebSocket and the node.js 'ws' WebSocket */
 export interface WebSocketType {
 	readonly readyState: number;
 	readonly bufferedAmount: number;
-	onopen: ((event: Event) => void) | null;
-	onmessage: ((event: MessageEvent) => void) | null;
-	onclose: ((event: CloseEvent) => void) | null;
-	onerror: ((event: Event) => void) | null;
+	onopen: ((event: WebSocketEvent) => void) | null;
+	onmessage: ((event: WebSocketMessageEvent) => void) | null;
+	onclose: ((event: WebSocketCloseEvent) => void) | null;
+	onerror: ((event: WebSocketEvent) => void) | null;
 	close(): void;
 	send(data: string | ArrayBuffer | ArrayBufferView): void;
 }
@@ -29,7 +51,7 @@ export class WebSocketClient {
 	async connect(): Promise<void> {
 		this.socket ??= await this.socketFactory();
 		if (this.connected.isResolved) {
-			if (this.socket.readyState === (WebSocket as any).OPEN) {
+			if (this.socket.readyState === WEBSOCKET_OPEN) {
 				return this.connected;
 			}
 			this.connected.cancel();
@@ -68,7 +90,7 @@ export class WebSocketClient {
 			throw new Error('WebSocket not connected.');
 		}
 		await this.connected;
-		if (this.socket.readyState !== (WebSocket as any).OPEN) {
+		if (this.socket.readyState !== WEBSOCKET_OPEN) {
 			throw new Error('WebSocket is not open.');
 		}
 		this.socket.send(data);
@@ -82,20 +104,20 @@ export class WebSocketClient {
 		this.eventHandler[eventType].push(handler);
 	}
 
-	private onOpen(event: Event): void {
+	private onOpen(event: WebSocketEvent): void {
 		for (const handler of this.eventHandler['open'] ?? []) {
 			handler(event);
 		}
 		this.connected?.resolve();
 	}
 
-	private onMessage(event: MessageEvent): void {
+	private onMessage(event: WebSocketMessageEvent): void {
 		for (const handler of this.eventHandler['message'] ?? []) {
 			handler(event);
 		}
 	}
 
-	private onClose(event: CloseEvent): void {
+	private onClose(event: WebSocketCloseEvent): void {
 		if (!this.closedOnPurpose) {
 			// reconnect
 			setTimeout(() => this.connect(), this.reconnectInterval);
@@ -105,7 +127,7 @@ export class WebSocketClient {
 		}
 	}
 
-	private onError(event: Event): void {
+	private onError(event: WebSocketEvent): void {
 		for (const handler of this.eventHandler['error'] ?? []) {
 			handler(event);
 		}
