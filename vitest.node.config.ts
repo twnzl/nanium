@@ -55,12 +55,12 @@ export default defineConfig({
 		testTimeout: 5000,
 		fileParallelism: false,
 		include: [
-			'_src/**/*.spec.ts',
+			'src/**/*.spec.ts',
 		],
 		exclude: [
 			'node_modules/**',
-			'_src/tests/browser/**',
-			'_src/tests/browser-client/**',
+			'src/tests/browser/**',
+			'src/tests/browser-client/**',
 		],
 	},
 });

@@ -8,7 +8,7 @@
     "inlineSourceMap": false,
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "_src",
+    "rootDir": "src",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
@@ -22,12 +22,12 @@
     ]
   },
   "include": [
-    "_src"
+    "src"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "_tmp/sdk",
-    "_src/tests/browser-client"
+    "src/tests/browser-client"
   ]
 }

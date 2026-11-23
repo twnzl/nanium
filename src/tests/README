@@ -14,8 +14,8 @@ start test server via launch config:
   "name": "testserver.js",
   "type": "node",
   "request": "launch",
-  "program": "${workspaceFolder}/_src/tests/test-server/dst/tests/test-server/testserver.js",
-  "cwd": "${workspaceFolder}/_src/tests/test-server/dst/tests/test-server",
+  "program": "${workspaceFolder}/src/tests/test-server/dst/tests/test-server/testserver.js",
+  "cwd": "${workspaceFolder}/src/tests/test-server/dst/tests/test-server",
   "runtimeExecutable": "${env:HOME}/.nvm/versions/node/v22.16.0/bin/node",
   "console": "integratedTerminal"
 },

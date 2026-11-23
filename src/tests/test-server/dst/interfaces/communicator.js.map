@@ -1,0 +1,1 @@
+{"version":3,"file":"communicator.js","sourceRoot":"","sources":["../../../../interfaces/communicator.ts"],"names":[],"mappings":"AAiBA,MAAM,OAAO,OAAO;IACnB,YACQ,IAAiB,EACjB,IAAO,EACP,IAAsB;QAFtB,SAAI,GAAJ,IAAI,CAAa;QACjB,SAAI,GAAJ,IAAI,CAAG;QACP,SAAI,GAAJ,IAAI,CAAkB;IAE9B,CAAC;CACD;AAED,MAAM,OAAO,gBAAgB;CAI5B"}

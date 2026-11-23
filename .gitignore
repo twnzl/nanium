@@ -17,7 +17,7 @@ package-lock.json
 /core.*
 /helper.*
 /objects.*
-/_src/tests/test-server/dst
+/src/tests/test-server/dst
 *.tgz
 
 # temporarry folders for development

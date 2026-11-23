@@ -7,21 +7,23 @@ export default defineConfig({
   test: {
     name: 'browser',
     testTimeout: 60000,
+    // all test files share the same test servers; requests of one file emit events that other files would receive
+    fileParallelism: false,
     browser: {
       enabled: true,
       provider: playwright(),
       // headless: true,
       // https://vitest.dev/config/browser/playwright
       instances: [
-        { browser: 'chromium' },
+        { browser: 'chromium', headless: true },
       ],
     },
     include: [
-      '_src/tests/browser/**/*.{test,spec}.ts',
+      'src/tests/browser/**/*.{test,spec}.ts',
     ],
     exclude: [
       'node_modules/**',
-      '_src/tests/test-server/**',
+      'src/tests/test-server/**',
     ],
   },
 })
@@ -38,7 +40,7 @@ export default defineConfig({
 //       headless: true, // set to false to see the browser
 //     },
 //     include: [
-//       '_src/tests/browser/**/*.{test,spec}.ts',
+//       'src/tests/browser/**/*.{test,spec}.ts',
 //     ]
 //   },
 // });

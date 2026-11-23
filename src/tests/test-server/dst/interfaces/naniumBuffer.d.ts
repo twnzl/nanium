@@ -1,0 +1,94 @@
+import { ConstructorType } from '../objects.js';
+export declare class NaniumBuffer {
+    id: string;
+    private readIndex;
+    private static naniumBufferInternalValueSymbol;
+    private static readonly pendingChunkSize;
+    private pendingChunk;
+    private pendingView;
+    private pendingOffset;
+    constructor(data?: DataSource | DataSource[], id?: string);
+    private getLength;
+    get length(): number;
+    private flushPendingChunk;
+    write(data: DataSource): void;
+    static as<T>(targetType: new (first?: any, second?: any, third?: any) => T, data: DataSource): Promise<T>;
+    as<T>(targetType: new (first?: any, second?: any, third?: any) => T): Promise<T>;
+    asUint8Array(): Promise<Uint8Array>;
+    private convertSinglePartToUint8Array;
+    static isBlobLike(objectOrConstructor: any): boolean;
+    static isArrayBufferLike(objectOrConstructor: any): boolean;
+    static isBufferLike(objectOrConstructor: any): boolean;
+    static isTypedArrayLike(objectOrConstructor: any): boolean;
+    private concatenateMultiplePartsToUint8Array;
+    private preparePartForCopy;
+    asArrayBuffer(): Promise<ArrayBuffer>;
+    clear(): void;
+    asString(encoding?: string): Promise<string>;
+    slice(start: number, end?: number): NaniumBuffer;
+    asReadable(): Promise<NaniumBufferReadable>;
+    writeString(text: string): NaniumBuffer;
+    writeCore(n: number, type: 'BigUint' | 'BigInt' | 'Uint' | 'Int' | 'Float', bits: 8 | 16 | 32 | 64, endianness?: 'LE' | 'BE'): void;
+    writeInt8(n: number): NaniumBuffer;
+    writeUInt8(n: number): NaniumBuffer;
+    writeInt16LE(n: number): NaniumBuffer;
+    writeUInt16LE(n: number): NaniumBuffer;
+    writeInt16BE(n: number): NaniumBuffer;
+    writeUInt16BE(n: number): NaniumBuffer;
+    writeInt32LE(n: number): NaniumBuffer;
+    writeUInt32LE(n: number): NaniumBuffer;
+    writeInt32BE(n: number): NaniumBuffer;
+    writeUInt32BE(n: number): NaniumBuffer;
+    writeInt64LE(n: number): NaniumBuffer;
+    writeUInt64LE(n: number): NaniumBuffer;
+    writeInt64BE(n: number): NaniumBuffer;
+    writeUInt64BE(n: number): NaniumBuffer;
+    writeFloat32LE(n: number): NaniumBuffer;
+    writeFloat64LE(n: number): NaniumBuffer;
+    writeFloat32BE(n: number): NaniumBuffer;
+    writeFloat64BE(n: number): NaniumBuffer;
+    static isNaniumBuffer(objectOrConstructor?: ConstructorType | object): boolean;
+}
+export interface BlobLike {
+    readonly size: number;
+    readonly type: string;
+    arrayBuffer(): Promise<ArrayBuffer>;
+    slice(start?: number, end?: number, contentType?: string): BlobLike;
+    text(): Promise<string>;
+}
+export interface BufferLike {
+    buffer: ArrayBuffer;
+    byteOffset: number;
+    length: number;
+    poolSize: number;
+}
+export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array;
+export type DataSource = (NaniumBuffer | ArrayBuffer | ArrayBufferLike | TypedArray | BlobLike | BufferLike | DataView | ArrayBufferView);
+export declare class NaniumBufferReadable {
+    private data;
+    readIndex: number;
+    get length(): number;
+    get eof(): boolean;
+    constructor(data: DataView);
+    static from(...data: DataSource[]): Promise<NaniumBufferReadable>;
+    startSequentialReadingAt(idx: number): void;
+    readString(length: number, startIdx?: number, encoding?: string): string;
+    readFloat32LE(idx?: number): number;
+    readFloat64LE(idx?: number): number;
+    readInt8(idx?: number): number;
+    readInt16LE(idx?: number): number;
+    readInt32LE(idx?: number): number;
+    readInt64LE(idx?: number): bigint;
+    readUInt8(idx?: number): number;
+    readUInt16LE(idx?: number): number;
+    readUInt32LE(idx?: number): number;
+    readUInt64LE(idx?: number): bigint;
+    readFloat32BE(idx?: number): number;
+    readFloat64BE(idx?: number): number;
+    readInt16BE(idx?: number): number;
+    readInt32BE(idx?: number): number;
+    readInt64BE(idx?: number): bigint;
+    readUInt16BE(idx?: number): number;
+    readUInt32BE(idx?: number): number;
+    readUInt64BE(idx?: number): bigint;
+}

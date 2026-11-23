@@ -48,17 +48,17 @@
     "nanoservices"
   ],
   "scripts": {
-    "lint": "tslint \"'_src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
-    "build:testserver": "cd _src/tests/test-server && tsc && cd ../../..",
-    "build": "tsc && node dist/tools/nanium.js ccp _src/tools/templates dist/tools/templates && npm run build:testserver",
-    "run:testserver": "cd _src/tests/test-server && node dst/tests/test-server/testserver.js && cd ../../..",
+    "lint": "tslint \"'src/**/*.ts\" -p tsconfig.json -c tslint.json -e node_modules",
+    "build:testserver": "cd src/tests/test-server && tsc && cd ../../..",
+    "build": "tsc && node dist/tools/nanium.js ccp src/tools/templates dist/tools/templates && npm run build:testserver",
+    "run:testserver": "cd src/tests/test-server && node dst/tests/test-server/testserver.js && cd ../../..",
     "test:server": "export NODE_TLS_REJECT_UNAUTHORIZED=0; vitest run --config vitest.node.config.ts",
     "test:client": "export NODE_TLS_REJECT_UNAUTHORIZED=0; vitest run --config vitest.browser.config.ts",
     "test": "npm run test:server && npm run test:client",
     "prepare": "",
     "publishlist": "npm publish --dry-run",
     "bundle": "npm run build && npm test && npm publish",
-    "cleanup": "rm -rf dist && rm -rf _src/tests/test-server/dst",
+    "cleanup": "rm -rf dist && rm -rf src/tests/test-server/dst",
     "cleanbuild": "npm run cleanup && npm run build"
   },
   "files": [

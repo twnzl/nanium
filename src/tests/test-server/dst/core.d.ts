@@ -1,0 +1,38 @@
+import { NaniumCommunicator } from './interfaces/communicator.js';
+import { EventNameOrConstructor } from './interfaces/eventConstructor.js';
+import { EventSubscription } from './interfaces/eventSubscription.js';
+import { ExecutionContext } from './interfaces/executionContext.js';
+import { ServiceManager } from './interfaces/serviceManager.js';
+import { ServiceRequestQueue } from './interfaces/serviceRequestQueue.js';
+import { ServiceRequestQueueEntry } from './interfaces/serviceRequestQueueEntry.js';
+export declare const managerSymbol: symbol;
+export declare class CNanium {
+    private _isShutDownInitiated;
+    managers: ServiceManager[];
+    queues: ServiceRequestQueue[];
+    communicators: NaniumCommunicator[];
+    get isShutDownInitiated(): boolean;
+    addManager(manager: ServiceManager): Promise<void>;
+    removeManager(manager: ServiceManager): Promise<void>;
+    addQueue(queue: ServiceRequestQueue): Promise<void>;
+    removeQueue(fn: (q: ServiceRequestQueue) => boolean): Promise<void>;
+    execute(request: any, serviceName?: string, context?: ExecutionContext): Promise<any>;
+    enqueue<TRequest>(entry: ServiceRequestQueueEntry, executionContext?: ExecutionContext): Promise<ServiceRequestQueueEntry>;
+    emit(event: any, eventName?: string, context?: ExecutionContext, broadcast?: boolean): void;
+    subscribe(eventNameOrConstructor: EventNameOrConstructor, handler: (data: any) => Promise<void>, context?: ExecutionContext, manager?: ServiceManager): Promise<EventSubscription>;
+    unsubscribe(subscriptionOrManager?: EventSubscription | ServiceManager, eventName?: string, broadcast?: boolean): Promise<void>;
+    removeClient(clientId: string, broadcast?: boolean): Promise<void>;
+    receiveSubscription(subscription: EventSubscription, broadcast?: boolean): Promise<void>;
+    getResponsibleManager(request: any, serviceName: string): Promise<ServiceManager>;
+    getResponsibleManagerForEvent(eventName: string, data: any, context?: any): Promise<ServiceManager>;
+    getResponsibleQueue(entry: ServiceRequestQueueEntry, executionContext?: ExecutionContext): Promise<ServiceRequestQueue>;
+    onReadyQueueEntry(entry: ServiceRequestQueueEntry, requestQueue: ServiceRequestQueue): Promise<void>;
+    private executeTimeControlled;
+    private start;
+    private tryStart;
+    calculateNextRun(entry: ServiceRequestQueueEntry, lastRun: Date): Date;
+    private calculateNextRunByCronConfig;
+    shutdown(): Promise<void>;
+    private startQueue;
+}
+export declare const Nanium: CNanium;

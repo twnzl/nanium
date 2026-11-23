@@ -1,0 +1,143 @@
+import cluster from 'cluster';
+import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { ClusterCommunicator } from '../../communicators/clusterCommunicator.js';
+import { Nanium } from '../../core.js';
+import { LogLevel, NaniumLogger } from '../../interfaces/logger.js';
+import { NaniumHttpChannel } from '../../managers/providers/channels/http.js';
+import { NaniumWebsocketChannel } from '../../managers/providers/channels/ws.js';
+import { NaniumProviderNodejs } from '../../managers/providers/nodejs.js';
+import { NaniumJsonSerializer } from '../../serializers/json.js';
+import { TestEventSubscriptionReceiveInterceptor } from '../interceptors/server/test.receive-event-subscription.interceptor.js';
+import { TestServerRequestInterceptor } from '../interceptors/server/test.request.interceptor.js';
+import { TestEventEmissionSendInterceptor } from '../interceptors/server/test.send-event-emission.interceptor.js';
+import { TestLogger } from '../testLogger.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+async function runPrimary(workerCount) {
+    console.log(`Primary ${process.pid} is running`);
+    for (let i = 0; i < workerCount; i++) {
+        cluster.fork();
+    }
+    Nanium.communicators = [new ClusterCommunicator((context) => context, (context) => context)];
+    cluster.on('exit', (worker) => {
+        console.log(`worker ${worker.process.pid} died`);
+    });
+}
+async function runWorker() {
+    const defaultHandler = async (req, res) => {
+        //#region CORS
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin ?? '*');
+        res.setHeader('AMP-Access-Control-Allow-Source-Origin', req.headers.origin ?? '*');
+        res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+        if (req.method === 'OPTIONS') {
+            res.statusCode = 200;
+            res.end();
+            return;
+        }
+        //#endregion CORS
+        //#region route to check if server is running
+        if (req.url === '/ready') {
+            res.statusCode = 200;
+            res.write('yes');
+            res.end();
+            return;
+        }
+        else if (!req.url.startsWith('/api') && !req.url.startsWith('/events')) {
+            res.statusCode = 200;
+            res.write('*** http fallback ***');
+            res.end();
+            return;
+        }
+        //#endregion route to check if server is running
+    };
+    let httpServer;
+    if (cluster.worker.id % 4 > 1) {
+        const certPath = path.join(__dirname, '../../../../cert');
+        httpServer = https.createServer({
+            key: fs.readFileSync(path.join(certPath, 'dummy.key')),
+            cert: fs.readFileSync(path.join(certPath, 'dummy.crt')),
+            keepAlive: false,
+        }, (req, res) => {
+            if (!/^\/(api[/#?]|events$)/gi.test(req.url)) {
+                res.write('*** https fallback ***');
+                res.statusCode = 200;
+                res.end();
+            }
+        });
+    }
+    else {
+        httpServer = http.createServer(defaultHandler);
+    }
+    // each worker has its own port, just tu make sure to connect to different processes in the tests
+    const port = 8080 + (cluster.worker.id % 4);
+    httpServer.listen(port);
+    console.log(`Worker ${process.pid} is listening on port ${port}`);
+    const serializer = new NaniumJsonSerializer();
+    serializer.packageSeparator = '\0';
+    Nanium.communicators = [new ClusterCommunicator((context) => context, (context) => context),
+    ];
+    await Nanium.addManager(new NaniumProviderNodejs({
+        servicePath: path.resolve(path.join(__dirname, '..', '..', '..', '..', '..', '..', 'dist', 'tests', 'services')),
+        //servicePath: path.resolve(path.join(__dirname, '..', 'services')),
+        channels: [
+            new NaniumHttpChannel('1', {
+                apiPath: '/api',
+                eventPath: '/events',
+                server: httpServer,
+                serializer: serializer,
+            }),
+            new NaniumWebsocketChannel('2', {
+                server: httpServer,
+                serializer: serializer,
+                streamAndBufferTimeout: 20000,
+            }),
+        ],
+        isResponsible: () => Promise.resolve(2),
+        requestInterceptors: [TestServerRequestInterceptor],
+        isResponsibleForEvent: () => Promise.resolve(2),
+        eventEmissionSendInterceptors: [TestEventEmissionSendInterceptor],
+        eventSubscriptionReceiveInterceptors: [TestEventSubscriptionReceiveInterceptor],
+        handleError: handleError,
+    }));
+    // await Nanium.addManager(new NaniumProviderNodejs({
+    // 	servicePath: '',
+    // 	channels: [
+    // 		new NaniumWebsocketChannel('2', {
+    // 			eventPath: '/events',
+    // 			server: httpServer,
+    // 			serializer: serializer,
+    // 		}),
+    // 	],
+    // 	isResponsible: () => Promise.resolve(0),
+    // 	isResponsibleForEvent: () => Promise.resolve(2),
+    // 	eventEmissionSendInterceptors: [TestEventEmissionSendInterceptor],
+    // 	eventSubscriptionReceiveInterceptors: [TestEventSubscriptionReceiveInterceptor],
+    // 	handleError: handleError
+    // }));
+    process.on('unhandledRejection', async function (e) {
+        await handleException(e);
+    });
+    process.on('uncaughtException', async function (e) {
+        await handleException(e);
+    });
+}
+async function run(workerCount = 4) {
+    NaniumLogger.addLogger(new TestLogger(LogLevel.warn));
+    if (cluster.isMaster || cluster.isPrimary) {
+        await runPrimary(workerCount);
+    }
+    else {
+        await runWorker();
+    }
+}
+function handleError(err, _serviceName, _request, _executionContext) {
+    throw { message: err?.message ?? err };
+}
+function handleException(error) {
+    throw error;
+}
+void run();
+//# sourceMappingURL=testserver.js.map
