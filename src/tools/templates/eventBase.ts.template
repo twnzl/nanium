@@ -6,7 +6,7 @@ import {
 	Nanium,
 	NaniumObject,
 	ServiceManager
-} from 'nanium/core';
+} from 'nanium';
 
 export abstract class EventBase<T = any> extends NaniumObject<T> {
 	static readonly eventName: string;

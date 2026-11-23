@@ -1,4 +1,4 @@
-import { NaniumObject, Type } from 'nanium/core';
+import { NaniumObject, Type } from 'nanium';
 
 export class ServiceRequestHead extends NaniumObject<ServiceRequestHead> {
 	@Type(String) user?: string;

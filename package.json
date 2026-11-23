@@ -18,19 +18,23 @@
   "exports": {
     ".": {
       "types": "./dist/entries/core.d.ts",
-      "import": "./dist/entries/core.js"
+      "import": "./dist/entries/core.js",
+      "default": "./dist/entries/core.js"
     },
     "./core": {
       "types": "./dist/entries/core.d.ts",
-      "import": "./dist/entries/core.js"
+      "import": "./dist/entries/core.js",
+      "default": "./dist/entries/core.js"
     },
     "./browser": {
       "types": "./dist/entries/browser.d.ts",
-      "import": "./dist/entries/browser.js"
+      "import": "./dist/entries/browser.js",
+      "default": "./dist/entries/browser.js"
     },
     "./node": {
       "types": "./dist/entries/node.d.ts",
-      "import": "./dist/entries/node.js"
+      "import": "./dist/entries/node.js",
+      "default": "./dist/entries/node.js"
     },
     "./package.json": "./package.json"
   },

@@ -179,9 +179,7 @@ export class NaniumWebsocketChannel {
                 scope: 'public',
                 source: ws[sourceSymbol]
             });
-            console.error('SERVER DEBUG before Nanium.execute', serviceName);
             const result = await Nanium.execute(request, serviceName, executionContext);
-            console.error('SERVER DEBUG after Nanium.execute', serviceName, JSON.stringify(result));
             // buffer response
             if (NaniumBuffer.isNaniumBuffer(ResponseType)) {
                 const responseMessage = {
@@ -266,14 +264,10 @@ export class NaniumWebsocketChannel {
                         response: result
                     }
                 };
-                console.error('SERVER DEBUG resBuffers.length=', resBuffers.length, 'sending service_response');
                 await sendMessage(responseMessage, this.config.serializer, async (data) => this.send(ws, data));
-                console.error('SERVER DEBUG service_response sent');
                 // send buffer chunks
                 for (const buffer of resBuffers) {
-                    console.error('SERVER DEBUG sending resBuffer', buffer.id, buffer.length);
                     await sendBufferInChunks(buffer, responseMessage.content.requestId, async (data) => this.send(ws, data), 'service_buffer_chunk', this.config.serializer, this.config.binaryChunkSize);
-                    console.error('SERVER DEBUG resBuffer sent', buffer.id);
                 }
             }
         }
@@ -289,7 +283,6 @@ export class NaniumWebsocketChannel {
         }
     }
     async handleIncomingServiceRequestBufferChunk(message, ws) {
-        console.error('SERVER DEBUG handleIncomingServiceRequestBufferChunk', message.content.requestId, message.content.bufferOrStreamId, message.content.isLastChunk, message.payload?.length);
         try {
             const arrivingRequest = this.arrivingRequests.get(message.content.requestId);
             if (!arrivingRequest) {

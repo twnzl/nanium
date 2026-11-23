@@ -1,4 +1,4 @@
-import { ConstructorType, ExecutionContext, Nanium, NaniumObject, ServiceRequestQueueEntry, Type } from 'nanium/core';
+import { ConstructorType, ExecutionContext, Nanium, NaniumObject, ServiceRequestQueueEntry, Type } from 'nanium';
 import { ServiceRequestHead } from './serviceRequestHead';
 
 export abstract class ServiceRequestBase<TRequestBody, TResponse> {

@@ -1,4 +1,4 @@
-import { ServiceRequestInterceptor } from 'nanium/core';
+import { ServiceRequestInterceptor } from 'nanium';
 import { ServiceRequestBase } from './serviceRequestBase';
 import { ServiceRequestContext } from './serviceRequestContext';
 

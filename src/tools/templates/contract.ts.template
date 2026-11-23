@@ -1,4 +1,4 @@
-import { NaniumObject, RequestType } from 'nanium/core';
+import { NaniumObject, RequestType } from 'nanium';
 import { ServiceRequestBase } from '${relativeToRoot}serviceRequestBase';
 
 export class ${coreClassName}RequestBody extends NaniumObject<${coreClassName}RequestBody> {
