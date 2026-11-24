@@ -4,16 +4,16 @@
 // (e.g. 'window', 'document'), so that it can safely be bundled into both server and client applications.
 
 export * from '../core.js';
-export * from '../objects.js';
 export * from '../helper.js';
-export * from '../serializers/json.js';
-export * from '../managers/core.js';
 export * from '../managers/consumers/base.js';
 export * from '../managers/consumers/http.core.js';
-export * from '../managers/consumers/wsBase.js';
 export * from '../managers/consumers/ws.core.js';
-export * from '../managers/ws.core.js';
+export * from '../managers/consumers/wsBase.js';
+export * from '../managers/core.js';
 export * from '../managers/providers/channels/ws.types.js';
+export * from '../managers/ws.core.js';
+export * from '../objects.js';
+export * from '../serializers/json.js';
 
 export * from '../interfaces/channel.js';
 export * from '../interfaces/channelConfig.js';
@@ -41,3 +41,4 @@ export * from '../interfaces/serviceRequestQueue.js';
 export * from '../interfaces/serviceRequestQueueEntry.js';
 export * from '../interfaces/serviceRequestQueueEntryState.js';
 export * from '../interfaces/serviceResponseInterceptor.js';
+

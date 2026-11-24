@@ -126,15 +126,11 @@ export abstract class ConsumerWebsocketBase<TConfig extends NaniumConsumerWebsoc
 			});
 
 			// send
-			console.error('DEBUG sending msg, buffers count=', buffers.length);
 			await sendMessage(msg, this.config.serializer!, async data => await this.websocket!.send(data));
-			console.error('DEBUG sendMessage done');
 			for (const buffer of buffers) {
-				console.error('DEBUG sending buffer, length=', buffer.length);
 				await sendBufferInChunks(buffer, msg.content.id,
 					async data => await this.websocket!.send(data), 'service_buffer_chunk',
 					this.config.serializer!, this.config.binaryChunkSize);
-				console.error('DEBUG buffer sent');
 			}
 		});
 	}
@@ -157,7 +153,6 @@ export abstract class ConsumerWebsocketBase<TConfig extends NaniumConsumerWebsoc
 			}
 		});
 		this.websocket.on('message', async event => {
-			console.error('DEBUG raw message event received, typeof data=', typeof event.data, event.data?.constructor?.name, event.data?.length ?? event.data?.byteLength);
 			let rawMessage: WsMessage;
 			// parseMessage has different speeds for different messages and so messages overtake each other
 			// what is critical e.g. for thinks like stream_chunk and stream_end -> criticalSection ensures order
@@ -165,7 +160,6 @@ export abstract class ConsumerWebsocketBase<TConfig extends NaniumConsumerWebsoc
 				rawMessage = await parseMessage(event.data, this.config.serializer!);
 			});
 			rawMessage = rawMessage!;
-			console.error('DEBUG client received message type:', rawMessage.type, JSON.stringify(rawMessage.content ?? {}), 'payloadLen', (rawMessage as any).payload?.length);
 			if (rawMessage.type === 'emit_event') {
 				const message = new WsMessage<EmitEventMessageContent>(rawMessage, { 'TContent': EmitEventMessageContent });
 				await super.receiveEventLocal(message.content.eventName, message.content.event);

@@ -7,8 +7,8 @@ import { Interface } from 'readline';
 import findFiles from 'recursive-readdir';
 import shell from 'shelljs';
 import * as zip from 'unzipper';
-import * as util from 'util';
 import { fileURLToPath } from 'url';
+import * as util from 'util';
 
 const __dirname: string = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,6 +43,45 @@ const rl: Interface = readline.createInterface({
 	input: process.stdin,
 	output: process.stdout
 });
+
+
+const defaultPackageJson = {
+	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"files": ["dist"],
+	"dependencies": {},
+	"devDependencies": {
+		"tsup": "^8.0.0",
+		"typescript": "^5.6.0"
+	}
+};
+
+const defaultTsConfig = {
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"experimentalDecorators": true,
+		"useDefineForClassFields": false,
+		"lib": ["ES2022", "DOM"],
+		"strict": false,
+		"skipLibCheck": true,
+		"declaration": true,
+		"noEmit": true,
+		"isolatedModules": true,
+		"rootDir": './src',
+		"outDir": './dist',
+	},
+	"include": ["src"]
+};
 
 // arguments
 if (process.argv.length < 3 || !actions[process.argv[2]]) {
@@ -302,31 +341,11 @@ function init(namespace: string): void {
 			namespace: namespace,
 			outDir: 'sdk',
 			sdkPackage: {
-				name: 'myServices',
-				description: 'SDK for my services',
-				author: 'unknown',
-				license: 'MIT',
-				keywords: [
-					'my',
-					'contracts',
-					'sdk',
-					'API'
-				]
+				...defaultPackageJson,
+				"name": 'myServices',
+				"description": 'SDK for my services',
 			},
-			sdkTsConfig: {
-				'compilerOptions': {
-					'module': 'commonjs',
-					'sourceMap': false,
-					'declaration': true,
-					'watch': false,
-					'noEmitOnError': false,
-					'emitDecoratorMetadata': true,
-					'experimentalDecorators': true,
-					'target': 'ES2020',
-					'lib': ['ES2020'],
-					'types': ['node']
-				}
-			}
+			sdkTsConfig: defaultTsConfig
 		},
 		...config,
 		...{ namespace }
@@ -412,40 +431,42 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 		const serviceSrcDir: string = path.join(root, config.serviceDirectory);
 		const eventsSrcDir: string = path.join(root, config.eventsDirectory);
 		const tmpSrcDir: string = path.join(tmpDir, 'src');
-		const tmpDstDir: string = path.join(tmpDir, 'dst');
+		const tmpDistDir: string = path.join(tmpDir, 'dist');
 		shell.mkdir('-p', tmpSrcDir);
-		shell.mkdir('-p', tmpDstDir);
+		shell.mkdir('-p', tmpDistDir);
 		shell.mkdir('-p', path.join(tmpDir, 'src', 'services'));
 		shell.mkdir('-p', path.join(tmpDir, 'src', 'events'));
 
 		// package.json
-		config.sdkPackage.version = packageJson.version;
+		config.sdkPackage = {
+			...defaultPackageJson,
+			...(config.sdkPackage ?? {}),
+		}
+		config.sdkPackage.version ??= packageJson.version;
 		fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(config.sdkPackage, null, 2));
+
+		// tsconfig.json
+		config.sdkTsConfig = {
+			...defaultTsConfig,
+			...config.sdkTsConfig
+		};
+		config.sdkTsConfig.compilerOptions = {
+			...defaultTsConfig.compilerOptions,
+			...config.sdkTsConfig.compilerOptions
+		};
+		config.sdkTsConfig.include ??= [];
+		config.sdkTsConfig.include.push('src/**/*.contract.ts');
+		config.sdkTsConfig.include.push('src/**/*.contractpart.ts');
+		config.sdkTsConfig.include.push('src/**/*.contractparts.ts');
+		config.sdkTsConfig.include.push('src/**/*.event.ts');
+		config.sdkTsConfig.include.push('src/**/*.dto.ts');
+		config.sdkTsConfig.include.push('src/index.ts');
+		fs.writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify(config.sdkTsConfig, null, 2));
 
 		// README
 		if (fs.existsSync(path.join(serviceSrcDir, 'README'))) {
 			shell.cp(path.join(serviceSrcDir, 'README'), tmpDir);
 		}
-
-		// tsconfig.json
-		config.sdkTsConfig.compilerOptions = config.sdkTsConfig.compilerOptions ?? {};
-		config.sdkTsConfig.compilerOptions.outDir = path.join(tmpDir, 'dst');
-		if (!config.sdkTsConfig.include) {
-			config.sdkTsConfig.include = [
-				'**/*.contract.ts',
-				'**/*.contractpart.ts',
-				'**/*.contractparts.ts',
-				'**/*.event.ts',
-				'**/*.dto.ts'
-			];
-		} else {
-			config.sdkTsConfig.include.push('**/*.contract.ts');
-			config.sdkTsConfig.include.push('**/*.contractpart.ts');
-			config.sdkTsConfig.include.push('**/*.contractparts.ts');
-			config.sdkTsConfig.include.push('**/*.event.ts');
-			config.sdkTsConfig.include.push('**/*.dto.ts');
-		}
-		fs.writeFileSync(path.join(tmpDir, 'tsconfig.json'), JSON.stringify(config.sdkTsConfig, null, 2));
 
 		const isContractPart = (f: string) => f.endsWith('contractpart.ts') || f.endsWith('contractparts.ts') || f.endsWith('dto.ts');
 
@@ -463,6 +484,7 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 		]);
 		let dstFile: string;
 		let srcFileContent: string = '';
+		const indexFileList: string[] = [];
 		for (const file of files) {
 			if (!isContractPart(file)) {
 				srcFileContent = fs.readFileSync(file, { encoding: 'utf8' });
@@ -477,8 +499,10 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 				dstFile = path.join(tmpDir, 'src', 'services', path.relative(serviceSrcDir, file));
 				shell.mkdir('-p', path.dirname(dstFile));
 				fs.copyFileSync(file, dstFile);
+				indexFileList.push(path.join('.', 'services', path.relative(serviceSrcDir, file)));
 			}
 		}
+
 		// copy event ts files to src dir
 		const eventFiles: string[] = await findFiles(eventsSrcDir, [(f: string, stats: Stats): boolean =>
 			!stats.isDirectory() &&
@@ -495,20 +519,40 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 				dstFile = path.join(tmpDir, 'src', 'events', path.relative(eventsSrcDir, file));
 				shell.mkdir('-p', path.dirname(dstFile));
 				fs.copyFileSync(file, dstFile);
+				indexFileList.push(path.join('.', 'events', path.relative(eventsSrcDir, file)));
 			}
 		}
+		const indexFileContent = indexFileList.map(f =>
+			`export * from './${f.replace(/\.ts$/gi, '.js')}';`
+		).join('\n') + '\n';
+
+		// create index file
+		fs.writeFileSync(path.join(tmpDir, 'src', 'index.ts'), indexFileContent);
+		fs.writeFileSync(path.join(tmpDir, 'tsup.config.ts'), `import { defineConfig } from 'tsup';
+			export default defineConfig({
+				entry: ['src/index.ts'],
+				format: ['esm'],
+				target: 'es2022',
+				platform: 'neutral',   // weder Node- noch Browser-spezifisch
+				dts: true,
+				clean: true,
+				sourcemap: true,
+				treeshake: true,
+			});`);
 
 		// compile contracts & events
-		shell.cd(path.join(tmpDir, 'src'));
-		shell.exec('tsc');
+		shell.cd(path.join(tmpDir));
+		shell.exec('npm install');
+		shell.exec('npx tsup');
+		// shell.exec('tsc');
 
 		// bundle or publish package
-		shell.cp(path.join(tmpDir, 'package.json'), path.join(tmpDstDir, 'package.json'));
+		shell.cp(path.join(tmpDir, 'package.json'), path.join(tmpDistDir, 'package.json'));
 		if (fs.existsSync(path.join(tmpDir, 'README'))) {
-			shell.cp(path.join(tmpDir, 'README'), path.join(tmpDstDir, 'README'));
+			shell.cp(path.join(tmpDir, 'README'), path.join(tmpDistDir, 'README'));
 		}
 
-		shell.cd(tmpDstDir);
+		// shell.cd(tmpDistDir);
 		if (kind === 'p') {
 			shell.exec('npm publish');
 		} else if (kind === 'u') {
@@ -517,7 +561,7 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 			shell.exec('npm pack');
 			shell.cd(root);
 			let packageFileName: string = `${config.sdkPackage.name}-${config.sdkPackage.version}.tgz`;
-			packageFileName = path.join(tmpDstDir, packageFileName);
+			packageFileName = path.join(tmpDir, packageFileName);
 			shell.cp(packageFileName, outDir);
 		}
 	} catch (e) {
@@ -528,3 +572,4 @@ async function sdk(kind: 'a' | 'p' | 'u'): Promise<void> {
 		shell.rm('-R', tmpDir);
 	}
 }
+
